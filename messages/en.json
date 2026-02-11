@@ -1,0 +1,1074 @@
+{
+  "Common": {
+    "projects": "Projects",
+    "inProgress": "In Progress Projects",
+    "completed": "Completed Projects",
+    "operating": "Operating Projects",
+    "viewDetails": "View Details"
+  },
+  "SanadFarms": {
+    "title": "Sanad Farms",
+    "description": "An integrated farm in Wadi El Assiouti combining agricultural production and livestock investment—with operational management and continuous annual returns.",
+    "strategyTitle": "Milestone Right | Sanad",
+    "strategyDesc": "Sanad's approach to building fair and transparent partnerships; linking project management and development to documented operational phases, with continuous follow-up and verifiable outputs.",
+    "strategyLink": "Learn how “Milestone Right” works in detail",
+    "overview": {
+      "title": "Quick Summary",
+      "description": "Brief overview of the project's construction, operational, and financial performance.",
+      "highlights": [
+        {
+          "title": "Current Production",
+          "value": "Various dates + jujube + wheat"
+        },
+        {
+          "title": "Infrastructure",
+          "value": "Modern well + electricity + irrigation + full fencing"
+        },
+        {
+          "title": "Operational Assets",
+          "value": "Livestock barn + stores + service buildings + housing"
+        },
+        {
+          "title": "Logistics",
+          "value": "5 mins from New Assiut on the Assiut–Cairo road"
+        },
+        {
+          "title": "Profits",
+          "value": "Annual for partners since 2022"
+        },
+        {
+          "title": "New Investment",
+          "value": "Not currently available"
+        }
+      ]
+    },
+    "detailedOverview": {
+      "title": "Operational Philosophy & Business Model",
+      "description": "“Sanad Farms” is an integrated farm established on a clear operational approach that balances sustainable agricultural production and livestock investment development within a complete infrastructure. The farm combines ready operational assets (water, electricity, irrigation networks, internal roads, equipment, and services) and active production with supply contracts, creating a practical model for stable annual returns.",
+      "highlights": [
+        "Active farm with actual production and supply contracts",
+        "Complete infrastructure and operational assets reducing operational risks",
+        "24-month expansion plan focusing on maximizing asset utilization"
+      ]
+    },
+    "location": {
+      "title": "Location: Why This Site?",
+      "description": "“Sanad Farms” is located in Wadi El Assiouti near New Assiut, and a short distance from the Assiut–Cairo road, achieving an important operational advantage: easy access to markets, services, labor, and transportation.",
+      "points": {
+        "1": "Proximity to an expanding urban area like New Assiut supports operational stability and improves supply chains.",
+        "2": "Strategic location facilitates access to markets, services, labor, and transport.",
+        "3": "5 minutes from New Assiut - a significant logistical advantage."
+      },
+      "badge": "5 mins from New Assiut"
+    },
+    "specs": {
+      "title": "Infrastructure & Operational Details",
+      "infrastructure": {
+        "title": "Infrastructure",
+        "items": [
+          {
+            "label": "Water Source",
+            "value": "Modern Well"
+          },
+          {
+            "label": "Electricity",
+            "value": "Available on-site"
+          },
+          {
+            "label": "Fencing & Security",
+            "value": "Fully fenced farm"
+          },
+          {
+            "label": "Internal Roads",
+            "value": "Available"
+          },
+          {
+            "label": "Buildings & Services",
+            "value": "Service buildings + housing for engineers and staff"
+          }
+        ]
+      },
+      "irrigation": {
+        "title": "Irrigation & Ag-Ops",
+        "items": [
+          {
+            "label": "Irrigation System",
+            "value": "Drip and sprinkler based on crop type"
+          },
+          {
+            "label": "Equipment",
+            "value": "Tractors + pumps + maintenance equipment (Available)"
+          }
+        ]
+      },
+      "livestock": {
+        "title": "Livestock Infrastructure",
+        "description": "Livestock investment barn built and equipped according to modern standards for startup/expansion.",
+        "readyStatus": "Ready for Startup/Expansion"
+      }
+    },
+    "production": {
+      "title": "Production, Operations & Results",
+      "current": {
+        "title": "Current Production",
+        "items": [
+          "Dates (various types)",
+          "Jujube",
+          "Wheat"
+        ]
+      },
+      "marketing": {
+        "title": "Marketing Model",
+        "description": "Active production backed by supply contracts (Contract details displayed per disclosure permissions)."
+      },
+      "revenue": {
+        "title": "Revenue Status",
+        "description": "Partners have been receiving annual profits since 2022.",
+        "revenueLabel": "Profitable since 2022"
+      }
+    },
+    "roadmap": {
+      "title": "24-Month Roadmap",
+      "description": "Over the next 24 months, we focus on maximizing value from current assets and gradually expanding revenue sources:",
+      "steps": [
+        {
+          "title": "Alfalfa Cultivation Allocation",
+          "description": "Supporting a more efficient nutrition system and reducing livestock operating costs."
+        },
+        {
+          "title": "Launching Livestock Investment Operations",
+          "description": "Leveraging current barn readiness and establishing a regular operating cycle."
+        },
+        {
+          "title": "Fish Farm Investment Study",
+          "description": "A studied expansion based on site suitability and operational requirement availability."
+        }
+      ],
+      "footer": "Each stage has clear operational outputs and is documented within the system according to 'Stage Right'."
+    },
+    "milestoneRight": {
+      "title": "Stage Right | Sanad | MilestoneRight",
+      "subtitle": "How does 'Stage Right' manifest in an agricultural/livestock project?",
+      "description": "In agricultural and livestock projects, a 'Stage' is not just paperwork—it is operational readiness + infrastructure + production cycle + contracts + operational stability. Therefore, we have applied 'Stage Right' through documented stages that truly reflect the project's evolution.",
+      "stages": [
+        {
+          "title": "Stage 1: Asset Establishment & Infrastructure Preparation (2018 →)",
+          "items": [
+            "Complete land purchase and preparation",
+            "Securing water (well) + electricity + fencing + internal roads",
+            "Basic operational equipment and service buildings"
+          ]
+        },
+        {
+          "title": "Stage 2: Agricultural Operation & Actual Production",
+          "items": [
+            "Operating the irrigation system (drip/sprinkler)",
+            "Starting and proving agricultural production (Dates/Jujube/Wheat)",
+            "Building/Developing storage and service capabilities"
+          ]
+        },
+        {
+          "title": "Stage 3: Contracts & Revenue Stability (Until 2022)",
+          "items": [
+            "Building a supply system",
+            "Adjusting operations to generate regular annual profits for partners (since 2022)"
+          ]
+        },
+        {
+          "title": "Stage 4: Livestock Expansion (Within 24 Months)",
+          "items": [
+            "Operating livestock investment based on barn readiness",
+            "Enhancing sustainability through alfalfa",
+            "Improving operational efficiency and increasing revenue sources"
+          ]
+        },
+        {
+          "title": "Stage 5: Studied Expansions (Fish Farm Study)",
+          "items": [
+            "Technical and operational evaluation before decision making",
+            "Phased implementation plan upon feasibility approval"
+          ]
+        }
+      ],
+      "cta": "Learn about Stage Right in detail"
+    },
+    "investorView": {
+      "title": "What do partners see inside the system?",
+      "description": "We provide a tracking and documentation framework that clarifies:",
+      "items": [
+        "Periodic operation and production reports (subject to disclosure policy)",
+        "Roadmap and upcoming stages",
+        "Documentation of operational and development decisions",
+        "Project Data Room",
+        "Annual summary of operational performance"
+      ],
+      "note": "Some operational details may be shared upon request or following an NDA, depending on the nature of the information."
+    },
+    "ownership": {
+      "title": "Ownership Structure",
+      "text": "60% owned by Sanad Pro Capital Projects within the areas allocated by the Businessmen Association.\n\n40% owned by investors.\n\nTrust Note:\nOwnership distribution is clear and documented, with operational management aimed at maintaining returns and sustainable growth."
+    },
+    "competitiveAdvantages": {
+      "title": "Competitive Advantage",
+      "description": "Sanad Farms' distinction is based on a rare mix of readiness and operational infrastructure:",
+      "items": [
+        {
+          "title": "Full Operational Readiness",
+          "description": "Reduces “starting from scratch” risks (water, electricity, fencing, roads, equipment)."
+        },
+        {
+          "title": "Production Diversity",
+          "description": "Creates operational balance and reduces project sensitivity to single-product fluctuations."
+        },
+        {
+          "title": "Logistical Proximity",
+          "description": "Close to New Assiut and a main road, supporting transportation and supply efficiency."
+        },
+        {
+          "title": "Gradual Scalability",
+          "description": "Via livestock investment followed by studied expansion options like fish farming."
+        },
+        {
+          "title": "Governance & Documentation",
+          "description": "Makes tracking data-driven based on outputs rather than impressions."
+        }
+      ]
+    },
+    "investment": {
+      "title": "Investment Opportunities",
+      "text": "There are no investment opportunities currently available in this project.",
+      "cta": {
+        "teaser": "Request Teaser"
+      }
+    },
+    "expertCollaboration": {
+      "title": "Do you have agricultural/operational expertise that adds to the project?",
+      "text": "Contact us to explore collaboration and contracting opportunities within a clear and defined framework.",
+      "cta": {
+        "expert": "Contact Us",
+        "session": "Book an Introductory Call"
+      }
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "items": [
+        {
+          "question": "Does the project generate profits?",
+          "answer": "Yes, partners have been receiving annual profits since 2022."
+        },
+        {
+          "question": "Can I join as a new investor?",
+          "answer": "No, there are no investment opportunities currently available."
+        },
+        {
+          "question": "Is it possible to collaborate with operational expertise?",
+          "answer": "Yes, we consider collaborating with agricultural experts who represent an addition to the project through clear contracts."
+        },
+        {
+          "question": "How is tracking conducted?",
+          "answer": "Through operational reports and a document center according to the followed disclosure policy."
+        }
+      ]
+    },
+    "disclaimer": {
+      "text": "This page is for informational purposes and does not constitute a binding offer. Operational details, contracts, and detailed documents are shared according to the disclosure policy and may require an NDA."
+    },
+    "badges": {
+      "sector": {
+        "label": "Sector",
+        "value": "Agricultural & Livestock Investment"
+      },
+      "location": {
+        "label": "Location",
+        "value": "Wadi El Assiouti – Next to New Assiut"
+      },
+      "purchaseDate": {
+        "label": "Purchase Date",
+        "value": "2018"
+      },
+      "revenueStatus": {
+        "label": "Revenue Status",
+        "value": "Annual profits (since 2022)"
+      },
+      "ownership": {
+        "label": "Ownership Structure",
+        "value": "60% Sanad Pro Capital Projects | 40% Investors"
+      },
+      "investment": {
+        "label": "Investment Opportunities",
+        "value": "Not currently available"
+      },
+      "operatingPattern": {
+        "label": "Operating Pattern",
+        "value": "Active production + 24-month expansion plan"
+      }
+    },
+    "ctas": {
+      "contactManagement": "Contact Management & Operations Team",
+      "viewReports": "View Operation Reports (Per disclosure permissions)"
+    }
+  },
+  "AlNasrFactory": {
+    "title": "Al-Nasr Marble & Granite",
+    "description": "Manufacturing, supply, and installation of marble and granite (Egyptian and imported) + stone crushing and aggregate/sand/gravel solutions for projects—with an execution capacity that supports individuals, projects, and tenders.",
+    "strategyTitle": "Production Capacity Development 2027",
+    "strategyDesc": "We plan to import advanced cutting and polishing equipment to increase operational efficiency by 40% and meet growing demand in national projects and Upper Egypt.",
+    "strategyLink": "Learn more about the factory's technical roadmap",
+    "badges": {
+      "sector": {
+        "label": "Sector",
+        "value": "Finishing Materials Manufacturing + Crushers/Aggregate"
+      },
+      "location": {
+        "label": "Location",
+        "value": "Arab Al-Awamer Industrial City – Assiut"
+      },
+      "operatingStatus": {
+        "label": "Operating Status",
+        "value": "Operating"
+      },
+      "nextDevelopment": {
+        "label": "Next Development",
+        "value": "Technical updates starting March 2027 (Importing advanced saws and cutting/polishing equipment to increase efficiency and capacity)"
+      },
+      "ownership": {
+        "label": "Ownership Structure",
+        "value": "50% Sanad Pro Capital Projects | 50% Shareholders"
+      },
+      "supplyRange": {
+        "label": "Supply Range",
+        "value": "Entire Republic (with a stronger focus on Upper Egypt)"
+      },
+      "investment": {
+        "label": "Investment Opportunities",
+        "value": "Not currently available"
+      }
+    },
+    "ctas": {
+      "title": "Ready to Start?",
+      "catalog": "Browse Catalog",
+      "survey": "Request Site Survey / Measurement",
+      "boq": "Request Technical Offer / BoQ"
+    },
+    "overview": {
+      "title": "Capabilities & Services",
+      "description": "A quick look at what Al-Nasr Factory offers to its clients across various sectors.",
+      "highlights": [
+        {
+          "title": "Core Products",
+          "value": "Marble + Granite (Egyptian/Imported) + Crusher products (Aggregate/Sand/Gravel/Powder)"
+        },
+        {
+          "title": "Services",
+          "value": "Supply — Supply & Installation — Size Measurement — Project Finishing Solutions — Tenders & Supplies"
+        },
+        {
+          "title": "Operational Capacity",
+          "value": "Integrated Cutting/Polishing/Finishing lines + 2027 Technical Development Plan"
+        },
+        {
+          "title": "Quality",
+          "value": "Tests via certified labs and documented official reports when needed"
+        },
+        {
+          "title": "Customers",
+          "value": "Individuals + Contractors + Companies + Government Agencies"
+        }
+      ]
+    },
+    "detailedOverview": {
+      "title": "Integrated Natural Stone System",
+      "description": "Al-Nasr Factory offers an integrated natural stone system: from raw material selection to manufacturing and finishing, then supply and installation, in addition to operating crushers to provide aggregate needs for concrete and infrastructure projects. Our goal is to provide a final product with specifications suitable for use, with an executive capacity that supports individual works, large projects, and tenders.",
+      "highlights": [
+        "From Material Selection to Finishing",
+        "Marble & Granite Supply & Installation",
+        "Crusher Operations for Aggregate Needs",
+        "Executive Capacity for Large Projects & Tenders"
+      ]
+    },
+    "location": {
+      "title": "Strategic Location",
+      "description": "The factory is located in the heart of the Arab Al-Awamer Industrial Zone, Assiut, making it an ideal hub for serving projects in Upper Egypt and Cairo.",
+      "points": [
+        "Proximity to major roads connecting Upper Egypt and Cairo",
+        "Easy access to granite and marble quarries",
+        "Availability of infrastructure and trained technical labor"
+      ],
+      "badge": "Arab Al-Awamer - Assiut"
+    },
+    "production": {
+      "title": "What We Produce",
+      "stone": {
+        "title": "Marble & Granite (Egyptian/Imported)",
+        "items": [
+          "Slabs",
+          "Tiles (Floors/Walls)",
+          "Stairs & Steps",
+          "Cladding / Facades",
+          "Countertops & Vanities",
+          "Profiles & Borders",
+          "Cut to Size"
+        ]
+      },
+      "finishes": {
+        "title": "Available Finishes",
+        "items": [
+          "Polished",
+          "Honed",
+          "Brushed",
+          "Sandblasted",
+          "Flamed",
+          "Bush-hammered",
+          "Tumbled / Split Face"
+        ]
+      },
+      "aggregates": {
+        "title": "Crusher Products (Aggregates)",
+        "items": [
+          "Aggregate (Various sizes)",
+          "Manufactured Sand",
+          "Gravel / Coarse Aggregate",
+          "Dust / Screenings",
+          "Crusher Run"
+        ]
+      }
+    },
+    "services": {
+      "title": "Our Services",
+      "description": "We provide comprehensive solutions suitable for individuals and projects, from simple supply to large tender management.",
+      "items": [
+        {
+          "title": "Supply & Installation",
+          "description": "Project execution via specialized technical teams to ensure final product quality according to required standards."
+        },
+        {
+          "title": "Measurement & Inspection",
+          "description": "Site visits and precise measurement to ensure perfect fit of manufactured pieces and minimize waste."
+        },
+        {
+          "title": "Supply Only",
+          "description": "Providing all types of marble, granite, and crusher products as requested and according to timelines."
+        },
+        {
+          "title": "Finishing Solutions",
+          "description": "Assisting in selecting the best materials and finishes for the nature of each project and its various applications."
+        },
+        {
+          "title": "Tenders & Supplies",
+          "description": "Preparing technical files for tenders and adhering to BOQ and standard specifications."
+        }
+      ]
+    },
+    "flow": {
+      "title": "How Our Product Reaches You",
+      "steps": [
+        {
+          "title": "Customer Inquiry",
+          "description": "Choosing material/color/finish + determining usage type (floors/facades/stairs/kitchens...)"
+        },
+        {
+          "title": "Inspection & Measurement",
+          "description": "Taking measurements, reviewing installation points, and determining site requirements (as needed)."
+        },
+        {
+          "title": "Technical Proposal & BOQ",
+          "description": "Material and finish specifications, scope of work, and summary of technical items."
+        },
+        {
+          "title": "Manufacturing & Processing",
+          "description": "Cutting, polishing, and finishing according to requested sizes and specifications."
+        },
+        {
+          "title": "Supply & Installation",
+          "description": "Delivery to site + installation by technical teams + final project handover."
+        },
+        {
+          "title": "Documentation & Handover",
+          "description": "Handover reports and official certified test reports upon request."
+        }
+      ]
+    },
+    "capacity": {
+      "title": "Operating Capacity & Development Plan",
+      "description": "Combining current expertise with a comprehensive technical development system for 2027.",
+      "steps": [
+        {
+          "title": "Current Capacity",
+          "description": "Integrated manufacturing lines including cutting, sawing, polishing, and final finishing with standard specifications."
+        },
+        {
+          "title": "2027 Development Plan",
+          "description": "Starting March 2027, advanced saws and equipment will be imported to raise production capacity by 40%."
+        }
+      ],
+      "footer": "The development plan aims to raise quality and significantly reduce waste."
+    },
+    "quality": {
+      "title": "Quality & Testing",
+      "description": "We are committed to providing reliable products for major projects, including:",
+      "points": {
+        "1": "Material selection according to the required nature of use",
+        "2": "Surface finish quality control according to technical requirements",
+        "3": "Official test reports documented via certified laboratories",
+        "4": "Documentation of precise supply specifications for tenders and BOQs"
+      }
+    },
+    "safety": {
+      "title": "Safety & Compliance",
+      "description": "In operating the factory and crushers, we adhere to a general framework for occupational safety and environment:",
+      "points": {
+        "1": "Standard operating procedures that reduce risks to individuals and technical staff",
+        "2": "Organizing heavy equipment movement and separating operating and production areas",
+        "3": "Dust reduction practices and raising safety levels at work sites"
+      },
+      "footer": "Safety procedure details are displayed within internal operating policies and upon project contracting."
+    },
+    "roadmap": {
+      "title": "Development Roadmap",
+      "description": "The 2027 update project aims to shift towards full automation to reduce waste and raise final product quality.",
+      "steps": [
+        {
+          "period": "Q1 2026",
+          "title": "Equipment Optimization",
+          "desc": "Maintenance and updates for cutting and polishing systems."
+        },
+        {
+          "period": "Q3 2026",
+          "title": "Expanding Supply & Logistics",
+          "desc": "Adding new transport vehicles to serve further projects."
+        },
+        {
+          "period": "Q1 2027",
+          "title": "Import Project Launch",
+          "desc": "Contracting for advanced saws and cutting/polishing equipment."
+        },
+        {
+          "period": "Q3 2027",
+          "title": "Operating with New Capacity",
+          "desc": "Increasing production capacity by 40%."
+        }
+      ]
+    },
+    "supplyRange": {
+      "title": "Supply Range & Customer Service",
+      "description": "We are committed to providing our services to a wide range of clients across the Republic, with a special focus on meeting the needs of projects in Upper Egypt.",
+      "points": [
+        "We cover the entire Republic with strong execution capability in Upper Egypt.",
+        "We serve: Individuals, contractors, finishing companies, developers, and government entities.",
+        "We provide fast communication channels for technical requests and surveys."
+      ],
+      "badge": "Entire Republic"
+    },
+    "investmentOpp": {
+      "title": "Investment Opportunities",
+      "text": "There are no investment opportunities currently available for this project.",
+      "cta": {}
+    },
+    "ownership": {
+      "title": "Ownership Structure",
+      "text": "The factory is 50% owned by Sanad Pro Capital Projects and 50% by other shareholders, with disciplined technical and financial management ensuring sustainable profits and growth."
+    },
+    "expertCollaboration": {
+      "title": "Do you have technical or commercial expertise in this sector?",
+      "text": "We welcome collaboration with engineering firms, contractors, and technical experts to develop business and expand the customer base.",
+      "cta": {
+        "expert": "Contact Us",
+        "session": "Book an Introductory Call"
+      }
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "items": [
+        {
+          "question": "Do you provide supply and installation?",
+          "answer": "Yes, we providing supply only or supply with installation depending on the project nature."
+        },
+        {
+          "question": "Can I request a site survey and measurement?",
+          "answer": "Yes, through the request form or direct contact."
+        },
+        {
+          "question": "Do you provide BoQ and technical offers for tenders?",
+          "answer": "Yes, we provide technical files and bills of quantities according to the entity's requirements."
+        },
+        {
+          "question": "Can I get test reports?",
+          "answer": "Yes, through certified laboratories with official documented reports when needed."
+        }
+      ]
+    },
+    "disclaimer": {
+      "text": "This page is for informational purposes and does not constitute a binding offer. Details of technical specifications, scope of work, and terms of supply and installation are determined during the contracting stage."
+    }
+  },
+  "SanadZayed": {
+    "title": "Sanad Zayed — Provisional Name",
+    "description": "A residential project in Sheikh Zayed Extension managed with a transparent investment partnership approach linked to on-ground achievement.",
+    "strategyTitle": "Milestone Right | Sanad",
+    "strategyDesc": "Entry is determined by the value of completed and documented milestones, with full transparency via the project database, and Sanad capital contribution of at least 30%.",
+    "strategyLink": "Learn how “Milestone Right” works in detail",
+    "badges": {
+      "sector": {
+        "label": "Sector",
+        "value": "Real Estate Development (Residential)"
+      },
+      "location": {
+        "label": "Location",
+        "value": "Sheikh Zayed Extension – Green Revolution Area"
+      },
+      "entity": {
+        "label": "Regulator",
+        "value": "Sheikh Zayed City Authority"
+      },
+      "status": {
+        "label": "Current Status",
+        "value": "Ownership Transfer"
+      },
+      "investment": {
+        "label": "Investment Opportunities",
+        "value": "Available (Selected Investors)"
+      },
+      "ownership": {
+        "label": "Ownership Structure",
+        "value": "Sanad + Investors"
+      },
+      "sanadShare": {
+        "label": "Sanad Contribution",
+        "value": "≥ 30%"
+      }
+    },
+    "ctas": {
+      "bookSession": "Book an Intro Session",
+      "requestTeaser": "Request Teaser File",
+      "downloadPdf": "Download Project Summary PDF"
+    }
+  },
+  "AlNasrInterlock": {
+    "title": "Al-Nasr Interlock & Automated Tiles Factory",
+    "description": "Manufacturing, supply, and installation of concrete paving solutions—Interlock, automated tiles, and curbstones—with specifications that support projects and tenders nationwide.",
+    "strategyTitle": "Milestone Right | Sanad",
+    "strategyDesc": "Investor entry is linked to the value of documented on-ground achievement, with full transparency via the project database, and Sanad capital contribution of at least 30%.",
+    "strategyLink": "Learn how “Milestone Right” works in detail",
+    "badges": {
+      "sector": {
+        "label": "Sector",
+        "value": "Precast Concrete Products (Paving & Exterior Finishes)"
+      },
+      "location": {
+        "label": "Location",
+        "value": "Arab Al-Awamer Industrial Zone – Assiut"
+      },
+      "operatingStatus": {
+        "label": "Operating Status",
+        "value": "Operating"
+      },
+      "ownership": {
+        "label": "Ownership Structure",
+        "value": "50% Sanad Pro Capital Projects | 50% Investors"
+      },
+      "supplyRange": {
+        "label": "Supply Range",
+        "value": "Entire Republic (with a stronger presence in Upper Egypt)"
+      },
+      "services": {
+        "label": "Services",
+        "value": "Supply — Supply & Installation — Ground Prep Execution/Supervision — Tenders & Supplies"
+      },
+      "investment": {
+        "label": "Investment Opportunities",
+        "value": "Not currently available"
+      }
+    },
+    "ctas": {
+      "title": "Ready to Start?",
+      "catalog": "Browse Catalog",
+      "survey": "Request Site Survey / Measurement",
+      "boq": "Request Technical Offer / BoQ"
+    },
+    "overview": {
+      "title": "Capabilities & Services",
+      "description": "A quick look at what Al-Nasr Factory offers to its clients across various sectors.",
+      "highlights": [
+        {
+          "title": "Products",
+          "value": "Interlock in all shapes, sizes, and thicknesses — Automated/Concrete tiles — Curbstones in all sizes"
+        },
+        {
+          "title": "Uses",
+          "value": "Roads & walkways — Sidewalks — Compounds — Yards & parking — Factories & stations"
+        },
+        {
+          "title": "Services",
+          "value": "Supply + Installation + Ground preparation (based on site nature) + Tender files"
+        },
+        {
+          "title": "Quality",
+          "value": "Official tests and reports through certified laboratories when needed"
+        },
+        {
+          "title": "Coverage",
+          "value": "Supply and execution nationwide"
+        }
+      ]
+    },
+    "detailedOverview": {
+      "title": "Overview",
+      "description": "Al-Nasr Interlock & Automated Tiles Factory offers an integrated system for concrete paving products for exterior uses and infrastructure. We focus on meeting specifications and quality consistency, with executive capacity including supply, installation, and providing technical files and BoQs for projects and tenders.",
+      "highlights": [
+        "Comprehensive coverage for paving needs: Interlock + Tiles + Curbstones",
+        "Supply and execution capacity supporting projects of various sizes",
+        "Documentable quality via certified tests upon request"
+      ]
+    },
+    "production": {
+      "title": "Products",
+      "interlock": {
+        "title": "Interlock Pavers",
+        "description": "We produce interlock in all types, shapes, and sizes, suitable for walkways, squares, parking, and roads.",
+        "items": [
+          "Walkways and internal paths",
+          "Squares and parking lots",
+          "Light to medium traffic entrances and roads",
+          "Factory and loading areas"
+        ],
+        "advantages": "High stability + Easy maintenance + Design flexibility + Long-term durability"
+      },
+      "tiles": {
+        "title": "Automated / Concrete Tiles",
+        "items": [
+          "Multiple sizes according to design",
+          "Suitable for public spaces and walkways",
+          "Practical solution for external squares"
+        ]
+      },
+      "curbstone": {
+        "title": "Curbstone",
+        "items": [
+          "Organizing sidewalks and road edges",
+          "Available in multiple sizes",
+          "Supply and installation integrated with site plans"
+        ]
+      },
+      "note": "Details of sizes, thicknesses, and colors are shown in the catalog or after site survey based on project nature."
+    },
+    "uses": {
+      "title": "Targeted Uses",
+      "description": "Our products are designed to meet paving needs in various sectors and projects.",
+      "items": [
+        {
+          "title": "Roads & Walkways",
+          "description": "Within residential and commercial projects"
+        },
+        {
+          "title": "Sidewalks & Curbstones",
+          "description": "Organizing pedestrian movement and city roads"
+        },
+        {
+          "title": "Compounds & Squares",
+          "description": "Aesthetic and practical solutions for entrances and yards"
+        },
+        {
+          "title": "Factories & Operational Areas",
+          "description": "High tolerance for heavy movement and continuous use"
+        },
+        {
+          "title": "Parking & Services",
+          "description": "Paving spaces and service routes"
+        }
+      ]
+    },
+    "services": {
+      "title": "Comprehensive Services",
+      "description": "We offer a flexible service system based on client needs.",
+      "items": [
+        {
+          "title": "Supply Only",
+          "description": "According to requested quantities and specifications"
+        },
+        {
+          "title": "Supply + Installation",
+          "description": "Via specialized execution teams on site"
+        },
+        {
+          "title": "Foundation & Supervision",
+          "description": "Ground preparation based on load requirements"
+        },
+        {
+          "title": "Integrated Paving Solutions",
+          "description": "Suggesting the right product and optimal installation pattern"
+        },
+        {
+          "title": "Tenders & Protocol Supplies",
+          "description": "Technical files + BoQ + Entity approval samples"
+        }
+      ]
+    },
+    "flow": {
+      "title": "How We Work",
+      "steps": [
+        {
+          "title": "Inquiry & Usage Determination",
+          "description": "Project type (road/path/square/sidewalk...) + required load level."
+        },
+        {
+          "title": "Survey & Measurement",
+          "description": "Taking measurements, site inspection, and determining foundation requirements."
+        },
+        {
+          "title": "Technical Offer & BoQ",
+          "description": "Determining product type, thickness, pattern, and scope of work."
+        },
+        {
+          "title": "Production & Preparation",
+          "description": "Preparing quantities with the required technical specifications."
+        },
+        {
+          "title": "Supply & Installation",
+          "description": "Delivery to the site + installation according to execution principles."
+        },
+        {
+          "title": "Handover & Documentation",
+          "description": "Handover certificates and official test results upon request."
+        }
+      ]
+    },
+    "quality": {
+      "title": "Quality & Certification",
+      "description": "We adhere to a quality framework that ensures product suitability for use.",
+      "items": [
+        {
+          "title": "Spec Control",
+          "description": "According to application requirements and load levels."
+        },
+        {
+          "title": "Standards Compliance",
+          "description": "Monitoring manufacturing consistency and product conformity."
+        },
+        {
+          "title": "Official Reports",
+          "description": "Providing certified tests for projects and tenders when needed."
+        },
+        {
+          "title": "Accreditation Documentation",
+          "description": "Providing technical spec files and official approvals."
+        }
+      ]
+    },
+    "safety": {
+      "title": "Safety & Compliance",
+      "description": "We are committed to a general framework for occupational safety and operational quality.",
+      "items": [
+        {
+          "title": "Operational Safety",
+          "description": "Organizing operations and handling to minimize risks."
+        },
+        {
+          "title": "On-site Safety",
+          "description": "Applying safety practices during supply and installation."
+        },
+        {
+          "title": "Execution Quality",
+          "description": "Maintaining standards for different site requirements."
+        }
+      ],
+      "note": "Safety procedure details are presented within operational policies and during contracting."
+    },
+    "supply": {
+      "title": "Supply Scope & Tenders",
+      "description": "Supply and execution nationwide with strong capability to serve Upper Egypt.",
+      "items": [
+        {
+          "title": "Comprehensive Coverage",
+          "description": "We serve individuals, contractors, developers, and government entities."
+        },
+        {
+          "title": "Tender Support",
+          "description": "Clear technical files, BoQs, and approvals for projects."
+        }
+      ]
+    },
+    "investmentDetails": {
+      "title": "Investment Opportunities",
+      "description": "There are no investment opportunities currently available in this project."
+    },
+    "faq": {
+      "title": "FAQ",
+      "items": [
+        {
+          "question": "Do you provide supply and installation?",
+          "answer": "Yes, supply only or supply with installation depending on the project."
+        },
+        {
+          "question": "Can you prepare foundation layers?",
+          "answer": "Yes, depending on site conditions and load requirements—ensuring paving quality and sustainability."
+        },
+        {
+          "question": "Do you support tenders with technical files?",
+          "answer": "Yes, we provide technical offers, BoQs, and approval samples as per entity requirements."
+        },
+        {
+          "question": "Are there quality tests and reports?",
+          "answer": "Yes, official reports through certified laboratories when needed."
+        }
+      ]
+    },
+    "finalCta": {
+      "title": "Start Your Request Now",
+      "buttons": {
+        "survey": "Request Site Survey / Measurement",
+        "boq": "Request Technical Offer / BoQ",
+        "catalog": "Browse Catalog"
+      }
+    },
+    "disclaimer": {
+      "text": "This page is for informational purposes and does not constitute a binding offer. Details of technical specifications, scope of work, and terms of supply and installation are determined during the contracting stage."
+    }
+  },
+  "HomePage": {
+    "title": "Sanad Investment",
+    "heroTitleLine1": "We Develop, Invest, and Manufacture",
+    "heroTitleLine2": "To Transform Opportunities into Assets that Maximize Returns",
+    "heroSubtitle": "We lead project establishment and management from feasibility to operation with a clear methodology, structured financing, and balanced partnerships—to achieve sustainable profitability and growth-ready returns.",
+    "milestoneNote": "Milestone Right | Sanad: Transparent partnership linked to documented achievement—with Sanad's capital contribution of at least 30%.",
+    "exploreProjects": "Explore Projects",
+    "exploreSectors": "Explore Sectors",
+    "contactUs": "Contact Us"
+  },
+  "TrustBar": {
+    "title": "Real Assets... and Institutional Management",
+    "items": [
+      "Projects under development and projects under operation",
+      "Sanad financial contribution ≥ 30%",
+      "Transparency through project database tracking",
+      "Supply + Installation + Tenders for the industrial sector"
+    ]
+  },
+  "FeaturedProjects": {
+    "title": "Projects Under Development and Projects Under Operation",
+    "projects": {
+      "alNasrInterlock": {
+        "title": "Al-Nasr Interlock & Automated Tiles Factory",
+        "sector": "Industry & Construction",
+        "status": "Operational",
+        "metric": "Nationwide supply and installation"
+      },
+      "alNasrFactory": {
+        "title": "Al-Nasr Marble & Granite Factory",
+        "sector": "Industry & Fit-outs",
+        "status": "Operational",
+        "metric": "Major production capacity for infrastructure projects"
+      },
+      "sanadFarms": {
+        "title": "Sanad Farms (Wadi El Assiouti)",
+        "sector": "Agricultural & Livestock Investment",
+        "status": "Operational / Active Production",
+        "metric": "Annual Profits (Since 2022) - Integrated Infrastructure"
+      },
+      "sanadZayed": {
+        "title": "Sanad Zayed (Admin/Commercial)",
+        "sector": "Real Estate Investment",
+        "status": "Under Development / Final Allocation",
+        "metric": "Strategic location near Sphinx Airport"
+      }
+    },
+    "viewProject": "View Details"
+  },
+  "WhySanad": {
+    "title": "Why do investors and partners choose us?",
+    "items": [
+      {
+        "title": "Accurate Feasibility",
+        "description": "Decision based on analysis and outputs"
+      },
+      {
+        "title": "Structured Financing",
+        "description": "Balanced partnerships and a clear framework"
+      },
+      {
+        "title": "Execution & Operation",
+        "description": "From plan to productive asset"
+      },
+      {
+        "title": "Governance & Transparency",
+        "description": "Documentation, reporting, and follow-up"
+      }
+    ]
+  },
+  "OurSectors": {
+    "title": "Our Sectors",
+    "realEstate": {
+      "title": "Real Estate Development",
+      "cta": "Explore Projects"
+    },
+    "agricultural": {
+      "title": "Agricultural Investment",
+      "cta": "Projects Under Operation"
+    },
+    "industrial": {
+      "title": "Industrial Investment",
+      "cta": "Products and Services"
+    },
+    "marble": {
+      "title": "Marble, Granite & Crushers",
+      "cta": "Catalog + Request Survey"
+    }
+  },
+  "MilestoneTeaser": {
+    "title": "Milestone Right | Sanad | MilestoneRight",
+    "description": "Sanad's approach to a fair and transparent partnership that links entry to documented achievement, giving the investor a clear view of stages, outputs, and follow-up.",
+    "cta": "Learn how Milestone Right works"
+  },
+  "PortalTeaser": {
+    "title": "Documented Follow-up... Decision Based on Data",
+    "description": "A database for each project: stages, documents, progress, reports—following a clear disclosure policy.",
+    "cta": "Book an Intro Session",
+    "features": {
+      "database": "Database",
+      "docs": "Documents",
+      "reports": "Reports",
+      "tracking": "Tracking"
+    }
+  },
+  "PartnershipCTA": {
+    "title": "Looking for an Investment or Operational Partnership?",
+    "description": "Contact us to review available projects or collaboration opportunities with operational expertise within a clear institutional framework.",
+    "bookIntro": "Book Intro Session",
+    "contactUs": "Contact Us",
+    "exploreProjects": "Explore Projects"
+  },
+  "Navigation": {
+    "home": "Home",
+    "about": "About",
+    "dashboard": "Dashboard",
+    "contact": "Contact"
+  },
+  "Footer": {
+    "about": "Sanad Investment... Building a sustainable future through strategic investments and community empowerment.",
+    "contact": "Contact Us",
+    "addresses": "Our Addresses",
+    "quickLinks": "Quick Links",
+    "locations": {
+      "assiut": "Assiut - City - Next to El Hamd Fish - Ground Floor",
+      "newAssiut": "New Assiut - Businessmen District - Basmala Villa - Ground Floor",
+      "october": "October - 4th District - 7th Neighborhood - No. 1592"
+    },
+    "links": {
+      "home": "Home",
+      "about": "About Us",
+      "projects": "Our Projects",
+      "contact": "Contact Us"
+    },
+    "copyright": "All rights reserved © {year} Sanad Pro Capital for Projects."
+  },
+  "milestonePage": {
+    "hero": {
+      "title": "Milestone Right | Sanad",
+      "subtitle": "Sanad's approach to building fair and transparent investment partnerships... linked to documented on-ground achievement.",
+      "description": "We link investor entry to the value of completed and documented milestones, with full transparency via the project database, and true interest alignment through Sanad's capital contribution of at least 30%.",
+      "cta": {
+        "session": "Request Model Explanation (Intro Session)",
+        "projects": "See Model Applied on a Project (Go to Projects)"
+      }
+    }
+  }
+}
