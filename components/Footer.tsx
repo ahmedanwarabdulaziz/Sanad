@@ -14,7 +14,7 @@ export default function Footer() {
     const year = new Date().getFullYear();
 
     return (
-        <Box component="footer" sx={{ bgcolor: "#0a213c", color: "white", py: 8, borderTop: "4px solid #C29B40" }}>
+        <Box component="footer" sx={{ bgcolor: "#154278", color: "white", py: 8, borderTop: "4px solid #C29B40" }}>
             <Container maxWidth="xl">
                 <Grid container spacing={6}>
                     {/* 1. Brand & About */}

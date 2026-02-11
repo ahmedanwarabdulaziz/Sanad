@@ -44,6 +44,7 @@ export default function SanadFarmsPage() {
                     linkUrl: "/milestone-right"
                 }}
                 badges={badges}
+                backgroundImage="/images/hero farm.png"
                 ctas={{
                     bookSession: t("ctas.contactManagement"),
                     requestTeaser: t("ctas.viewReports"),

@@ -3,13 +3,17 @@
 import { Box, Container, Typography, Button, Stack } from "@mui/material";
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
-import { Link } from "@/navigation";
+import Link from "next/link"; // Ensure correct link import if needed, or stick to navigation
+import { useState } from "react";
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import ContactSupportIcon from '@mui/icons-material/ContactSupport';
 import SearchIcon from '@mui/icons-material/Search';
+import ContactModal from "./ContactModal";
 
 export default function PartnershipCTA() {
     const t = useTranslations("PartnershipCTA");
+
+    const [contactOpen, setContactOpen] = useState(false);
 
     return (
         <Box sx={{ py: { xs: 10, md: 15 }, bgcolor: "#fff" }}>
@@ -76,8 +80,7 @@ export default function PartnershipCTA() {
                             alignItems="center"
                         >
                             <Button
-                                component={Link}
-                                href="/contact"
+                                onClick={() => setContactOpen(true)}
                                 variant="contained"
                                 startIcon={<EventAvailableIcon />}
                                 sx={{
@@ -97,8 +100,7 @@ export default function PartnershipCTA() {
                             </Button>
 
                             <Button
-                                component={Link}
-                                href="/contact"
+                                onClick={() => setContactOpen(true)}
                                 variant="outlined"
                                 startIcon={<ContactSupportIcon />}
                                 sx={{
@@ -140,6 +142,7 @@ export default function PartnershipCTA() {
                     </motion.div>
                 </Box>
             </Container>
+            <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
         </Box>
     );
 }

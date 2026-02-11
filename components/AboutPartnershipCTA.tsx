@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import ChatIcon from '@mui/icons-material/Chat';
 import { Link } from "@/navigation";
+import { useState } from "react";
+import ContactModal from "./ContactModal";
 
 interface AboutPartnershipCTAProps {
     data: {
@@ -18,6 +20,7 @@ interface AboutPartnershipCTAProps {
 }
 
 export default function AboutPartnershipCTA({ data }: AboutPartnershipCTAProps) {
+    const [contactOpen, setContactOpen] = useState(false);
     return (
         <Box
             sx={{
@@ -82,8 +85,7 @@ export default function AboutPartnershipCTA({ data }: AboutPartnershipCTAProps) 
                             alignItems="center"
                         >
                             <Button
-                                component={Link}
-                                href="/contact"
+                                onClick={() => setContactOpen(true)}
                                 variant="contained"
                                 size="large"
                                 startIcon={<CalendarMonthIcon />}
@@ -108,8 +110,7 @@ export default function AboutPartnershipCTA({ data }: AboutPartnershipCTAProps) 
                             </Button>
 
                             <Button
-                                component={Link}
-                                href="/contact"
+                                onClick={() => setContactOpen(true)}
                                 variant="outlined"
                                 size="large"
                                 startIcon={<ChatIcon />}
@@ -137,6 +138,7 @@ export default function AboutPartnershipCTA({ data }: AboutPartnershipCTAProps) 
                         </Stack>
                     </Box>
                 </motion.div>
+                <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
             </Container>
         </Box>
     );

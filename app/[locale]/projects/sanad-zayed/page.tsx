@@ -11,6 +11,7 @@ import ProjectOwnership from "@/components/ProjectOwnership";
 import ProjectReturns from "@/components/ProjectReturns";
 import ProjectGovernance from "@/components/ProjectGovernance";
 import ProjectInvestmentOpp from "@/components/ProjectInvestmentOpp";
+import ProjectCTA from "@/components/ProjectCTA";
 import ProjectDisclaimer from "@/components/ProjectDisclaimer";
 import ProjectFAQ from "@/components/ProjectFAQ";
 import { useTranslations } from "next-intl";
@@ -44,14 +45,16 @@ export default function SanadZayedPage() {
         <main>
             <ProjectHero
                 title={t("title")}
+                titleNote={t("titleNote")}
                 description={t("description")}
                 strategy={{
                     title: t("strategyTitle"),
                     description: t("strategyDesc"),
                     linkText: t("strategyLink"),
-                    linkUrl: "#" // Link placeholder as requested
+                    linkUrl: "/milestone-right"
                 }}
                 badges={badges}
+                backgroundImage="/images/Hero zayed.png"
                 ctas={{
                     bookSession: t("ctas.bookSession"),
                     requestTeaser: t("ctas.requestTeaser"),
@@ -85,6 +88,7 @@ export default function SanadZayedPage() {
                         t("location.points.5")
                     ]
                 }}
+                image="/images/img-1.png"
             />
 
             <ProjectLandData
@@ -231,8 +235,7 @@ export default function SanadZayedPage() {
                     text: t("investmentOpp.text"),
                     cta: {
                         session: t("investmentOpp.cta.session"),
-                        teaser: t("investmentOpp.cta.teaser"),
-                        nda: t("investmentOpp.cta.nda")
+                        teaser: t("investmentOpp.cta.teaser")
                     }
                 }}
             />
@@ -249,6 +252,17 @@ export default function SanadZayedPage() {
                         { question: t("faq.items.6.question"), answer: t("faq.items.6.answer") },
                         { question: t("faq.items.7.question"), answer: t("faq.items.7.answer") },
                         { question: t("faq.items.8.question"), answer: t("faq.items.8.answer") }
+                    ]
+                }}
+            />
+
+            <ProjectCTA
+                data={{
+                    title: t("finalCta.title"),
+                    buttons: [
+                        { text: t("finalCta.buttons.survey"), href: "#contact", variant: "contained" },
+                        { text: t("finalCta.buttons.boq"), href: "#contact", variant: "outlined" },
+                        { text: t("finalCta.buttons.catalog"), href: "#contact", variant: "outlined" }
                     ]
                 }}
             />

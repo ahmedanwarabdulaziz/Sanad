@@ -41,6 +41,7 @@ export default function AlNasrFactoryPage() {
                     linkUrl: "/milestone-right" // Consistent with Sanad Farms
                 }}
                 badges={badges}
+                backgroundImage="/images/hero granite.png"
                 ctas={{
                     bookSession: t("ctas.catalog"),
                     requestTeaser: t("ctas.survey"),
@@ -150,9 +151,9 @@ export default function AlNasrFactoryPage() {
                 data={{
                     title: t("ctas.title"),
                     buttons: [
-                        { text: t("ctas.survey"), href: "/contact", variant: "contained" },
-                        { text: t("ctas.boq"), href: "/contact", variant: "outlined" },
-                        { text: t("ctas.catalog"), href: "/contact", variant: "outlined" }
+                        { text: t("ctas.survey"), href: "#contact", variant: "contained" },
+                        { text: t("ctas.boq"), href: "#contact", variant: "outlined" },
+                        { text: t("ctas.catalog"), href: "#contact", variant: "outlined" }
                     ]
                 }}
             />

@@ -6,6 +6,55 @@
     "operating": "Operating Projects",
     "viewDetails": "View Details"
   },
+  "Contact": {
+    "title": "Contact Us",
+    "formTitle": "Contact Form",
+    "fields": {
+      "requestType": "Request Type",
+      "requestTypePlaceholder": "Select Request Type",
+      "name": "Full Name",
+      "company": "Company / Entity",
+      "jobTitle": "Job Title",
+      "phone": "Phone Number / WhatsApp",
+      "email": "Email",
+      "city": "Governorate / City",
+      "message": "Message / Request Details",
+      "uploadLabel": "Attachments (Upload)",
+      "uploadNote": "Max 20MB — PDF/JPG/PNG/DWG if possible",
+      "dragDrop": "Drag & Drop files here or",
+      "browse": "Browse",
+      "privacyPolicy": "I agree to the privacy policy and processing my data for contact purposes.",
+      "newsletter": "I agree to receive updates about projects and services.",
+      "submit": "Send",
+      "cancel": "Cancel"
+    },
+    "requestTypes": {
+      "investmentPartnership": "Investment / Partnership",
+      "realEstateDev": "Real Estate Development (Project Inquiry)",
+      "marbleGranite": "Marble & Granite (Catalog / Inspection / Measurement)",
+      "interlockTiles": "Interlock & Automated Tiles (Catalog / BoQ / Installation)",
+      "crusherProducts": "Crusher Products (Supply)",
+      "operationalExp": "Operational Experience / Consulting",
+      "other": "Other"
+    },
+    "success": "Sent Successfully!",
+    "error": "An error occurred, please try again.",
+    "sending": "Sending...",
+    "sentString": "Sent Successfully!",
+    "errorString": "Error, try again",
+    "errors": {
+      "privacyRequired": "You must agree to the privacy policy to proceed"
+    },
+    "teaser": {
+      "title": "Request Project Teaser",
+      "subtitle": "We will send you the data on your email or whatsapp according to your choice",
+      "deliveryMethod": "Preferred Delivery Method",
+      "email": "Email",
+      "whatsapp": "WhatsApp",
+      "submit": "Request Data",
+      "mandatoryNote": "* Both email and phone are required"
+    }
+  },
   "SanadFarms": {
     "title": "Sanad Farms",
     "description": "An integrated farm in Wadi El Assiouti combining agricultural production and livestock investment—with operational management and continuous annual returns.",
@@ -202,7 +251,7 @@
         "Project Data Room",
         "Annual summary of operational performance"
       ],
-      "note": "Some operational details may be shared upon request or following an NDA, depending on the nature of the information."
+      "note": "Some operational details may be shared upon request, depending on the nature of the information."
     },
     "ownership": {
       "title": "Ownership Structure",
@@ -271,7 +320,7 @@
       ]
     },
     "disclaimer": {
-      "text": "This page is for informational purposes and does not constitute a binding offer. Operational details, contracts, and detailed documents are shared according to the disclosure policy and may require an NDA."
+      "text": "This page is for informational purposes and does not constitute a binding offer. Operational details, contracts, and detailed documents are shared according to the disclosure policy."
     },
     "badges": {
       "sector": {
@@ -602,7 +651,8 @@
     }
   },
   "SanadZayed": {
-    "title": "Sanad Zayed — Provisional Name",
+    "title": "Sanad Zayed",
+    "titleNote": "Provisional Name",
     "description": "A residential project in Sheikh Zayed Extension managed with a transparent investment partnership approach linked to on-ground achievement.",
     "strategyTitle": "Milestone Right | Sanad",
     "strategyDesc": "Entry is determined by the value of completed and documented milestones, with full transparency via the project database, and Sanad capital contribution of at least 30%.",
@@ -641,6 +691,36 @@
       "bookSession": "Book an Intro Session",
       "requestTeaser": "Request Teaser File",
       "downloadPdf": "Download Project Summary PDF"
+    },
+    "location": {
+      "title": "Why Sheikh Zayed Extension? (Site Study Summary)",
+      "description": "Location selection is a fundamental part of the risk-return equation. Before entering any project, we rely on a clear reading of demand factors, marketability, and ease of execution within the regulatory framework.",
+      "points": {
+        "1": "Sheikh Zayed is one of the new cities with stable and growing residential demand.",
+        "2": "Sheikh Zayed Extension represents an urban expansion zone supported by a regulatory framework under the New Communities Authority.",
+        "3": "The Green Revolution area is within urban zones being developed and regularized according to the City Authority's tracks.",
+        "4": "Ease of access and proximity to surrounding services is a supporting factor for residential product demand.",
+        "5": "The nature of building regulations supports organized residential development suitable for the target market."
+      }
+    },
+    "investmentOpp": {
+      "title": "Investment Opportunities",
+      "text": "Participation opportunities are available for selected investors within Sanad's investment network, according to the 'Stage Right' framework and acceptance criteria that ensure seriousness and vision alignment.",
+      "cta": {
+        "session": "Book Intro Session",
+        "teaser": "Request Teaser File"
+      }
+    },
+    "finalCta": {
+      "title": "Start Your Request Now",
+      "buttons": {
+        "survey": "Request Site Survey / Measurement",
+        "boq": "Request Technical Offer / BoQ",
+        "catalog": "Browse Catalog"
+      }
+    },
+    "disclaimer": {
+      "text": "This page is for informational purposes and does not constitute a binding offer. Participation details, pricing, and terms are discussed during the contracting stage. Investment involves risks, and results vary according to market and implementation conditions."
     }
   },
   "AlNasrInterlock": {

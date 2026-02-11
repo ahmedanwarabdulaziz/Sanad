@@ -8,6 +8,7 @@ import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import ParkIcon from '@mui/icons-material/Park';
 import CommuteIcon from '@mui/icons-material/Commute';
 import HomeWorkIcon from '@mui/icons-material/HomeWork';
+import Image from "next/image";
 
 interface ProjectLocationProps {
     data: {
@@ -16,10 +17,10 @@ interface ProjectLocationProps {
         points: string[];
         badge?: string;
     };
-    images?: string[]; // Optional for now
+    image?: string;
 }
 
-export default function ProjectLocation({ data, images = [] }: ProjectLocationProps) {
+export default function ProjectLocation({ data, image }: ProjectLocationProps) {
 
     const icons = [
         <TrendingUpIcon key={0} />,
@@ -72,7 +73,7 @@ export default function ProjectLocation({ data, images = [] }: ProjectLocationPr
                         </motion.div>
                     </Grid>
 
-                    {/* Visual Section - Static Image */}
+                    {/* Visual Section */}
                     <Grid size={{ xs: 12, md: 6 }}>
                         <motion.div
                             initial={{ opacity: 0, x: -50 }}
@@ -80,40 +81,66 @@ export default function ProjectLocation({ data, images = [] }: ProjectLocationPr
                             viewport={{ once: true }}
                             transition={{ duration: 0.8, delay: 0.2 }}
                         >
-                            <Paper
-                                elevation={2}
-                                sx={{
-                                    height: '400px',
-                                    width: '100%',
-                                    borderRadius: 4,
-                                    overflow: 'hidden',
-                                    position: 'relative',
-                                    backgroundColor: '#e6e6e6',
-                                    backgroundImage: "url('/hero.png')",
-                                    backgroundSize: 'cover',
-                                    backgroundPosition: 'center'
-                                }}
-                            >
-                                {data.badge && (
-                                    <Box
-                                        sx={{
-                                            position: 'absolute',
-                                            top: 20,
-                                            right: 20,
-                                            bgcolor: '#154278',
-                                            color: '#ffffff',
-                                            px: 3,
-                                            py: 1,
-                                            borderRadius: 2,
-                                            fontWeight: 'bold',
-                                            boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-                                            zIndex: 2
+                            {image ? (
+                                <Box
+                                    sx={{
+                                        position: 'relative',
+                                        width: '100%',
+                                        borderRadius: 4,
+                                        overflow: 'hidden',
+                                        boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+                                        border: '1px solid rgba(21, 66, 120, 0.1)',
+                                        bgcolor: '#fff'
+                                    }}
+                                >
+                                    <Image
+                                        src={image}
+                                        alt={data.title}
+                                        width={1200}
+                                        height={800}
+                                        style={{
+                                            width: '100%',
+                                            height: 'auto',
+                                            display: 'block'
                                         }}
-                                    >
-                                        {data.badge}
-                                    </Box>
-                                )}
-                            </Paper>
+                                    />
+                                </Box>
+                            ) : (
+                                <Paper
+                                    elevation={2}
+                                    sx={{
+                                        height: '400px',
+                                        width: '100%',
+                                        borderRadius: 4,
+                                        overflow: 'hidden',
+                                        position: 'relative',
+                                        backgroundColor: '#e6e6e6',
+                                        backgroundImage: "url('/images/hero.png')",
+                                        backgroundSize: 'cover',
+                                        backgroundPosition: 'center'
+                                    }}
+                                >
+                                    {data.badge && (
+                                        <Box
+                                            sx={{
+                                                position: 'absolute',
+                                                top: 20,
+                                                right: 20,
+                                                bgcolor: '#154278',
+                                                color: '#ffffff',
+                                                px: 3,
+                                                py: 1,
+                                                borderRadius: 2,
+                                                fontWeight: 'bold',
+                                                boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                                                zIndex: 2
+                                            }}
+                                        >
+                                            {data.badge}
+                                        </Box>
+                                    )}
+                                </Paper>
+                            )}
                         </motion.div>
                     </Grid>
                 </Grid>

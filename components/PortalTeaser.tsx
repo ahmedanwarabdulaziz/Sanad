@@ -7,9 +7,12 @@ import DevicesIcon from '@mui/icons-material/Devices';
 import StorageIcon from '@mui/icons-material/Storage';
 import InsertChartIcon from '@mui/icons-material/InsertChart';
 import DescriptionIcon from '@mui/icons-material/Description';
+import { useState } from "react";
+import TeaserModal from "./TeaserModal";
 
 export default function PortalTeaser() {
     const t = useTranslations("PortalTeaser");
+    const [teaserOpen, setTeaserOpen] = useState(false);
 
     const features = [
         { icon: <StorageIcon />, label: t("features.database") },
@@ -54,6 +57,7 @@ export default function PortalTeaser() {
                                 {t("description")}
                             </Typography>
                             <Button
+                                onClick={() => setTeaserOpen(true)}
                                 variant="outlined"
                                 size="large"
                                 sx={{
@@ -128,6 +132,7 @@ export default function PortalTeaser() {
                         </motion.div>
                     </Grid>
                 </Grid>
+                <TeaserModal open={teaserOpen} onClose={() => setTeaserOpen(false)} projectName="Sanad Portal" />
             </Container>
         </Box>
     );

@@ -4,6 +4,8 @@ import { Box, Container, Typography, Button, Stack } from "@mui/material";
 import { motion } from "framer-motion";
 import EventIcon from '@mui/icons-material/Event';
 import DescriptionIcon from '@mui/icons-material/Description';
+import { useState } from "react";
+import ContactModal from "./ContactModal";
 
 interface MilestoneCTAProps {
     data: {
@@ -16,6 +18,8 @@ interface MilestoneCTAProps {
 }
 
 export default function MilestoneCTA({ data }: MilestoneCTAProps) {
+    const [contactOpen, setContactOpen] = useState(false);
+
     return (
         <Box
             sx={{
@@ -55,6 +59,7 @@ export default function MilestoneCTA({ data }: MilestoneCTAProps) {
                         alignItems="center"
                     >
                         <Button
+                            onClick={() => setContactOpen(true)}
                             variant="contained"
                             size="large"
                             startIcon={<EventIcon />}
@@ -81,6 +86,7 @@ export default function MilestoneCTA({ data }: MilestoneCTAProps) {
                         </Button>
 
                         <Button
+                            onClick={() => setContactOpen(true)}
                             variant="outlined"
                             size="large"
                             startIcon={<DescriptionIcon />}
@@ -108,6 +114,7 @@ export default function MilestoneCTA({ data }: MilestoneCTAProps) {
                         </Button>
                     </Stack>
                 </motion.div>
+                <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
             </Container>
         </Box>
     );

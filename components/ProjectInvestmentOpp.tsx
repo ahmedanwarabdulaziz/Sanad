@@ -4,6 +4,9 @@ import { Box, Container, Typography, Button, Stack } from "@mui/material";
 import { motion } from "framer-motion";
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import ArticleIcon from '@mui/icons-material/Article';
+import { useState } from "react";
+import TeaserModal from "./TeaserModal";
+import ContactModal from "./ContactModal";
 
 interface ProjectInvestmentOppProps {
     data: {
@@ -12,13 +15,15 @@ interface ProjectInvestmentOppProps {
         cta: {
             session?: string;
             teaser?: string;
-            nda?: string;
             expert?: string;
         };
     };
 }
 
 export default function ProjectInvestmentOpp({ data }: ProjectInvestmentOppProps) {
+    const [teaserOpen, setTeaserOpen] = useState(false);
+    const [contactOpen, setContactOpen] = useState(false);
+
     return (
         <Box sx={{ py: 12, backgroundColor: "#154278", color: "white" }}>
             <Container maxWidth="md">
@@ -44,6 +49,7 @@ export default function ProjectInvestmentOpp({ data }: ProjectInvestmentOppProps
                         >
                             {data.cta.session && (
                                 <Button
+                                    onClick={() => setContactOpen(true)}
                                     variant="contained"
                                     size="large"
                                     startIcon={<CalendarMonthIcon />}
@@ -64,6 +70,7 @@ export default function ProjectInvestmentOpp({ data }: ProjectInvestmentOppProps
 
                             {data.cta.teaser && (
                                 <Button
+                                    onClick={() => setTeaserOpen(true)}
                                     variant="outlined"
                                     size="large"
                                     startIcon={<ArticleIcon />}
@@ -83,6 +90,7 @@ export default function ProjectInvestmentOpp({ data }: ProjectInvestmentOppProps
 
                             {data.cta.expert && (
                                 <Button
+                                    onClick={() => setContactOpen(true)}
                                     variant="contained"
                                     size="large"
                                     sx={{
@@ -101,13 +109,10 @@ export default function ProjectInvestmentOpp({ data }: ProjectInvestmentOppProps
                             )}
                         </Stack>
 
-                        {data.cta.nda && (
-                            <Typography variant="body2" sx={{ mt: 4, opacity: 0.6, fontSize: '0.9rem' }}>
-                                {data.cta.nda}
-                            </Typography>
-                        )}
                     </Box>
                 </motion.div>
+                <TeaserModal open={teaserOpen} onClose={() => setTeaserOpen(false)} projectName={data.title} />
+                <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
             </Container>
         </Box>
     );

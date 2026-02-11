@@ -3,6 +3,8 @@
 import { Box, Button, Container, Typography, Grid } from "@mui/material";
 import { Link } from "@/navigation";
 import { motion } from "framer-motion";
+import { useState } from "react";
+import ContactModal from "./ContactModal";
 
 interface MilestoneHeroProps {
     data: {
@@ -20,6 +22,7 @@ interface MilestoneHeroProps {
 export default function MilestoneHero({ data, locale }: MilestoneHeroProps) {
     // Forced RTL for Arabic content
     const isRtl = true;
+    const [contactOpen, setContactOpen] = useState(false);
 
     return (
         <Box
@@ -105,8 +108,7 @@ export default function MilestoneHero({ data, locale }: MilestoneHeroProps) {
                             </Typography>
                             <Box sx={{ display: 'flex', gap: 2, justifyContent: "flex-start" }}> {/* Ensure buttons align to start (right in RTL) */}
                                 <Button
-                                    href="/contact"
-                                    component={Link}
+                                    onClick={() => setContactOpen(true)}
                                     variant="contained"
                                     size="large"
                                     sx={{
@@ -138,6 +140,7 @@ export default function MilestoneHero({ data, locale }: MilestoneHeroProps) {
                                 </Button>
                             </Box>
                         </motion.div>
+                        <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
                     </Grid>
 
                     {/* Empty Grid item to balance layout if needed */}

@@ -6,11 +6,14 @@ import { motion } from "framer-motion";
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import LanIcon from '@mui/icons-material/Lan';
 import { Link } from "@/navigation";
+import { useState } from "react";
+import ContactModal from "./ContactModal";
 
 export default function Hero() {
     const t = useTranslations("HomePage");
     const locale = useLocale();
     const isRtl = locale === 'ar';
+    const [contactOpen, setContactOpen] = useState(false);
 
     return (
         <Box
@@ -153,8 +156,7 @@ export default function Hero() {
                                     {t("exploreSectors")}
                                 </Button>
                                 <Button
-                                    component={Link}
-                                    href="/contact"
+                                    onClick={() => setContactOpen(true)}
                                     variant="text"
                                     size="large"
                                     sx={{
@@ -172,6 +174,8 @@ export default function Hero() {
                                     {t("contactUs")}
                                 </Button>
                             </Stack>
+
+                            <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
                         </motion.div>
                     </Grid>
                 </Grid>

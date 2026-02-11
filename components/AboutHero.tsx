@@ -4,6 +4,8 @@ import { Box, Button, Container, Typography, Grid } from "@mui/material";
 import { motion } from "framer-motion";
 import ExploreIcon from '@mui/icons-material/Explore';
 import ContactMailIcon from '@mui/icons-material/ContactMail';
+import { useState } from "react";
+import ContactModal from "./ContactModal";
 
 interface AboutHeroProps {
     data: {
@@ -19,6 +21,7 @@ interface AboutHeroProps {
 
 export default function AboutHero({ data }: AboutHeroProps) {
     const isRtl = true;
+    const [contactOpen, setContactOpen] = useState(false);
 
     return (
         <Box
@@ -135,6 +138,7 @@ export default function AboutHero({ data }: AboutHeroProps) {
                                 </Button>
 
                                 <Button
+                                    onClick={() => setContactOpen(true)}
                                     variant="outlined"
                                     size="large"
                                     startIcon={<ContactMailIcon />}
@@ -151,6 +155,7 @@ export default function AboutHero({ data }: AboutHeroProps) {
                                 </Button>
                             </Box>
                         </motion.div>
+                        <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
                     </Grid>
 
                     {/* Empty Grid item to balance layout */}

@@ -6,6 +6,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import BalanceIcon from '@mui/icons-material/Balance';
 import FactCheckIcon from '@mui/icons-material/FactCheck';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { Link } from "@/navigation";
 
 interface ProjectMilestoneRightProps {
     data: {
@@ -104,6 +105,8 @@ export default function ProjectMilestoneRight({ data }: ProjectMilestoneRightPro
 
                     <Box sx={{ textAlign: 'center' }}>
                         <Button
+                            component={Link}
+                            href="/milestone-right"
                             variant="contained"
                             size="large"
                             endIcon={<ArrowBackIcon sx={{ transform: 'rotate(180deg)' }} />} // RTL arrow

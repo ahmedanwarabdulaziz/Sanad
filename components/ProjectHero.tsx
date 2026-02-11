@@ -5,6 +5,9 @@ import { useLocale } from "next-intl";
 import { motion } from "framer-motion";
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'; // For Strategy Link
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'; // For PDF Download
+import { useState } from "react";
+import ContactModal from "./ContactModal";
+import TeaserModal from "./TeaserModal";
 
 interface ProjectHeroProps {
     title: string;
@@ -24,11 +27,15 @@ interface ProjectHeroProps {
         requestTeaser: string;
         downloadPdf: string;
     };
+    backgroundImage?: string;
+    titleNote?: string;
 }
 
-export default function ProjectHero({ title, description, strategy, badges, ctas }: ProjectHeroProps) {
+export default function ProjectHero({ title, description, strategy, badges, ctas, backgroundImage = '/images/hero.png', titleNote }: ProjectHeroProps) {
     // Forced RTL for Arabic site
     const isRtl = true;
+    const [contactOpen, setContactOpen] = useState(false);
+    const [teaserOpen, setTeaserOpen] = useState(false);
 
 
     return (
@@ -49,7 +56,7 @@ export default function ProjectHero({ title, description, strategy, badges, ctas
                 sx={{
                     width: "100%",
                     height: { xs: "40vh", md: "60vh" }, // Taller image on desktop
-                    backgroundImage: "url('/images/hero.png')",
+                    backgroundImage: `url('${backgroundImage}')`,
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                     position: "relative"
@@ -85,10 +92,33 @@ export default function ProjectHero({ title, description, strategy, badges, ctas
                                     mb: 2,
                                     color: "#d1d0c6",
                                     fontSize: { xs: "2rem", md: "3.5rem" },
-                                    lineHeight: 1.2
+                                    lineHeight: 1.2,
+                                    display: 'flex',
+                                    alignItems: 'baseline',
+                                    flexWrap: 'wrap',
+                                    gap: 2
                                 }}
                             >
                                 {title}
+                                {titleNote && (
+                                    <Typography
+                                        component="span"
+                                        sx={{
+                                            fontSize: { xs: '0.9rem', md: '1.2rem' },
+                                            fontWeight: 500,
+                                            color: '#d1d0c6',
+                                            opacity: 0.8,
+                                            backgroundColor: 'rgba(209, 208, 198, 0.1)',
+                                            px: 1.5,
+                                            py: 0.5,
+                                            borderRadius: 2,
+                                            border: '1px solid rgba(209, 208, 198, 0.2)',
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                    >
+                                        {titleNote}
+                                    </Typography>
+                                )}
                             </Typography>
 
                             <Typography
@@ -109,6 +139,7 @@ export default function ProjectHero({ title, description, strategy, badges, ctas
                             {/* CTAs */}
                             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
                                 <Button
+                                    onClick={() => setContactOpen(true)}
                                     variant="contained"
                                     size="large"
                                     sx={{
@@ -121,6 +152,7 @@ export default function ProjectHero({ title, description, strategy, badges, ctas
                                     {ctas.bookSession}
                                 </Button>
                                 <Button
+                                    onClick={() => setTeaserOpen(true)}
                                     variant="outlined"
                                     size="large"
                                     sx={{
@@ -132,6 +164,7 @@ export default function ProjectHero({ title, description, strategy, badges, ctas
                                     {ctas.requestTeaser}
                                 </Button>
                                 <Button
+                                    onClick={() => setTeaserOpen(true)}
                                     startIcon={<PictureAsPdfIcon />}
                                     sx={{
                                         color: "#d1d0c6",
@@ -143,6 +176,8 @@ export default function ProjectHero({ title, description, strategy, badges, ctas
                                 </Button>
                             </Box>
                         </motion.div>
+                        <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
+                        <TeaserModal open={teaserOpen} onClose={() => setTeaserOpen(false)} projectName={title} />
                     </Grid>
 
                     {/* Right Column: Badges */}

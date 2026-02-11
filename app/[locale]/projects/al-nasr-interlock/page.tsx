@@ -37,6 +37,7 @@ export default function AlNasrInterlockPage() {
                     linkUrl: "/milestone-right"
                 }}
                 badges={badges}
+                backgroundImage="/images/Hero interlok.png"
                 ctas={{
                     bookSession: t("ctas.catalog"),
                     requestTeaser: t("ctas.survey"),
@@ -146,17 +147,17 @@ export default function AlNasrInterlockPage() {
                     buttons: [
                         {
                             text: t("finalCta.buttons.survey"),
-                            href: "#",
+                            href: "#contact",
                             variant: "contained"
                         },
                         {
                             text: t("finalCta.buttons.boq"),
-                            href: "#",
+                            href: "#contact",
                             variant: "outlined"
                         },
                         {
                             text: t("finalCta.buttons.catalog"),
-                            href: "#",
+                            href: "#contact",
                             variant: "outlined"
                         }
                     ]
