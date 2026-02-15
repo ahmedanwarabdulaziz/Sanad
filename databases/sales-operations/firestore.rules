@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users collection - PIN-based login, no auth
+    // Allow read for login (get users list), write only for super_admin from app
+    // For now: allow read/write for development - tighten in production
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+    match /vault_categories/{categoryId} {
+      allow read, write: if true;
+    }
+    match /vaults/{vaultId} {
+      allow read, write: if true;
+    }
+    match /vault_transfers/{transferId} {
+      allow read, write: if true;
+    }
+    match /products/{productId} {
+      allow read, write: if true;
+    }
+    match /suppliers/{supplierId} {
+      allow read, write: if true;
+    }
+    match /customers/{customerId} {
+      allow read, write: if true;
+    }
+    match /sales_invoices/{invoiceId} {
+      allow read, write: if true;
+    }
+    match /sales_invoice_items/{itemId} {
+      allow read, write: if true;
+    }
+    match /sales_invoice_expenses/{expenseId} {
+      allow read, write: if true;
+    }
+    match /expenses/{expenseId} {
+      allow read, write: if true;
+    }
+    match /expense_types/{expenseTypeId} {
+      allow read, write: if true;
+    }
+    match /purchase_invoices/{invoiceId} {
+      allow read, write: if true;
+    }
+    match /purchase_invoice_items/{itemId} {
+      allow read, write: if true;
+    }
+    match /purchase_invoice_expenses/{expenseId} {
+      allow read, write: if true;
+    }
+    match /stock_movements/{movementId} {
+      allow read, write: if true;
+    }
+  }
+}

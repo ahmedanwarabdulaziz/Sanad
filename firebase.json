@@ -1,0 +1,5 @@
+{
+  "firestore": {
+    "rules": "databases/sales-operations/firestore.rules"
+  }
+}

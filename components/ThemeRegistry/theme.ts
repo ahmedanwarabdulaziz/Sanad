@@ -39,6 +39,12 @@ const theme = createTheme({
         },
     },
     components: {
+        MuiCssBaseline: {
+            styleOverrides: {
+                html: { direction: 'rtl', textAlign: 'right' },
+                body: { direction: 'rtl', textAlign: 'right' },
+            },
+        },
         MuiButton: {
             styleOverrides: {
                 root: {
@@ -49,11 +55,15 @@ const theme = createTheme({
         MuiTypography: {
             styleOverrides: {
                 root: {
-                    // Ensure default alignment follows direction, though 'inherit' is standard
-                    // textAlign: 'start' is usually default
+                    textAlign: 'inherit',
                 }
             }
-        }
+        },
+        MuiInputBase: {
+            styleOverrides: {
+                input: { textAlign: 'right' },
+            },
+        },
     }
 });
 

@@ -14,12 +14,92 @@
   }
 }
 
+html {
+  direction: rtl !important;
+  text-align: right !important;
+}
+
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-cairo), Cairo, sans-serif;
+  direction: rtl !important;
+  text-align: right !important;
+}
+
+/* N-admin: force RTL alignment for all form fields, labels and text */
+.n-admin-rtl .MuiTypography-root,
+.n-admin-rtl .MuiButton-root,
+.n-admin-rtl .MuiInputBase-input,
+.n-admin-rtl .MuiInputLabel-root,
+.n-admin-rtl .MuiFormLabel-root,
+.n-admin-rtl .MuiSelect-select,
+.n-admin-rtl .MuiListItemText-primary,
+.n-admin-rtl .MuiFormControlLabel-label,
+.n-admin-rtl .MuiTableCell-root,
+.n-admin-rtl .MuiMenuItem-root {
+  text-align: right !important;
+}
+/* Labels: right-align and position for RTL (outlined variant shrink origin) */
+.MuiInputLabel-root,
+.MuiFormLabel-root,
+.n-admin-rtl .MuiInputLabel-root,
+.n-admin-rtl .MuiFormLabel-root {
+  text-align: right !important;
+  transform-origin: top right !important;
+}
+.MuiInputLabel-root.MuiInputLabel-shrink,
+.MuiFormLabel-root.MuiInputLabel-shrink {
+  transform-origin: top right !important;
+}
+/* Dialogs render in portal – ensure RTL alignment for all dialog form fields */
+.MuiDialog-paper {
   direction: rtl;
-  /* Force Global RTL */
   text-align: right;
-  /* Force Global Right Align */
+}
+.MuiDialog-paper .MuiInputLabel-root,
+.MuiDialog-paper .MuiFormLabel-root,
+.MuiDialog-paper .MuiInputBase-input,
+.MuiDialog-paper .MuiSelect-select,
+.MuiDialog-paper .MuiFormControlLabel-label,
+.MuiDialog-paper .MuiTableCell-root,
+.MuiDialog-paper .MuiMenuItem-root,
+.MuiDialog-paper .MuiDialogTitle-root,
+.MuiDialog-paper .MuiDialogContent-root,
+.MuiDialog-paper .MuiDialogActions-root {
+  text-align: right !important;
+}
+.MuiDialog-paper .MuiInputLabel-root,
+.MuiDialog-paper .MuiFormLabel-root {
+  transform-origin: top right !important;
+  left: auto !important;
+  right: 14px !important;
+}
+.MuiDialog-paper .MuiOutlinedInput-notchedOutline legend {
+  text-align: right;
+}
+.n-admin-rtl .MuiInputLabel-root,
+.n-admin-rtl .MuiFormLabel-root {
+  left: auto !important;
+  right: 14px !important;
+}
+.n-admin-rtl .MuiOutlinedInput-notchedOutline legend {
+  text-align: right;
+}
+.MuiDialog-paper .MuiInputBase-input {
+  text-align: right !important;
+}
+/* Form controls in RTL: label and value on the right */
+[dir="rtl"] .MuiInputLabel-root,
+[dir="rtl"] .MuiFormLabel-root {
+  text-align: right !important;
+  transform-origin: top right !important;
+  left: auto !important;
+  right: 14px !important;
+}
+[dir="rtl"] .MuiOutlinedInput-notchedOutline legend {
+  text-align: right;
+}
+.n-admin-align-center .MuiTypography-root {
+  text-align: center !important;
 }

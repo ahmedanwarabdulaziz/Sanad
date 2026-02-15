@@ -3,8 +3,7 @@ import { Playfair_Display, Cairo, Tajawal } from "next/font/google";
 import "../globals.css";
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import ConditionalLayout from "@/components/ConditionalLayout";
 import ThemeRegistry from "@/components/ThemeRegistry/ThemeRegistry";
 
 const playfair = Playfair_Display({
@@ -41,12 +40,10 @@ export default async function RootLayout({
   // Force Arabic/RTL globally as it's the sole supported language
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
-      <body className={`${playfair.variable} ${cairo.variable} ${tajawal.variable} font-sans antialiased`}>
+      <body className={`${playfair.variable} ${cairo.variable} ${tajawal.variable} font-sans antialiased`} dir="rtl" lang="ar">
         <NextIntlClientProvider messages={messages} locale="ar">
           <ThemeRegistry>
-            <Header />
-            {children}
-            <Footer />
+            <ConditionalLayout>{children}</ConditionalLayout>
           </ThemeRegistry>
         </NextIntlClientProvider>
       </body>
