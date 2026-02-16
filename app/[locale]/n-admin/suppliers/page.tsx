@@ -273,7 +273,7 @@ export default function SuppliersPage() {
               onChange={(e) => setForm((f) => ({ ...f, order: parseInt(e.target.value, 10) || 0 }))}
               fullWidth
               size="small"
-              inputProps={{ min: 0, dir: "rtl" }}
+              inputProps={{ min: 0, inputMode: "numeric", dir: "rtl" }}
               InputLabelProps={{ style: { textAlign: "right" } }}
               sx={{ "& .MuiInputBase-input": { fontFamily: "var(--font-cairo)", textAlign: "right" } }}
             />

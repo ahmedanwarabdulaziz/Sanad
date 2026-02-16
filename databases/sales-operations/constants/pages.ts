@@ -16,4 +16,5 @@ export const ADMIN_PAGES: PageDefinition[] = [
   { id: "sales", labelAr: "فواتير المبيعات", labelEn: "Sales", path: "/n-admin/sales", order: 9 },
   { id: "warehouse", labelAr: "المخزون", labelEn: "Warehouse", path: "/n-admin/warehouse", order: 10 },
   { id: "expenses", labelAr: "المصروفات", labelEn: "Expenses", path: "/n-admin/expenses", order: 11 },
+  { id: "outstanding", labelAr: "المتبقي (دفع وتحصيل)", labelEn: "Outstanding", path: "/n-admin/outstanding", order: 12 },
 ];

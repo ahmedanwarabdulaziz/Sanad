@@ -10,8 +10,6 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
-  MenuItem,
-  Select,
   Table,
   TableBody,
   TableCell,
@@ -27,7 +25,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import NAdminShell from "../components/NAdminShell";
-import { RecordList, RecordCard, PageHeader, EmptyState } from "../components";
+import { RecordList, RecordCard, PageHeader, EmptyState, MobileFriendlySelect } from "../components";
 import { getAllSalesInvoices, createSalesInvoice, updateSalesInvoice, suggestNextSalesInvoiceNumber, isSalesInvoiceNumberDuplicate } from "@/databases/sales-operations/collections/sales_invoices";
 import { getItemsBySalesInvoiceId, createSalesInvoiceItem, deleteItemsBySalesInvoiceId } from "@/databases/sales-operations/collections/sales_invoice_items";
 import { getExpensesBySalesInvoiceId, createSalesInvoiceExpense, deleteExpensesBySalesInvoiceId } from "@/databases/sales-operations/collections/sales_invoice_expenses";
@@ -446,23 +444,22 @@ export default function SalesPage() {
             <Box>
               <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block", textAlign: "right" }}>العميل</Typography>
               <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
-                <Select
-                  value={header.customerId}
-                  onChange={(e) => {
-                    const c = customers.find((x) => x.id === e.target.value);
-                    setHeader((h) => ({ ...h, customerId: e.target.value, customerName: c?.nameAr ?? "", customerPhone: c?.phone ?? "" }));
-                  }}
-                  fullWidth
-                  size="small"
-                  displayEmpty
-                  sx={{ fontFamily: "var(--font-cairo)", textAlign: "right", "& .MuiSelect-select": { textAlign: "right" } }}
-                  MenuProps={{ PaperProps: { sx: { direction: "rtl" } } }}
-                >
-                  <MenuItem value="">اختر العميل</MenuItem>
-                  {customers.map((c) => (
-                    <MenuItem key={c.id} value={c.id}>{c.nameAr} {c.phone ? `— ${c.phone}` : ""}</MenuItem>
-                  ))}
-                </Select>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <MobileFriendlySelect
+                    value={header.customerId}
+                    onChange={(v) => {
+                      const c = customers.find((x) => x.id === v);
+                      setHeader((h) => ({ ...h, customerId: v, customerName: c?.nameAr ?? "", customerPhone: c?.phone ?? "" }));
+                    }}
+                    options={customers.map((c) => ({ value: c.id, label: `${c.nameAr}${c.phone ? ` — ${c.phone}` : ""}` }))}
+                    fullWidth
+                    size="small"
+                    placeholder="اختر العميل"
+                    displayEmpty
+                    searchable
+                    sx={{ fontFamily: "var(--font-cairo)", textAlign: "right" }}
+                  />
+                </Box>
                 <Button
                   size="small"
                   startIcon={<AddIcon />}
@@ -499,7 +496,7 @@ export default function SalesPage() {
                     fullWidth
                     size="small"
                     type="tel"
-                    inputProps={{ dir: "ltr", placeholder: "01xxxxxxxxx" }}
+                    inputProps={{ dir: "ltr", inputMode: "tel", placeholder: "01xxxxxxxxx" }}
                     InputLabelProps={{ style: { textAlign: "right" } }}
                     sx={{ "& .MuiInputBase-input": { fontFamily: "var(--font-cairo)" } }}
                   />
@@ -600,7 +597,7 @@ export default function SalesPage() {
               onChange={(e) => setHeader((h) => ({ ...h, amountPaid: parseFloat(e.target.value) || 0 }))}
               fullWidth
               size="small"
-              inputProps={{ min: 0, max: totalAmount > 0 ? totalAmount : undefined, step: 0.01, dir: "rtl" }}
+              inputProps={{ min: 0, max: totalAmount > 0 ? totalAmount : undefined, step: 0.01, inputMode: "decimal", dir: "rtl" }}
               InputLabelProps={{ style: { textAlign: "right" } }}
               sx={{ "& .MuiInputBase-input": { fontFamily: "var(--font-cairo)", textAlign: "right" } }}
               helperText={
@@ -613,25 +610,17 @@ export default function SalesPage() {
               error={(header.amountPaid ?? 0) > totalAmount}
             />
             {(header.amountPaid ?? 0) > 0 && (
-              <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block", textAlign: "right", fontFamily: "var(--font-cairo)" }}>
-                  الاستلام في حساب
-                </Typography>
-                <Select
-                  value={header.paidToVaultId}
-                  onChange={(e) => setHeader((h) => ({ ...h, paidToVaultId: e.target.value }))}
-                  fullWidth
-                  size="small"
-                  displayEmpty
-                  sx={{ fontFamily: "var(--font-cairo)", textAlign: "right", "& .MuiSelect-select": { textAlign: "right" } }}
-                  MenuProps={{ PaperProps: { sx: { direction: "rtl" } } }}
-                >
-                  <MenuItem value="">اختر الحساب</MenuItem>
-                  {vaults.map((v) => (
-                    <MenuItem key={v.id} value={v.id}>{v.name} {v.type === "bank" ? "(بنك)" : "(شخصي)"}</MenuItem>
-                  ))}
-                </Select>
-              </Box>
+              <MobileFriendlySelect
+                label="الاستلام في حساب"
+                options={vaults.map((v) => ({ value: v.id, label: `${v.name} ${v.type === "bank" ? "(بنك)" : "(شخصي)"}` }))}
+                value={header.paidToVaultId}
+                onChange={(v) => setHeader((h) => ({ ...h, paidToVaultId: v }))}
+                fullWidth
+                size="small"
+                placeholder="اختر الحساب"
+                displayEmpty
+                sx={{ fontFamily: "var(--font-cairo)", textAlign: "right" }}
+              />
             )}
 
             <Typography variant="subtitle2" sx={{ fontFamily: "var(--font-cairo)", textAlign: "right", mt: 1 }}>
@@ -661,21 +650,18 @@ export default function SalesPage() {
                           <DeleteIcon fontSize="small" />
                         </IconButton>
                       </Box>
-                      <Select
+                      <MobileFriendlySelect
                         value={line.productId}
-                        onChange={(e) => {
-                          const p = products.find((x) => x.id === e.target.value);
-                          updateLine(idx, { productId: e.target.value, unit: p?.unit ?? "sqm", unitCost: avgCost[e.target.value] });
+                        onChange={(v) => {
+                          const p = products.find((x) => x.id === v);
+                          updateLine(idx, { productId: v, unit: p?.unit ?? "sqm", unitCost: avgCost[v] });
                         }}
+                        options={products.map((p) => ({ value: p.id, label: `${p.nameAr} (متاح: ${getAvailableQty(p.id)} ${unitLabel(stock[p.id]?.unit ?? p.unit)})` }))}
                         size="small"
                         fullWidth
-                        sx={{ fontFamily: "var(--font-cairo)", textAlign: "right", "& .MuiSelect-select": { textAlign: "right" } }}
-                        MenuProps={{ PaperProps: { sx: { direction: "rtl" } } }}
-                      >
-                        {products.map((p) => (
-                          <MenuItem key={p.id} value={p.id}>{p.nameAr} (متاح: {getAvailableQty(p.id)} {unitLabel(stock[p.id]?.unit ?? p.unit)})</MenuItem>
-                        ))}
-                      </Select>
+                        searchable
+                        sx={{ fontFamily: "var(--font-cairo)", textAlign: "right" }}
+                      />
                       <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 1, alignItems: "center" }}>
                         <TextField
                           label="الكمية"
@@ -683,7 +669,7 @@ export default function SalesPage() {
                           value={line.quantity || ""}
                           onChange={(e) => updateLine(idx, { quantity: parseFloat(e.target.value) || 0 })}
                           size="small"
-                          inputProps={{ min: 0, max: avail, step: 0.01 }}
+                          inputProps={{ min: 0, max: avail, step: 0.01, inputMode: "decimal" }}
                           sx={{ "& .MuiInputBase-input": { textAlign: "right" } }}
                           InputLabelProps={{ style: { textAlign: "right" } }}
                         />
@@ -693,7 +679,7 @@ export default function SalesPage() {
                           value={line.unitPrice || ""}
                           onChange={(e) => updateLine(idx, { unitPrice: parseFloat(e.target.value) || 0 })}
                           size="small"
-                          inputProps={{ min: 0, step: 0.01 }}
+                          inputProps={{ min: 0, step: 0.01, inputMode: "decimal" }}
                           sx={{ "& .MuiInputBase-input": { textAlign: "right" } }}
                           InputLabelProps={{ style: { textAlign: "right" } }}
                         />
@@ -728,18 +714,15 @@ export default function SalesPage() {
                       return (
                         <TableRow key={idx}>
                           <TableCell>
-                            <Select
+                            <MobileFriendlySelect
                               value={line.productId}
-                              onChange={(e) => updateLine(idx, { productId: e.target.value, unitCost: avgCost[e.target.value] })}
+                              onChange={(v) => updateLine(idx, { productId: v, unitCost: avgCost[v] })}
+                              options={products.map((p) => ({ value: p.id, label: p.nameAr }))}
                               size="small"
                               fullWidth
+                              searchable
                               sx={{ fontFamily: "var(--font-cairo)", textAlign: "right", minWidth: 140 }}
-                              MenuProps={{ PaperProps: { sx: { direction: "rtl" } } }}
-                            >
-                              {products.map((p) => (
-                                <MenuItem key={p.id} value={p.id}>{p.nameAr}</MenuItem>
-                              ))}
-                            </Select>
+                            />
                           </TableCell>
                           <TableCell>
                             <TextField
@@ -747,7 +730,7 @@ export default function SalesPage() {
                               value={line.quantity || ""}
                               onChange={(e) => updateLine(idx, { quantity: parseFloat(e.target.value) || 0 })}
                               size="small"
-                              inputProps={{ min: 0, max: avail, step: 0.01 }}
+                              inputProps={{ min: 0, max: avail, step: 0.01, inputMode: "decimal" }}
                               sx={{ width: 80, "& .MuiInputBase-input": { textAlign: "right" } }}
                             />
                           </TableCell>
@@ -758,7 +741,7 @@ export default function SalesPage() {
                               value={line.unitPrice || ""}
                               onChange={(e) => updateLine(idx, { unitPrice: parseFloat(e.target.value) || 0 })}
                               size="small"
-                              inputProps={{ min: 0, step: 0.01 }}
+                              inputProps={{ min: 0, step: 0.01, inputMode: "decimal" }}
                               sx={{ width: 90, "& .MuiInputBase-input": { textAlign: "right" } }}
                             />
                           </TableCell>
@@ -785,24 +768,20 @@ export default function SalesPage() {
             </Typography>
             {expenseRows.map((er, idx) => (
               <Box key={idx} sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
-                <Select
+                <MobileFriendlySelect
                   value={er.expenseTypeId}
-                  onChange={(e) => updateExpenseRow(idx, { expenseTypeId: e.target.value })}
+                  onChange={(v) => updateExpenseRow(idx, { expenseTypeId: v })}
+                  options={expenseTypes.map((et) => ({ value: et.id, label: et.nameAr }))}
                   size="small"
                   sx={{ minWidth: 160, fontFamily: "var(--font-cairo)", textAlign: "right" }}
-                  MenuProps={{ PaperProps: { sx: { direction: "rtl" } } }}
-                >
-                  {expenseTypes.map((et) => (
-                    <MenuItem key={et.id} value={et.id}>{et.nameAr}</MenuItem>
-                  ))}
-                </Select>
+                />
                 <TextField
                   label="المبلغ"
                   type="number"
                   value={er.amount || ""}
                   onChange={(e) => updateExpenseRow(idx, { amount: parseFloat(e.target.value) || 0 })}
                   size="small"
-                  inputProps={{ min: 0, step: 0.01 }}
+                  inputProps={{ min: 0, step: 0.01, inputMode: "decimal" }}
                   sx={{ width: 120, "& .MuiInputBase-input": { textAlign: "right" } }}
                   InputLabelProps={{ style: { textAlign: "right" } }}
                 />

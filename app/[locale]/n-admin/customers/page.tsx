@@ -11,8 +11,6 @@ import {
   DialogTitle,
   FormControlLabel,
   IconButton,
-  MenuItem,
-  Select,
   Switch,
   TextField,
   Typography,
@@ -21,7 +19,7 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import PhoneIcon from "@mui/icons-material/Phone";
 import NAdminShell from "../components/NAdminShell";
-import { RecordList, RecordCard, PageHeader, EmptyState } from "../components";
+import { RecordList, RecordCard, PageHeader, EmptyState, MobileFriendlySelect } from "../components";
 import { getAllCustomers, createCustomer, updateCustomer } from "@/databases/sales-operations/collections/customers";
 import type { SalesUser } from "@/databases/sales-operations/types";
 import type { Customer, CustomerStage } from "@/databases/sales-operations/types";
@@ -267,26 +265,24 @@ export default function CustomersPage() {
               type="tel"
               error={!!phoneError}
               helperText={phoneError}
-              inputProps={{ dir: "ltr", placeholder: "01xxxxxxxxx (11 رقم)", maxLength: 11 }}
+              inputProps={{ dir: "ltr", inputMode: "tel", placeholder: "01xxxxxxxxx (11 رقم)", maxLength: 11 }}
               InputLabelProps={{ style: { textAlign: "right" } }}
               sx={{ "& .MuiInputBase-input": { fontFamily: "var(--font-cairo)" } }}
             />
-            <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block", textAlign: "right" }}>المرحلة</Typography>
-              <Select
-                value={form.stage}
-                onChange={(e) => setForm((f) => ({ ...f, stage: e.target.value as CustomerStage }))}
-                fullWidth
-                size="small"
-                sx={{ fontFamily: "var(--font-cairo)", textAlign: "right", "& .MuiSelect-select": { textAlign: "right" } }}
-                MenuProps={{ PaperProps: { sx: { direction: "rtl" } } }}
-              >
-                <MenuItem value="lead">{STAGE_LABELS.lead}</MenuItem>
-                <MenuItem value="measures_taken">{STAGE_LABELS.measures_taken}</MenuItem>
-                <MenuItem value="deposit_taken">{STAGE_LABELS.deposit_taken}</MenuItem>
-                <MenuItem value="done">{STAGE_LABELS.done}</MenuItem>
-              </Select>
-            </Box>
+            <MobileFriendlySelect
+              label="المرحلة"
+              options={[
+                { value: "lead", label: STAGE_LABELS.lead },
+                { value: "measures_taken", label: STAGE_LABELS.measures_taken },
+                { value: "deposit_taken", label: STAGE_LABELS.deposit_taken },
+                { value: "done", label: STAGE_LABELS.done },
+              ]}
+              value={form.stage}
+              onChange={(v) => setForm((f) => ({ ...f, stage: v as CustomerStage }))}
+              fullWidth
+              size="small"
+              sx={{ fontFamily: "var(--font-cairo)", textAlign: "right" }}
+            />
             <TextField
               label="ملاحظات"
               value={form.notes}
@@ -305,7 +301,7 @@ export default function CustomersPage() {
               onChange={(e) => setForm((f) => ({ ...f, order: parseInt(e.target.value, 10) || 0 }))}
               fullWidth
               size="small"
-              inputProps={{ min: 0, dir: "rtl" }}
+              inputProps={{ min: 0, inputMode: "numeric", dir: "rtl" }}
               InputLabelProps={{ style: { textAlign: "right" } }}
               sx={{ "& .MuiInputBase-input": { fontFamily: "var(--font-cairo)", textAlign: "right" } }}
             />

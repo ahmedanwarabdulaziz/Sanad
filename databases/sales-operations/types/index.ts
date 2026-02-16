@@ -241,6 +241,7 @@ export interface Expense {
   purchaseInvoiceId?: string;
   salesInvoiceId?: string;
   createdAt: number;
+  updatedAt?: number;
   createdBy?: string;
 }
 

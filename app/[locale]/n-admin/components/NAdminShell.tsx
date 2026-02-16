@@ -90,7 +90,7 @@ export default function NAdminShell({ children }: { children: React.ReactNode })
             >
               <ListItemText primary="لوحة التحكم" primaryTypographyProps={{ sx: { textAlign: "right" } }} sx={{ fontFamily: "var(--font-cairo)" }} />
             </ListItemButton>
-            {pages.map((p) => (
+            {pages.filter((p) => p.id !== "dashboard").map((p) => (
               <ListItemButton
                 key={p.id}
                 selected={pathname === p.path}

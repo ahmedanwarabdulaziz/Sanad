@@ -60,6 +60,12 @@ export async function getStockByProduct(): Promise<
   return byProduct;
 }
 
+function toNum(v: unknown): number {
+  if (v == null) return 0;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
 /** Average cost per unit by product (from purchase/adjustment movements only). */
 export async function getAverageCostByProduct(): Promise<
   Record<string, { averageCost: number; unit: ProductUnit }>
@@ -75,8 +81,11 @@ export async function getAverageCostByProduct(): Promise<
       sumCost[m.productId] = 0;
       unitByProduct[m.productId] = m.unit;
     }
-    sumQty[m.productId] += m.quantity;
-    const cost = m.totalCost ?? (m.unitCost != null ? m.quantity * m.unitCost : 0);
+    const qty = toNum(m.quantity);
+    sumQty[m.productId] += qty;
+    const totalC = toNum(m.totalCost);
+    const unitC = toNum(m.unitCost);
+    const cost = totalC > 0 ? totalC : (unitC > 0 && qty > 0 ? qty * unitC : 0);
     sumCost[m.productId] += cost;
   }
   const result: Record<string, { averageCost: number; unit: ProductUnit }> = {};
@@ -88,4 +97,38 @@ export async function getAverageCostByProduct(): Promise<
     };
   }
   return result;
+}
+
+/** Last known unit cost per product (from most recent purchase/adjustment with cost). Used when average is 0. */
+export async function getLastUnitCostByProduct(): Promise<Record<string, number>> {
+  const all = await getAllStockMovements();
+  const byProduct: Record<string, number> = {};
+  for (const m of all) {
+    if (m.type !== "purchase" && m.type !== "adjustment") continue;
+    if (byProduct[m.productId] != null) continue;
+    const totalC = toNum(m.totalCost);
+    const unitC = toNum(m.unitCost);
+    const qty = toNum(m.quantity);
+    const costPerUnit = totalC > 0 && qty > 0 ? totalC / qty : unitC;
+    if (costPerUnit > 0) byProduct[m.productId] = costPerUnit;
+  }
+  return byProduct;
+}
+
+/** Total value of warehouse stock (quantity × cost per product; cost = average or last known). */
+export async function getWarehouseValue(): Promise<number> {
+  const [byProduct, avgCost, lastCost] = await Promise.all([
+    getStockByProduct(),
+    getAverageCostByProduct(),
+    getLastUnitCostByProduct(),
+  ]);
+  let total = 0;
+  for (const pid of Object.keys(byProduct)) {
+    const qty = Math.max(0, byProduct[pid].quantity);
+    const cost = (avgCost[pid]?.averageCost && avgCost[pid].averageCost > 0)
+      ? avgCost[pid].averageCost
+      : (lastCost[pid] ?? 0);
+    total += qty * cost;
+  }
+  return total;
 }

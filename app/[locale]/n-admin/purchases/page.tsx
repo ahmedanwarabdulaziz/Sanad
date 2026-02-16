@@ -10,8 +10,6 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
-  MenuItem,
-  Select,
   Table,
   TableBody,
   TableCell,
@@ -27,7 +25,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import NAdminShell from "../components/NAdminShell";
-import { RecordList, RecordCard, PageHeader, EmptyState } from "../components";
+import { RecordList, RecordCard, PageHeader, EmptyState, MobileFriendlySelect } from "../components";
 import { getAllPurchaseInvoices, createPurchaseInvoice, updatePurchaseInvoice, suggestNextInvoiceNumber, isInvoiceNumberDuplicate } from "@/databases/sales-operations/collections/purchase_invoices";
 import { getItemsByPurchaseInvoiceId, createPurchaseInvoiceItem, deleteItemsByPurchaseInvoiceId } from "@/databases/sales-operations/collections/purchase_invoice_items";
 import { deleteExpensesByPurchaseInvoiceId } from "@/databases/sales-operations/collections/purchase_invoice_expenses";
@@ -403,26 +401,21 @@ export default function PurchasesPage() {
         </DialogTitle>
         <DialogContent sx={{ textAlign: "right", overflowY: "auto", flex: 1, minHeight: 0, px: isMobile ? 2 : 3 }}>
           <Box dir="rtl" sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1, pb: 2 }}>
-            <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block", textAlign: "right" }}>المورد</Typography>
-              <Select
-                value={header.supplierId}
-                onChange={(e) => {
-                  const s = suppliers.find((x) => x.id === e.target.value);
-                  setHeader((h) => ({ ...h, supplierId: e.target.value, supplierName: s?.nameAr ?? "" }));
-                }}
-                fullWidth
-                size="small"
-                displayEmpty
-                sx={{ fontFamily: "var(--font-cairo)", textAlign: "right", "& .MuiSelect-select": { textAlign: "right" } }}
-                MenuProps={{ PaperProps: { sx: { direction: "rtl" } } }}
-              >
-                <MenuItem value="">اختر المورد</MenuItem>
-                {suppliers.map((s) => (
-                  <MenuItem key={s.id} value={s.id}>{s.nameAr}</MenuItem>
-                ))}
-              </Select>
-            </Box>
+            <MobileFriendlySelect
+              label="المورد"
+              options={suppliers.map((s) => ({ value: s.id, label: s.nameAr }))}
+              value={header.supplierId}
+              onChange={(v) => {
+                const s = suppliers.find((x) => x.id === v);
+                setHeader((h) => ({ ...h, supplierId: v, supplierName: s?.nameAr ?? "" }));
+              }}
+              fullWidth
+              size="small"
+              placeholder="اختر المورد"
+              displayEmpty
+              searchable
+              sx={{ fontFamily: "var(--font-cairo)", textAlign: "right" }}
+            />
             <TextField
               label="رقم الفاتورة"
               value={header.invoiceNumber}
@@ -470,7 +463,7 @@ export default function PurchasesPage() {
               }}
               fullWidth
               size="small"
-              inputProps={{ min: 0, max: totalAmount > 0 ? totalAmount : undefined, step: 0.01, dir: "rtl" }}
+              inputProps={{ min: 0, max: totalAmount > 0 ? totalAmount : undefined, step: 0.01, inputMode: "decimal", dir: "rtl" }}
               InputLabelProps={{ style: { textAlign: "right" } }}
               sx={{ "& .MuiInputBase-input": { fontFamily: "var(--font-cairo)", textAlign: "right" } }}
               helperText={
@@ -485,28 +478,20 @@ export default function PurchasesPage() {
               error={!!vaultBalanceError || (header.amountPaid ?? 0) > totalAmount}
             />
             {(header.amountPaid ?? 0) > 0 && (
-              <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block", textAlign: "right", fontFamily: "var(--font-cairo)" }}>
-                  الدفع من حساب
-                </Typography>
-                <Select
-                  value={header.paidFromVaultId}
-                  onChange={(e) => {
-                    setVaultBalanceError(null);
-                    setHeader((h) => ({ ...h, paidFromVaultId: e.target.value }));
-                  }}
-                  fullWidth
-                  size="small"
-                  displayEmpty
-                  sx={{ fontFamily: "var(--font-cairo)", textAlign: "right", "& .MuiSelect-select": { textAlign: "right" } }}
-                  MenuProps={{ PaperProps: { sx: { direction: "rtl" } } }}
-                >
-                  <MenuItem value="">اختر الحساب</MenuItem>
-                  {vaults.filter((v) => v.active).map((v) => (
-                    <MenuItem key={v.id} value={v.id}>{v.name} {v.type === "bank" ? "(بنك)" : "(شخصي)"}</MenuItem>
-                  ))}
-                </Select>
-              </Box>
+              <MobileFriendlySelect
+                label="الدفع من حساب"
+                options={vaults.filter((v) => v.active).map((v) => ({ value: v.id, label: `${v.name} ${v.type === "bank" ? "(بنك)" : "(شخصي)"}` }))}
+                value={header.paidFromVaultId}
+                onChange={(v) => {
+                  setVaultBalanceError(null);
+                  setHeader((h) => ({ ...h, paidFromVaultId: v }));
+                }}
+                fullWidth
+                size="small"
+                placeholder="اختر الحساب"
+                displayEmpty
+                sx={{ fontFamily: "var(--font-cairo)", textAlign: "right" }}
+              />
             )}
 
             <Typography variant="subtitle2" sx={{ fontFamily: "var(--font-cairo)", textAlign: "right", mt: 1 }}>
@@ -534,21 +519,18 @@ export default function PurchasesPage() {
                         <DeleteIcon fontSize="small" />
                       </IconButton>
                     </Box>
-                    <Select
+                    <MobileFriendlySelect
                       value={line.productId}
-                      onChange={(e) => {
-                        const p = products.find((x) => x.id === e.target.value);
-                        updateLine(idx, { productId: e.target.value, unit: p?.unit ?? "sqm" });
+                      onChange={(v) => {
+                        const p = products.find((x) => x.id === v);
+                        updateLine(idx, { productId: v, unit: p?.unit ?? "sqm" });
                       }}
+                      options={products.map((p) => ({ value: p.id, label: p.nameAr }))}
                       size="small"
                       fullWidth
-                      sx={{ fontFamily: "var(--font-cairo)", textAlign: "right", "& .MuiSelect-select": { textAlign: "right" } }}
-                      MenuProps={{ PaperProps: { sx: { direction: "rtl" } } }}
-                    >
-                      {products.map((p) => (
-                        <MenuItem key={p.id} value={p.id}>{p.nameAr}</MenuItem>
-                      ))}
-                    </Select>
+                      searchable
+                      sx={{ fontFamily: "var(--font-cairo)", textAlign: "right" }}
+                    />
                     <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 1, alignItems: "center" }}>
                       <TextField
                         label="الكمية"
@@ -556,7 +538,7 @@ export default function PurchasesPage() {
                         value={line.quantity || ""}
                         onChange={(e) => updateLine(idx, { quantity: parseFloat(e.target.value) || 0 })}
                         size="small"
-                        inputProps={{ min: 0, step: 0.01 }}
+                        inputProps={{ min: 0, step: 0.01, inputMode: "decimal" }}
                         sx={{ "& .MuiInputBase-input": { textAlign: "right" } }}
                         InputLabelProps={{ style: { textAlign: "right" } }}
                       />
@@ -566,7 +548,7 @@ export default function PurchasesPage() {
                         value={line.unitPrice || ""}
                         onChange={(e) => updateLine(idx, { unitPrice: parseFloat(e.target.value) || 0 })}
                         size="small"
-                        inputProps={{ min: 0, step: 0.01 }}
+                        inputProps={{ min: 0, step: 0.01, inputMode: "decimal" }}
                         sx={{ "& .MuiInputBase-input": { textAlign: "right" } }}
                         InputLabelProps={{ style: { textAlign: "right" } }}
                       />
@@ -594,21 +576,18 @@ export default function PurchasesPage() {
                     {lines.map((line, idx) => (
                       <TableRow key={idx}>
                         <TableCell>
-                          <Select
+                          <MobileFriendlySelect
                             value={line.productId}
-                            onChange={(e) => {
-                              const p = products.find((x) => x.id === e.target.value);
-                              updateLine(idx, { productId: e.target.value, unit: p?.unit ?? "sqm" });
+                            onChange={(v) => {
+                              const p = products.find((x) => x.id === v);
+                              updateLine(idx, { productId: v, unit: p?.unit ?? "sqm" });
                             }}
+                            options={products.map((p) => ({ value: p.id, label: p.nameAr }))}
                             size="small"
                             fullWidth
-                            sx={{ minWidth: 120, "& .MuiSelect-select": { textAlign: "right" } }}
-                            MenuProps={{ PaperProps: { sx: { direction: "rtl" } } }}
-                          >
-                            {products.map((p) => (
-                              <MenuItem key={p.id} value={p.id}>{p.nameAr}</MenuItem>
-                            ))}
-                          </Select>
+                            searchable
+                            sx={{ minWidth: 120, fontFamily: "var(--font-cairo)", textAlign: "right" }}
+                          />
                         </TableCell>
                         <TableCell>
                           <TextField
@@ -616,7 +595,7 @@ export default function PurchasesPage() {
                             value={line.quantity || ""}
                             onChange={(e) => updateLine(idx, { quantity: parseFloat(e.target.value) || 0 })}
                             size="small"
-                            inputProps={{ min: 0, step: 0.01 }}
+                            inputProps={{ min: 0, step: 0.01, inputMode: "decimal" }}
                             sx={{ width: 80, "& .MuiInputBase-input": { textAlign: "right" } }}
                           />
                         </TableCell>
@@ -627,7 +606,7 @@ export default function PurchasesPage() {
                             value={line.unitPrice || ""}
                             onChange={(e) => updateLine(idx, { unitPrice: parseFloat(e.target.value) || 0 })}
                             size="small"
-                            inputProps={{ min: 0, step: 0.01 }}
+                            inputProps={{ min: 0, step: 0.01, inputMode: "decimal" }}
                             sx={{ width: 90, "& .MuiInputBase-input": { textAlign: "right" } }}
                           />
                         </TableCell>

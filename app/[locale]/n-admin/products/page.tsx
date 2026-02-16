@@ -11,8 +11,6 @@ import {
   DialogTitle,
   FormControlLabel,
   IconButton,
-  MenuItem,
-  Select,
   Switch,
   TextField,
   Typography,
@@ -20,7 +18,7 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import NAdminShell from "../components/NAdminShell";
-import { RecordList, RecordCard, PageHeader, EmptyState } from "../components";
+import { RecordList, RecordCard, PageHeader, EmptyState, MobileFriendlySelect } from "../components";
 import { getAllProducts, createProduct, updateProduct } from "@/databases/sales-operations/collections/products";
 import type { SalesUser } from "@/databases/sales-operations/types";
 import type { Product, ProductUnit, MaterialType } from "@/databases/sales-operations/types";
@@ -192,36 +190,32 @@ export default function ProductsPage() {
               InputLabelProps={{ style: { textAlign: "right" } }}
               sx={{ "& .MuiInputBase-input": { fontFamily: "var(--font-cairo)" } }}
             />
-            <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block", textAlign: "right" }}>وحدة القياس</Typography>
-              <Select
-                value={form.unit}
-                onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value as ProductUnit }))}
-                fullWidth
-                size="small"
-                sx={{ fontFamily: "var(--font-cairo)", textAlign: "right", "& .MuiSelect-select": { textAlign: "right" } }}
-                MenuProps={{ PaperProps: { sx: { direction: "rtl" } } }}
-              >
-                <MenuItem value="sqm">متر مربع</MenuItem>
-                <MenuItem value="linear_m">متر طولي</MenuItem>
-              </Select>
-            </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block", textAlign: "right" }}>نوع المادة</Typography>
-              <Select
-                value={form.materialType}
-                onChange={(e) => setForm((f) => ({ ...f, materialType: e.target.value as MaterialType | "" }))}
-                fullWidth
-                size="small"
-                displayEmpty
-                sx={{ fontFamily: "var(--font-cairo)", textAlign: "right", "& .MuiSelect-select": { textAlign: "right" } }}
-                MenuProps={{ PaperProps: { sx: { direction: "rtl" } } }}
-              >
-                <MenuItem value="">—</MenuItem>
-                <MenuItem value="marble">رخام</MenuItem>
-                <MenuItem value="granite">جرانيت</MenuItem>
-              </Select>
-            </Box>
+            <MobileFriendlySelect
+              label="وحدة القياس"
+              options={[
+                { value: "sqm", label: "متر مربع" },
+                { value: "linear_m", label: "متر طولي" },
+              ]}
+              value={form.unit}
+              onChange={(v) => setForm((f) => ({ ...f, unit: v as ProductUnit }))}
+              fullWidth
+              size="small"
+              sx={{ fontFamily: "var(--font-cairo)", textAlign: "right" }}
+            />
+            <MobileFriendlySelect
+              label="نوع المادة"
+              options={[
+                { value: "marble", label: "رخام" },
+                { value: "granite", label: "جرانيت" },
+              ]}
+              value={form.materialType}
+              onChange={(v) => setForm((f) => ({ ...f, materialType: v as MaterialType | "" }))}
+              fullWidth
+              size="small"
+              placeholder="—"
+              displayEmpty
+              sx={{ fontFamily: "var(--font-cairo)", textAlign: "right" }}
+            />
             <TextField
               label="ترتيب العرض"
               type="number"
@@ -229,7 +223,7 @@ export default function ProductsPage() {
               onChange={(e) => setForm((f) => ({ ...f, order: parseInt(e.target.value, 10) || 0 }))}
               fullWidth
               size="small"
-              inputProps={{ min: 0, dir: "rtl" }}
+              inputProps={{ min: 0, inputMode: "numeric", dir: "rtl" }}
               InputLabelProps={{ style: { textAlign: "right" } }}
               sx={{ "& .MuiInputBase-input": { fontFamily: "var(--font-cairo)", textAlign: "right" } }}
             />

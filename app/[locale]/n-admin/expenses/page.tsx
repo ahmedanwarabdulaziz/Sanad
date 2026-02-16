@@ -10,8 +10,6 @@ import {
   DialogContent,
   DialogTitle,
   InputAdornment,
-  MenuItem,
-  Select,
   TextField,
   Typography,
   useMediaQuery,
@@ -20,7 +18,7 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
 import NAdminShell from "../components/NAdminShell";
-import { RecordList, RecordCard, PageHeader, EmptyState } from "../components";
+import { RecordList, RecordCard, PageHeader, EmptyState, MobileFriendlySelect } from "../components";
 import { getAllExpenses, createExpense, updateExpense } from "@/databases/sales-operations/collections/expenses";
 import { getActiveExpenseTypes } from "@/databases/sales-operations/collections/expense_types";
 import { getAllPurchaseInvoices } from "@/databases/sales-operations/collections/purchase_invoices";
@@ -45,7 +43,7 @@ export default function ExpensesPage() {
   const [items, setItems] = useState<Expense[]>([]);
   const [expenseTypes, setExpenseTypes] = useState<{ id: string; nameAr: string }[]>([]);
   const [purchaseInvoices, setPurchaseInvoices] = useState<{ id: string; invoiceNumber?: string; supplierName: string }[]>([]);
-  const [salesInvoices, setSalesInvoices] = useState<{ id: string; invoiceNumber?: string; customerName: string }[]>([]);
+  const [salesInvoices, setSalesInvoices] = useState<{ id: string; invoiceNumber?: string; customerName: string; customerPhone?: string }[]>([]);
   const [vaults, setVaults] = useState<Vault[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -93,7 +91,7 @@ export default function ExpensesPage() {
     loadData();
     getActiveExpenseTypes().then((list) => setExpenseTypes(list.map((e) => ({ id: e.id, nameAr: e.nameAr })))).catch(() => setExpenseTypes([]));
     getAllPurchaseInvoices().then((list) => setPurchaseInvoices(list.map((i) => ({ id: i.id, invoiceNumber: i.invoiceNumber, supplierName: i.supplierName })))).catch(() => setPurchaseInvoices([]));
-    getAllSalesInvoices().then((list) => setSalesInvoices(list.map((i) => ({ id: i.id, invoiceNumber: i.invoiceNumber, customerName: i.customerName })))).catch(() => setSalesInvoices([]));
+    getAllSalesInvoices().then((list) => setSalesInvoices(list.map((i) => ({ id: i.id, invoiceNumber: i.invoiceNumber, customerName: i.customerName, customerPhone: i.customerPhone })))).catch(() => setSalesInvoices([]));
     const loadVaults = () => {
       try {
         const u = JSON.parse(sessionStorage.getItem("n_admin_user") ?? "null");
@@ -246,7 +244,14 @@ export default function ExpensesPage() {
     return null;
   };
 
-  const getExpenseInvoiceNumber = (item: Expense): string => {
+  /** Expense category label: مصروف عام | فاتورة شراء | فاتورة بيع */
+  const getExpenseCategoryLabel = (item: Expense): string => {
+    if (item.scope !== "invoice") return "مصروف عام";
+    return item.relatedTo === "sell" ? "فاتورة بيع" : "فاتورة شراء";
+  };
+
+  /** Invoice number when expense is linked to an invoice */
+  const getExpenseInvoiceNo = (item: Expense): string => {
     if (item.salesInvoiceId) {
       const inv = salesInvoices.find((i) => i.id === item.salesInvoiceId);
       return inv ? (inv.invoiceNumber ?? inv.id) : "";
@@ -258,12 +263,34 @@ export default function ExpensesPage() {
     return "";
   };
 
+  /** Customer name (sell) or supplier name (buy) when linked to invoice */
+  const getExpensePartyName = (item: Expense): string => {
+    if (item.salesInvoiceId) {
+      const inv = salesInvoices.find((i) => i.id === item.salesInvoiceId);
+      return inv?.customerName ?? "";
+    }
+    if (item.purchaseInvoiceId) {
+      const inv = purchaseInvoices.find((i) => i.id === item.purchaseInvoiceId);
+      return inv?.supplierName ?? "";
+    }
+    return "";
+  };
+
+  /** Customer phone (sales only) when linked to invoice */
+  const getExpensePartyPhone = (item: Expense): string => {
+    if (item.salesInvoiceId) {
+      const inv = salesInvoices.find((i) => i.id === item.salesInvoiceId);
+      return inv?.customerPhone?.trim() ?? "";
+    }
+    return "";
+  };
+
   const filteredItems = items.filter((item) => {
     const status = item.paymentStatus ?? "not_paid";
     if (paymentStatusFilter && status !== paymentStatusFilter) return false;
     const q = invoiceSearch.trim().toLowerCase();
     if (q) {
-      const invNum = getExpenseInvoiceNumber(item).toLowerCase();
+      const invNum = getExpenseInvoiceNo(item).toLowerCase();
       if (!invNum || !invNum.includes(q)) return false;
     }
     return true;
@@ -308,19 +335,21 @@ export default function ExpensesPage() {
           }}
           sx={{ flex: 1, minWidth: 0 }}
         />
-        <Select
-          size="small"
-          value={paymentStatusFilter}
-          onChange={(e) => setPaymentStatusFilter(e.target.value as ExpensePaymentStatus | "")}
-          displayEmpty
-          sx={{ flexShrink: 0, minWidth: 140, fontFamily: "var(--font-cairo)", textAlign: "right", "& .MuiSelect-select": { textAlign: "right" } }}
-          MenuProps={{ PaperProps: { sx: { direction: "rtl" } } }}
-        >
-          <MenuItem value="">كل الحالات</MenuItem>
-          <MenuItem value="paid">{paymentStatusLabel.paid}</MenuItem>
-          <MenuItem value="partial">{paymentStatusLabel.partial}</MenuItem>
-          <MenuItem value="not_paid">{paymentStatusLabel.not_paid}</MenuItem>
-        </Select>
+        <Box sx={{ flexShrink: 0, minWidth: 140 }}>
+          <MobileFriendlySelect
+            size="small"
+            value={paymentStatusFilter}
+            onChange={(v) => setPaymentStatusFilter(v as ExpensePaymentStatus | "")}
+            options={[
+              { value: "paid", label: paymentStatusLabel.paid },
+              { value: "partial", label: paymentStatusLabel.partial },
+              { value: "not_paid", label: paymentStatusLabel.not_paid },
+            ]}
+            placeholder="كل الحالات"
+            displayEmpty
+            sx={{ fontFamily: "var(--font-cairo)", textAlign: "right" }}
+          />
+        </Box>
       </Box>
 
       <RecordList loading={loading}>
@@ -347,34 +376,39 @@ export default function ExpensesPage() {
                     : `${item.amount.toLocaleString("en-US")} ج.م • ${paymentStatusLabel[status]} • ${relatedToLabel[item.relatedTo]} • ${scopeLabel[item.scope]}${item.scope === "invoice" && (item.purchaseInvoiceId || item.salesInvoiceId) ? ` — ${item.purchaseInvoiceId ? getPurchaseInvoiceLabel(item.purchaseInvoiceId) : getSalesInvoiceLabel(item.salesInvoiceId!)}` : ""}`
                 }
                 meta={
-                  <Box sx={{ display: "flex", gap: 0.5, mt: 0.5, flexWrap: "wrap", alignItems: "center" }}>
-                    {notFullyPaid && (
-                      <Chip
-                        size="small"
-                        label={status === "partial" ? `جزئي — متبقي: ${remaining.toLocaleString("en-US")} ج.م` : "غير مكتمل"}
-                        color="warning"
-                        variant="outlined"
-                        sx={{ fontFamily: "var(--font-cairo)" }}
-                      />
-                    )}
-                    <Typography variant="caption" color="text.secondary" sx={{ fontFamily: "var(--font-cairo)" }}>
-                      {formatDate(item.createdAt)}
-                    </Typography>
-                    {invoiceCaption && (
-                      <Typography variant="caption" color="text.secondary" sx={{ fontFamily: "var(--font-cairo)", fontSize: "0.7rem" }}>
-                        • {invoiceCaption}
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, mt: 0.5 }}>
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
+                      <Typography variant="caption" sx={{ fontFamily: "var(--font-cairo)", fontWeight: 600 }}>
+                        {getExpenseCategoryLabel(item)}
+                        {getExpenseInvoiceNo(item) && ` • رقم الفاتورة: ${getExpenseInvoiceNo(item)}`}
+                        {getExpensePartyName(item) && ` • ${item.relatedTo === "sell" ? "العميل:" : "المورد:"} ${getExpensePartyName(item)}`}
+                        {getExpensePartyPhone(item) && ` • رقم العميل: ${getExpensePartyPhone(item)}`}
                       </Typography>
-                    )}
-                    {getPaymentsByVault(getPaymentEntries(item)).length > 0 && (
+                    </Box>
+                    <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 0.5 }}>
+                      {notFullyPaid && (
+                        <Chip
+                          size="small"
+                          label={status === "partial" ? `جزئي — متبقي: ${remaining.toLocaleString("en-US")} ج.م` : "غير مكتمل"}
+                          color="warning"
+                          variant="outlined"
+                          sx={{ fontFamily: "var(--font-cairo)" }}
+                        />
+                      )}
                       <Typography variant="caption" color="text.secondary" sx={{ fontFamily: "var(--font-cairo)" }}>
-                        • مدفوع: {getPaymentsByVault(getPaymentEntries(item)).map((p) => `${p.amount.toLocaleString("en-US")} ج.م من ${vaults.find((v) => v.id === p.vaultId)?.name ?? p.vaultId}`).join("، ")}
+                        {formatDate(item.createdAt)}
                       </Typography>
-                    )}
-                    {item.notes && (
-                      <Typography variant="caption" color="text.secondary" sx={{ fontFamily: "var(--font-cairo)" }}>
-                        • {item.notes}
-                      </Typography>
-                    )}
+                      {getPaymentsByVault(getPaymentEntries(item)).length > 0 && (
+                        <Typography variant="caption" color="text.secondary" sx={{ fontFamily: "var(--font-cairo)" }}>
+                          • مدفوع: {getPaymentsByVault(getPaymentEntries(item)).map((p) => `${p.amount.toLocaleString("en-US")} ج.م من ${vaults.find((v) => v.id === p.vaultId)?.name ?? p.vaultId}`).join("، ")}
+                        </Typography>
+                      )}
+                      {item.notes && (
+                        <Typography variant="caption" color="text.secondary" sx={{ fontFamily: "var(--font-cairo)" }}>
+                          • {item.notes}
+                        </Typography>
+                      )}
+                    </Box>
                   </Box>
                 }
                 action={
@@ -420,23 +454,17 @@ export default function ExpensesPage() {
         <DialogTitle sx={{ fontFamily: "var(--font-cairo)", textAlign: "right", flexShrink: 0 }}>إضافة مصروف</DialogTitle>
         <DialogContent sx={{ textAlign: "right", overflowY: "auto", flex: 1, minHeight: 0, px: isMobile ? 2 : 3 }}>
           <Box dir="rtl" sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1, pb: 2 }}>
-            <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block", textAlign: "right" }}>نوع المصروف</Typography>
-              <Select
-                value={form.expenseTypeId}
-                onChange={(e) => setForm((f) => ({ ...f, expenseTypeId: e.target.value }))}
-                fullWidth
-                size="small"
-                displayEmpty
-                sx={{ fontFamily: "var(--font-cairo)", textAlign: "right", "& .MuiSelect-select": { textAlign: "right" } }}
-                MenuProps={{ PaperProps: { sx: { direction: "rtl" } } }}
-              >
-                <MenuItem value="">اختر النوع</MenuItem>
-                {expenseTypes.map((et) => (
-                  <MenuItem key={et.id} value={et.id}>{et.nameAr}</MenuItem>
-                ))}
-              </Select>
-            </Box>
+            <MobileFriendlySelect
+              label="نوع المصروف"
+              options={expenseTypes.map((et) => ({ value: et.id, label: et.nameAr }))}
+              value={form.expenseTypeId}
+              onChange={(v) => setForm((f) => ({ ...f, expenseTypeId: v }))}
+              fullWidth
+              size="small"
+              placeholder="اختر النوع"
+              displayEmpty
+              sx={{ fontFamily: "var(--font-cairo)", textAlign: "right" }}
+            />
             <TextField
               label="المبلغ (ج.م)"
               type="number"
@@ -444,25 +472,23 @@ export default function ExpensesPage() {
               onChange={(e) => setForm((f) => ({ ...f, amount: parseFloat(e.target.value) || 0 }))}
               fullWidth
               size="small"
-              inputProps={{ min: 0, step: 0.01, dir: "rtl" }}
+              inputProps={{ min: 0, step: 0.01, inputMode: "decimal", dir: "rtl" }}
               InputLabelProps={{ style: { textAlign: "right" } }}
               sx={{ "& .MuiInputBase-input": { fontFamily: "var(--font-cairo)", textAlign: "right" } }}
             />
-            <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block", textAlign: "right" }}>حالة الدفع</Typography>
-              <Select
-                value={form.paymentStatus}
-                onChange={(e) => setForm((f) => ({ ...f, paymentStatus: e.target.value as ExpensePaymentStatus }))}
-                fullWidth
-                size="small"
-                sx={{ fontFamily: "var(--font-cairo)", textAlign: "right", "& .MuiSelect-select": { textAlign: "right" } }}
-                MenuProps={{ PaperProps: { sx: { direction: "rtl" } } }}
-              >
-                <MenuItem value="not_paid">{paymentStatusLabel.not_paid}</MenuItem>
-                <MenuItem value="partial">{paymentStatusLabel.partial}</MenuItem>
-                <MenuItem value="paid">{paymentStatusLabel.paid}</MenuItem>
-              </Select>
-            </Box>
+            <MobileFriendlySelect
+              label="حالة الدفع"
+              options={[
+                { value: "not_paid", label: paymentStatusLabel.not_paid },
+                { value: "partial", label: paymentStatusLabel.partial },
+                { value: "paid", label: paymentStatusLabel.paid },
+              ]}
+              value={form.paymentStatus}
+              onChange={(v) => setForm((f) => ({ ...f, paymentStatus: v as ExpensePaymentStatus }))}
+              fullWidth
+              size="small"
+              sx={{ fontFamily: "var(--font-cairo)", textAlign: "right" }}
+            />
             {form.paymentStatus === "partial" && (
               <TextField
                 label="المبلغ المدفوع (ج.م)"
@@ -472,7 +498,7 @@ export default function ExpensesPage() {
                 fullWidth
                 size="small"
                 required
-                inputProps={{ min: 0, max: form.amount > 0 ? form.amount : undefined, step: 0.01, dir: "rtl" }}
+                inputProps={{ min: 0, max: form.amount > 0 ? form.amount : undefined, step: 0.01, inputMode: "decimal", dir: "rtl" }}
                 InputLabelProps={{ style: { textAlign: "right" } }}
                 sx={{ "& .MuiInputBase-input": { fontFamily: "var(--font-cairo)", textAlign: "right" } }}
                 helperText={form.amount > 0 ? `الحد الأقصى: ${form.amount.toLocaleString("en-US")} ج.م` : undefined}
@@ -480,89 +506,69 @@ export default function ExpensesPage() {
               />
             )}
             {(form.paymentStatus === "paid" || form.paymentStatus === "partial") && (
-              <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block", textAlign: "right" }}>الدفع من حساب</Typography>
-                <Select
-                  value={form.paidFromVaultId}
-                  onChange={(e) => setForm((f) => ({ ...f, paidFromVaultId: e.target.value }))}
-                  fullWidth
-                  size="small"
-                  displayEmpty
-                  sx={{ fontFamily: "var(--font-cairo)", textAlign: "right", "& .MuiSelect-select": { textAlign: "right" } }}
-                  MenuProps={{ PaperProps: { sx: { direction: "rtl" } } }}
-                >
-                  <MenuItem value="">اختر الحساب</MenuItem>
-                  {vaults.map((v) => (
-                    <MenuItem key={v.id} value={v.id}>{v.name} {v.type === "bank" ? "(بنك)" : "(شخصي)"}</MenuItem>
-                  ))}
-                </Select>
-              </Box>
+              <MobileFriendlySelect
+                label="الدفع من حساب"
+                options={vaults.map((v) => ({ value: v.id, label: `${v.name} ${v.type === "bank" ? "(بنك)" : "(شخصي)"}` }))}
+                value={form.paidFromVaultId}
+                onChange={(v) => setForm((f) => ({ ...f, paidFromVaultId: v }))}
+                fullWidth
+                size="small"
+                placeholder="اختر الحساب"
+                displayEmpty
+                sx={{ fontFamily: "var(--font-cairo)", textAlign: "right" }}
+              />
             )}
-            <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block", textAlign: "right" }}>مرتبط بـ</Typography>
-              <Select
-                value={form.relatedTo}
-                onChange={(e) => setForm((f) => ({ ...f, relatedTo: e.target.value as ExpenseRelatedTo, purchaseInvoiceId: "", salesInvoiceId: "" }))}
-                fullWidth
-                size="small"
-                sx={{ fontFamily: "var(--font-cairo)", textAlign: "right", "& .MuiSelect-select": { textAlign: "right" } }}
-                MenuProps={{ PaperProps: { sx: { direction: "rtl" } } }}
-              >
-                <MenuItem value="buy">{relatedToLabel.buy}</MenuItem>
-                <MenuItem value="sell">{relatedToLabel.sell}</MenuItem>
-              </Select>
-            </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block", textAlign: "right" }}>نطاق المصروف</Typography>
-              <Select
-                value={form.scope}
-                onChange={(e) => setForm((f) => ({ ...f, scope: e.target.value as ExpenseScope, purchaseInvoiceId: "", salesInvoiceId: "" }))}
-                fullWidth
-                size="small"
-                sx={{ fontFamily: "var(--font-cairo)", textAlign: "right", "& .MuiSelect-select": { textAlign: "right" } }}
-                MenuProps={{ PaperProps: { sx: { direction: "rtl" } } }}
-              >
-                <MenuItem value="general">{scopeLabel.general}</MenuItem>
-                <MenuItem value="invoice">{scopeLabel.invoice}</MenuItem>
-              </Select>
-            </Box>
+            <MobileFriendlySelect
+              label="مرتبط بـ"
+              options={[
+                { value: "buy", label: relatedToLabel.buy },
+                { value: "sell", label: relatedToLabel.sell },
+              ]}
+              value={form.relatedTo}
+              onChange={(v) => setForm((f) => ({ ...f, relatedTo: v as ExpenseRelatedTo, purchaseInvoiceId: "", salesInvoiceId: "" }))}
+              fullWidth
+              size="small"
+              sx={{ fontFamily: "var(--font-cairo)", textAlign: "right" }}
+            />
+            <MobileFriendlySelect
+              label="نطاق المصروف"
+              options={[
+                { value: "general", label: scopeLabel.general },
+                { value: "invoice", label: scopeLabel.invoice },
+              ]}
+              value={form.scope}
+              onChange={(v) => setForm((f) => ({ ...f, scope: v as ExpenseScope, purchaseInvoiceId: "", salesInvoiceId: "" }))}
+              fullWidth
+              size="small"
+              sx={{ fontFamily: "var(--font-cairo)", textAlign: "right" }}
+            />
             {form.scope === "invoice" && form.relatedTo === "buy" && (
-              <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block", textAlign: "right" }}>فاتورة الشراء</Typography>
-                <Select
-                  value={form.purchaseInvoiceId}
-                  onChange={(e) => setForm((f) => ({ ...f, purchaseInvoiceId: e.target.value }))}
-                  fullWidth
-                  size="small"
-                  displayEmpty
-                  sx={{ fontFamily: "var(--font-cairo)", textAlign: "right", "& .MuiSelect-select": { textAlign: "right" } }}
-                  MenuProps={{ PaperProps: { sx: { direction: "rtl" } } }}
-                >
-                  <MenuItem value="">اختر الفاتورة</MenuItem>
-                  {purchaseInvoices.map((inv) => (
-                    <MenuItem key={inv.id} value={inv.id}>{getPurchaseInvoiceLabel(inv.id)}</MenuItem>
-                  ))}
-                </Select>
-              </Box>
+              <MobileFriendlySelect
+                label="فاتورة الشراء"
+                options={purchaseInvoices.map((inv) => ({ value: inv.id, label: getPurchaseInvoiceLabel(inv.id) }))}
+                value={form.purchaseInvoiceId}
+                onChange={(v) => setForm((f) => ({ ...f, purchaseInvoiceId: v }))}
+                fullWidth
+                size="small"
+                placeholder="اختر الفاتورة"
+                displayEmpty
+                searchable
+                sx={{ fontFamily: "var(--font-cairo)", textAlign: "right" }}
+              />
             )}
             {form.scope === "invoice" && form.relatedTo === "sell" && (
-              <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block", textAlign: "right" }}>فاتورة المبيعات</Typography>
-                <Select
-                  value={form.salesInvoiceId}
-                  onChange={(e) => setForm((f) => ({ ...f, salesInvoiceId: e.target.value }))}
-                  fullWidth
-                  size="small"
-                  displayEmpty
-                  sx={{ fontFamily: "var(--font-cairo)", textAlign: "right", "& .MuiSelect-select": { textAlign: "right" } }}
-                  MenuProps={{ PaperProps: { sx: { direction: "rtl" } } }}
-                >
-                  <MenuItem value="">اختر الفاتورة</MenuItem>
-                  {salesInvoices.map((inv) => (
-                    <MenuItem key={inv.id} value={inv.id}>{getSalesInvoiceLabel(inv.id)}</MenuItem>
-                  ))}
-                </Select>
-              </Box>
+              <MobileFriendlySelect
+                label="فاتورة المبيعات"
+                options={salesInvoices.map((inv) => ({ value: inv.id, label: getSalesInvoiceLabel(inv.id) }))}
+                value={form.salesInvoiceId}
+                onChange={(v) => setForm((f) => ({ ...f, salesInvoiceId: v }))}
+                fullWidth
+                size="small"
+                placeholder="اختر الفاتورة"
+                displayEmpty
+                searchable
+                sx={{ fontFamily: "var(--font-cairo)", textAlign: "right" }}
+              />
             )}
             <TextField
               label="ملاحظات"
@@ -631,29 +637,24 @@ export default function ExpensesPage() {
                   min: 0,
                   max: Math.max(0, addPaymentExpense.amount - (addPaymentExpense.amountPaid ?? 0)),
                   step: 0.01,
+                  inputMode: "decimal",
                   dir: "rtl",
                 }}
                 InputLabelProps={{ style: { textAlign: "right" } }}
                 sx={{ "& .MuiInputBase-input": { fontFamily: "var(--font-cairo)", textAlign: "right" } }}
                 helperText={`الحد الأقصى: ${Math.max(0, addPaymentExpense.amount - (addPaymentExpense.amountPaid ?? 0)).toLocaleString("en-US")} ج.م`}
               />
-              <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block", textAlign: "right" }}>الدفع من حساب</Typography>
-                <Select
-                  value={addPaymentVaultId}
-                  onChange={(e) => setAddPaymentVaultId(e.target.value)}
-                  fullWidth
-                  size="small"
-                  displayEmpty
-                  sx={{ fontFamily: "var(--font-cairo)", textAlign: "right", "& .MuiSelect-select": { textAlign: "right" } }}
-                  MenuProps={{ PaperProps: { sx: { direction: "rtl" } } }}
-                >
-                  <MenuItem value="">اختر الحساب</MenuItem>
-                  {vaults.map((v) => (
-                    <MenuItem key={v.id} value={v.id}>{v.name} {v.type === "bank" ? "(بنك)" : "(شخصي)"}</MenuItem>
-                  ))}
-                </Select>
-              </Box>
+              <MobileFriendlySelect
+                label="الدفع من حساب"
+                options={vaults.map((v) => ({ value: v.id, label: `${v.name} ${v.type === "bank" ? "(بنك)" : "(شخصي)"}` }))}
+                value={addPaymentVaultId}
+                onChange={setAddPaymentVaultId}
+                fullWidth
+                size="small"
+                placeholder="اختر الحساب"
+                displayEmpty
+                sx={{ fontFamily: "var(--font-cairo)", textAlign: "right" }}
+              />
             </Box>
           )}
         </DialogContent>

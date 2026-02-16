@@ -11,8 +11,6 @@ import {
   DialogTitle,
   FormControlLabel,
   IconButton,
-  MenuItem,
-  Select,
   Switch,
   TextField,
   Typography,
@@ -20,7 +18,7 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import NAdminShell from "../components/NAdminShell";
-import { RecordList, RecordCard, PageHeader, EmptyState } from "../components";
+import { RecordList, RecordCard, PageHeader, EmptyState, MobileFriendlySelect } from "../components";
 import { getAllUsers, createUser, updateUser } from "@/databases/sales-operations/collections/users";
 import type { SalesUser, PageAccess } from "@/databases/sales-operations/types";
 import { ADMIN_PAGES } from "@/databases/sales-operations/constants/pages";
@@ -266,23 +264,19 @@ export default function UsersPage() {
               InputLabelProps={{ style: { textAlign: "right" } }}
               sx={{ "& .MuiInputBase-input": { fontFamily: "var(--font-cairo)", textAlign: "right" } }}
             />
-            <Box dir="rtl" sx={{ textAlign: "right" }}>
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block", fontFamily: "var(--font-cairo)", textAlign: "right" }}>
-                الدور
-              </Typography>
-              <Select
-                value={form.role}
-                onChange={(e) => setForm((f) => ({ ...f, role: e.target.value as SalesUser["role"] }))}
-                fullWidth
-                size="small"
-                sx={{ fontFamily: "var(--font-cairo)", textAlign: "right", "& .MuiSelect-select": { textAlign: "right" } }}
-                MenuProps={{ PaperProps: { sx: { direction: "rtl" } } }}
-              >
-                <MenuItem value="user">مستخدم</MenuItem>
-                <MenuItem value="admin">مدير</MenuItem>
-                {user.role === "super_admin" && <MenuItem value="super_admin">مدير أعلى</MenuItem>}
-              </Select>
-            </Box>
+            <MobileFriendlySelect
+              label="الدور"
+              options={[
+                { value: "user", label: "مستخدم" },
+                { value: "admin", label: "مدير" },
+                ...(user?.role === "super_admin" ? [{ value: "super_admin", label: "مدير أعلى" }] : []),
+              ]}
+              value={form.role}
+              onChange={(v) => setForm((f) => ({ ...f, role: v as SalesUser["role"] }))}
+              fullWidth
+              size="small"
+              sx={{ fontFamily: "var(--font-cairo)", textAlign: "right" }}
+            />
             <FormControlLabel
               control={
                 <Switch

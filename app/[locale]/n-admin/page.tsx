@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Box, Button, MenuItem, Select, TextField, Typography } from "@mui/material";
+import { Box, Button, TextField, Typography } from "@mui/material";
+import { MobileFriendlySelect } from "./components";
 import { getAllUsers } from "@/databases/sales-operations/collections/users";
 import type { SalesUser } from "@/databases/sales-operations/types";
 
@@ -85,30 +86,24 @@ export default function NAdminLoginPage() {
         </Typography>
         </Box>
 
-        <Select
-          fullWidth
-          value={selectedUserId}
-          onChange={(e) => setSelectedUserId(e.target.value)}
-          displayEmpty
-          sx={{ mb: 2, fontFamily: "var(--font-cairo)", textAlign: "right", "& .MuiSelect-select": { textAlign: "right" } }}
-          MenuProps={{ PaperProps: { sx: { direction: "rtl" } } }}
-        >
-          <MenuItem value="">
-            <em>اختر المستخدم</em>
-          </MenuItem>
-          {users.filter((u) => u.active).map((u) => (
-            <MenuItem key={u.id} value={u.id}>
-              {u.name}
-            </MenuItem>
-          ))}
-        </Select>
+        <Box sx={{ mb: 2 }}>
+          <MobileFriendlySelect
+            fullWidth
+            value={selectedUserId}
+            onChange={setSelectedUserId}
+            options={users.filter((u) => u.active).map((u) => ({ value: u.id, label: u.name }))}
+            placeholder="اختر المستخدم"
+            displayEmpty
+            searchable
+            sx={{ fontFamily: "var(--font-cairo)", textAlign: "right" }}
+          />
+        </Box>
 
         <TextField
           fullWidth
           label="الرمز (4 أرقام)"
           type="password"
-          inputMode="numeric"
-          inputProps={{ maxLength: 4, pattern: "[0-9]*", dir: "rtl" }}
+          inputProps={{ maxLength: 4, pattern: "[0-9]*", inputMode: "numeric", dir: "rtl" }}
           value={pin}
           onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
           InputLabelProps={{ style: { textAlign: "right" } }}

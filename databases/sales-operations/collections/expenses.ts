@@ -56,5 +56,5 @@ export async function createExpense(
 }
 
 export async function updateExpense(id: string, data: Partial<Expense>): Promise<void> {
-  await updateDoc(expenseDoc(id), omitUndefined(data));
+  await updateDoc(expenseDoc(id), omitUndefined({ ...data, updatedAt: Date.now() }));
 }
