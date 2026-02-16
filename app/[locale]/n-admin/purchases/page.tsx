@@ -34,6 +34,7 @@ import { getActiveSuppliers } from "@/databases/sales-operations/collections/sup
 import { getAllVaults, getVaultsByUser } from "@/databases/sales-operations/collections/vaults";
 import { getAllVaultTransfers, computeBalancesByVault } from "@/databases/sales-operations/collections/vault_transfers";
 import { createStockMovement } from "@/databases/sales-operations/collections/stock_movements";
+import { createActivityLogEntry } from "@/databases/sales-operations/collections/activity_log";
 import type { SalesUser } from "@/databases/sales-operations/types";
 import type {
   PurchaseInvoice,
@@ -247,6 +248,19 @@ export default function PurchasesPage() {
         await deleteExpensesByPurchaseInvoiceId(editing.id);
       } else {
         invoiceId = await createPurchaseInvoice(payload);
+      }
+      const logAmount = editing
+        ? Math.max(0, (header.amountPaid ?? 0) - (editing.amountPaid ?? 0))
+        : (header.amountPaid ?? 0);
+      if (logAmount > 0 && paidFromVaultId) {
+        const vaultName = vaults.find((v) => v.id === paidFromVaultId)?.name ?? paidFromVaultId;
+        await createActivityLogEntry({
+          type: "payment",
+          amount: logAmount,
+          vaultId: paidFromVaultId,
+          ref: `دفع ${logAmount.toLocaleString("en-US")} ج.م لفاتورة ${header.invoiceNumber?.trim() || invoiceId} — ${supplierName} — من حساب ${vaultName}`,
+          createdBy: user?.id,
+        });
       }
       for (const line of lines) {
         if (!line.productId || line.quantity <= 0) continue;

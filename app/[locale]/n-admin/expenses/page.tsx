@@ -24,6 +24,7 @@ import { getActiveExpenseTypes } from "@/databases/sales-operations/collections/
 import { getAllPurchaseInvoices } from "@/databases/sales-operations/collections/purchase_invoices";
 import { getAllSalesInvoices } from "@/databases/sales-operations/collections/sales_invoices";
 import { getAllVaults, getVaultsByUser } from "@/databases/sales-operations/collections/vaults";
+import { createActivityLogEntry } from "@/databases/sales-operations/collections/activity_log";
 import type { SalesUser } from "@/databases/sales-operations/types";
 import type { Vault } from "@/databases/sales-operations/types";
 import type { Expense, ExpensePayment, ExpenseRelatedTo, ExpenseScope, ExpensePaymentStatus } from "@/databases/sales-operations/types";
@@ -45,6 +46,8 @@ export default function ExpensesPage() {
   const [purchaseInvoices, setPurchaseInvoices] = useState<{ id: string; invoiceNumber?: string; supplierName: string }[]>([]);
   const [salesInvoices, setSalesInvoices] = useState<{ id: string; invoiceNumber?: string; customerName: string; customerPhone?: string }[]>([]);
   const [vaults, setVaults] = useState<Vault[]>([]);
+  /** All active vaults for resolving names in payment details (so all users see vault names, not IDs). */
+  const [allVaultsForDisplay, setAllVaultsForDisplay] = useState<Vault[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -105,6 +108,7 @@ export default function ExpensesPage() {
       }
     };
     loadVaults();
+    getAllVaults().then((list) => setAllVaultsForDisplay(list.filter((v) => v.active))).catch(() => setAllVaultsForDisplay([]));
   }, []);
 
   const loadData = () => {
@@ -166,6 +170,17 @@ export default function ExpensesPage() {
         salesInvoiceId: form.scope === "invoice" && form.relatedTo === "sell" ? form.salesInvoiceId : undefined,
         createdBy: user?.id,
       });
+      if (amountPaid && amountPaid > 0 && paidFromVaultId) {
+        const vaultName = vaults.find((v) => v.id === paidFromVaultId)?.name ?? paidFromVaultId;
+        const typeName = expenseTypes.find((e) => e.id === form.expenseTypeId)?.nameAr ?? form.expenseTypeId;
+        await createActivityLogEntry({
+          type: "expense_payment",
+          amount: amountPaid,
+          vaultId: paidFromVaultId,
+          ref: `دفع مصروف ${amountPaid.toLocaleString("en-US")} ج.م — ${typeName} — من حساب ${vaultName}`,
+          createdBy: user?.id,
+        });
+      }
       setDialogOpen(false);
       loadData();
     } catch (err) {
@@ -192,6 +207,14 @@ export default function ExpensesPage() {
         amountPaid: newAmountPaid,
         paidFromVaultId: addPaymentVaultId.trim(),
         paymentStatus,
+      });
+      const vaultName = vaults.find((v) => v.id === addPaymentVaultId.trim())?.name ?? addPaymentVaultId;
+      await createActivityLogEntry({
+        type: "expense_payment",
+        amount,
+        vaultId: addPaymentVaultId.trim(),
+        ref: `دفع مصروف ${amount.toLocaleString("en-US")} ج.م — ${getExpenseTypeName(addPaymentExpense.expenseTypeId)} — من حساب ${vaultName}`,
+        createdBy: user?.id,
       });
       setAddPaymentExpense(null);
       setAddPaymentAmount(0);
@@ -400,7 +423,7 @@ export default function ExpensesPage() {
                       </Typography>
                       {getPaymentsByVault(getPaymentEntries(item)).length > 0 && (
                         <Typography variant="caption" color="text.secondary" sx={{ fontFamily: "var(--font-cairo)" }}>
-                          • مدفوع: {getPaymentsByVault(getPaymentEntries(item)).map((p) => `${p.amount.toLocaleString("en-US")} ج.م من ${vaults.find((v) => v.id === p.vaultId)?.name ?? p.vaultId}`).join("، ")}
+                          • مدفوع: {getPaymentsByVault(getPaymentEntries(item)).map((p) => `${p.amount.toLocaleString("en-US")} ج.م من ${allVaultsForDisplay.find((v) => v.id === p.vaultId)?.name ?? vaults.find((v) => v.id === p.vaultId)?.name ?? p.vaultId}`).join("، ")}
                         </Typography>
                       )}
                       {item.notes && (

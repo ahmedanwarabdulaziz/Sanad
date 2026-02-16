@@ -32,6 +32,7 @@ import { getExpensesBySalesInvoiceId, createSalesInvoiceExpense, deleteExpensesB
 import { getActiveProducts } from "@/databases/sales-operations/collections/products";
 import { getActiveCustomers, createCustomer, updateCustomer } from "@/databases/sales-operations/collections/customers";
 import { getAllVaults, getVaultsByUser } from "@/databases/sales-operations/collections/vaults";
+import { createActivityLogEntry } from "@/databases/sales-operations/collections/activity_log";
 import { getActiveExpenseTypes } from "@/databases/sales-operations/collections/expense_types";
 import { getStockByProduct, getAverageCostByProduct } from "@/databases/sales-operations/collections/stock_movements";
 import { createStockMovement } from "@/databases/sales-operations/collections/stock_movements";
@@ -75,6 +76,9 @@ export default function SalesPage() {
   const [addCustomerOpen, setAddCustomerOpen] = useState(false);
   const [newCustomerForm, setNewCustomerForm] = useState({ nameAr: "", phone: "", notes: "" });
   const [addingCustomer, setAddingCustomer] = useState(false);
+  const [insufficientStockItems, setInsufficientStockItems] = useState<
+    { productName: string; requested: number; available: number; unit: ProductUnit }[] | null
+  >(null);
 
   useEffect(() => {
     const raw = sessionStorage.getItem("n_admin_user");
@@ -272,6 +276,20 @@ export default function SalesPage() {
       } else {
         invoiceId = await createSalesInvoice(payload);
       }
+      const paidToVaultId = header.paidToVaultId?.trim();
+      const logAmount = editing
+        ? Math.max(0, (header.amountPaid ?? 0) - (editing.amountPaid ?? 0))
+        : (header.amountPaid ?? 0);
+      if (logAmount > 0 && paidToVaultId) {
+        const vaultName = vaults.find((v) => v.id === paidToVaultId)?.name ?? paidToVaultId;
+        await createActivityLogEntry({
+          type: "collection",
+          amount: logAmount,
+          vaultId: paidToVaultId,
+          ref: `تحصيل ${logAmount.toLocaleString("en-US")} ج.م من فاتورة ${header.invoiceNumber?.trim() || invoiceId} — ${customerName} — إيداع في ${vaultName}`,
+          createdBy: user?.id,
+        });
+      }
       for (const line of lines) {
         if (!line.productId || line.quantity <= 0) continue;
         const lineTotal = line.quantity * line.unitPrice;
@@ -313,6 +331,19 @@ export default function SalesPage() {
     setConfirmLoadingId(inv.id);
     try {
       const items = await getItemsBySalesInvoiceId(inv.id);
+      const insufficient: { productName: string; requested: number; available: number; unit: ProductUnit }[] = [];
+      for (const item of items) {
+        const available = getAvailableQty(item.productId);
+        if (item.quantity > available) {
+          const productName = products.find((p) => p.id === item.productId)?.nameAr ?? item.productId;
+          insufficient.push({ productName, requested: item.quantity, available, unit: item.unit });
+        }
+      }
+      if (insufficient.length > 0) {
+        setConfirmLoadingId(null);
+        setInsufficientStockItems(insufficient);
+        return;
+      }
       const now = Date.now();
       for (const item of items) {
         await createStockMovement({
@@ -814,6 +845,34 @@ export default function SalesPage() {
           <Button onClick={() => !saving && setDialogOpen(false)} sx={{ fontFamily: "var(--font-cairo)" }}>إلغاء</Button>
           <Button variant="contained" onClick={handleSave} disabled={saving || !header.customerName?.trim()} sx={{ fontFamily: "var(--font-cairo)" }}>
             {saving ? "جاري الحفظ…" : "حفظ"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={!!insufficientStockItems?.length}
+        onClose={() => setInsufficientStockItems(null)}
+        dir="rtl"
+        PaperProps={{ sx: { borderRadius: 2, direction: "rtl", textAlign: "right", minWidth: 320, maxWidth: 420 } }}
+      >
+        <DialogTitle sx={{ fontFamily: "var(--font-cairo)", textAlign: "right", color: "warning.main" }}>
+          تنبيه — الكمية غير متوفرة في المخزن
+        </DialogTitle>
+        <DialogContent sx={{ textAlign: "right" }}>
+          <Typography variant="body2" sx={{ fontFamily: "var(--font-cairo)", mb: 1.5 }}>
+            لا يمكن تنفيذ إخراج من المخزن. الكميات التالية غير متوفرة:
+          </Typography>
+          <Box component="ul" sx={{ m: 0, pl: 2.5, listStyle: "disc" }}>
+            {insufficientStockItems?.map((i, idx) => (
+              <Typography key={idx} component="li" variant="body2" sx={{ fontFamily: "var(--font-cairo)", mb: 0.5 }}>
+                {i.productName}: مطلوب {i.requested.toLocaleString("en-US")} {unitLabel(i.unit)}، المتاح: {i.available.toLocaleString("en-US")} {unitLabel(i.unit)}
+              </Typography>
+            ))}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ direction: "rtl", justifyContent: "flex-start" }}>
+          <Button onClick={() => setInsufficientStockItems(null)} variant="contained" sx={{ fontFamily: "var(--font-cairo)" }}>
+            موافق
           </Button>
         </DialogActions>
       </Dialog>

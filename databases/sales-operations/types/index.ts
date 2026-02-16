@@ -261,3 +261,15 @@ export interface StockMovement {
   createdAt: number;
   createdBy?: string;
 }
+
+export type ActivityLogType = "collection" | "payment" | "expense_payment";
+
+export interface ActivityLogEntry {
+  id: string;
+  type: ActivityLogType;
+  timestamp: number;
+  amount: number;
+  vaultId: string;
+  ref: string;
+  createdBy?: string;
+}

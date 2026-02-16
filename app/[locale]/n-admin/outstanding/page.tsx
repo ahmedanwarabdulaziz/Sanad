@@ -22,6 +22,7 @@ import { getActiveExpenseTypes } from "@/databases/sales-operations/collections/
 import { getAllPurchaseInvoices, updatePurchaseInvoice } from "@/databases/sales-operations/collections/purchase_invoices";
 import { getAllSalesInvoices, updateSalesInvoice } from "@/databases/sales-operations/collections/sales_invoices";
 import { getAllVaults, getVaultsByUser } from "@/databases/sales-operations/collections/vaults";
+import { createActivityLogEntry } from "@/databases/sales-operations/collections/activity_log";
 import type { SalesUser } from "@/databases/sales-operations/types";
 import type { Vault } from "@/databases/sales-operations/types";
 import type { Expense, ExpensePayment, ExpensePaymentStatus } from "@/databases/sales-operations/types";
@@ -174,6 +175,14 @@ export default function OutstandingPage() {
         paidFromVaultId: expensePaymentVaultId.trim(),
         paymentStatus,
       });
+      const vaultName = vaults.find((v) => v.id === expensePaymentVaultId.trim())?.name ?? expensePaymentVaultId;
+      await createActivityLogEntry({
+        type: "expense_payment",
+        amount,
+        vaultId: expensePaymentVaultId.trim(),
+        ref: `دفع مصروف ${amount.toLocaleString("en-US")} ج.م — ${getExpenseTypeName(expensePayment.expenseTypeId)} — من حساب ${vaultName}`,
+        createdBy: user?.id,
+      });
       setExpensePayment(null);
       setExpensePaymentAmount(0);
       setExpensePaymentVaultId("");
@@ -197,6 +206,14 @@ export default function OutstandingPage() {
         amountPaid: paid + amount,
         paidFromVaultId: purchasePaymentVaultId.trim(),
       });
+      const vaultName = vaults.find((v) => v.id === purchasePaymentVaultId.trim())?.name ?? purchasePaymentVaultId;
+      await createActivityLogEntry({
+        type: "payment",
+        amount,
+        vaultId: purchasePaymentVaultId.trim(),
+        ref: `دفع ${amount.toLocaleString("en-US")} ج.م لفاتورة ${purchasePaymentInv.invoiceNumber ?? purchasePaymentInv.id} — ${purchasePaymentInv.supplierName} — من حساب ${vaultName}`,
+        createdBy: user?.id,
+      });
       setPurchasePaymentInv(null);
       setPurchasePaymentAmount(0);
       setPurchasePaymentVaultId("");
@@ -219,6 +236,14 @@ export default function OutstandingPage() {
       await updateSalesInvoice(salesCollectInv.id, {
         amountPaid: paid + amount,
         paidToVaultId: salesCollectVaultId.trim(),
+      });
+      const vaultName = vaults.find((v) => v.id === salesCollectVaultId.trim())?.name ?? salesCollectVaultId;
+      await createActivityLogEntry({
+        type: "collection",
+        amount,
+        vaultId: salesCollectVaultId.trim(),
+        ref: `تحصيل ${amount.toLocaleString("en-US")} ج.م من فاتورة ${salesCollectInv.invoiceNumber ?? salesCollectInv.id} — ${salesCollectInv.customerName} — إيداع في ${vaultName}`,
+        createdBy: user?.id,
       });
       setSalesCollectInv(null);
       setSalesCollectAmount(0);

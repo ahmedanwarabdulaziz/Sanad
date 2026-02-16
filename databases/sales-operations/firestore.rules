@@ -52,5 +52,8 @@ service cloud.firestore {
     match /stock_movements/{movementId} {
       allow read, write: if true;
     }
+    match /activity_log/{entryId} {
+      allow read, write: if true;
+    }
   }
 }

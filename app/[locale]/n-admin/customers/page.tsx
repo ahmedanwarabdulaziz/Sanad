@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import {
   Box,
   Button,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -12,17 +11,30 @@ import {
   FormControlLabel,
   IconButton,
   Switch,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
   TextField,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import AssessmentIcon from "@mui/icons-material/Assessment";
 import EditIcon from "@mui/icons-material/Edit";
 import PhoneIcon from "@mui/icons-material/Phone";
 import NAdminShell from "../components/NAdminShell";
 import { RecordList, RecordCard, PageHeader, EmptyState, MobileFriendlySelect } from "../components";
 import { getAllCustomers, createCustomer, updateCustomer } from "@/databases/sales-operations/collections/customers";
+import { getAllSalesInvoices, updateSalesInvoice } from "@/databases/sales-operations/collections/sales_invoices";
+import { getAllVaults, getVaultsByUser } from "@/databases/sales-operations/collections/vaults";
+import { createActivityLogEntry } from "@/databases/sales-operations/collections/activity_log";
 import type { SalesUser } from "@/databases/sales-operations/types";
 import type { Customer, CustomerStage } from "@/databases/sales-operations/types";
+import type { SalesInvoice } from "@/databases/sales-operations/types";
+import type { Vault } from "@/databases/sales-operations/types";
 
 const STAGE_LABELS: Record<CustomerStage, string> = {
   lead: "ليد",
@@ -51,11 +63,20 @@ function validateEgyptianPhone(value: string): string | null {
 }
 
 export default function CustomersPage() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [user, setUser] = useState<SalesUser | null>(null);
   const [items, setItems] = useState<Customer[]>([]);
+  const [salesInvoices, setSalesInvoices] = useState<SalesInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
+  const [reportCustomer, setReportCustomer] = useState<Customer | null>(null);
+  const [vaults, setVaults] = useState<Vault[]>([]);
+  const [collectInv, setCollectInv] = useState<SalesInvoice | null>(null);
+  const [collectAmount, setCollectAmount] = useState(0);
+  const [collectVaultId, setCollectVaultId] = useState("");
+  const [collectSaving, setCollectSaving] = useState(false);
   const [form, setForm] = useState({
     nameAr: "",
     nameEn: "",
@@ -88,14 +109,40 @@ export default function CustomersPage() {
       return;
     }
     loadData();
+    const loadVaults = () => {
+      try {
+        const u = JSON.parse(sessionStorage.getItem("n_admin_user") ?? "null");
+        if (u?.role === "super_admin" || u?.role === "admin")
+          getAllVaults().then((list) => setVaults(list.filter((v) => v.active))).catch(() => setVaults([]));
+        else if (u?.id)
+          getVaultsByUser(u.id).then((list) => setVaults(list.filter((v) => v.active))).catch(() => setVaults([]));
+        else setVaults([]);
+      } catch {
+        setVaults([]);
+      }
+    };
+    loadVaults();
   }, []);
 
   const loadData = () => {
     setLoading(true);
-    getAllCustomers()
-      .then(setItems)
-      .catch(() => setItems([]))
+    Promise.all([getAllCustomers(), getAllSalesInvoices()])
+      .then(([customers, invoices]) => {
+        setItems(customers);
+        setSalesInvoices(invoices);
+      })
+      .catch(() => {
+        setItems([]);
+        setSalesInvoices([]);
+      })
       .finally(() => setLoading(false));
+  };
+
+  const getCustomerStats = (customerId: string) => {
+    const invs = salesInvoices.filter((inv) => inv.customerId === customerId);
+    const notFullyPaidCount = invs.filter((i) => (i.amountPaid ?? 0) < i.totalAmount).length;
+    const remainingToCollect = invs.reduce((sum, i) => sum + Math.max(0, i.totalAmount - (i.amountPaid ?? 0)), 0);
+    return { invoiceCount: invs.length, notFullyPaidCount, remainingToCollect, invoices: invs };
   };
 
   const openAdd = () => {
@@ -155,6 +202,36 @@ export default function CustomersPage() {
     }
   };
 
+  const handleCollect = async () => {
+    if (!collectInv || collectAmount <= 0 || !collectVaultId.trim()) return;
+    const paid = collectInv.amountPaid ?? 0;
+    const remaining = Math.max(0, collectInv.totalAmount - paid);
+    const amount = Math.min(collectAmount, remaining);
+    setCollectSaving(true);
+    try {
+      await updateSalesInvoice(collectInv.id, {
+        amountPaid: paid + amount,
+        paidToVaultId: collectVaultId.trim(),
+      });
+      const vaultName = vaults.find((v) => v.id === collectVaultId.trim())?.name ?? collectVaultId;
+      await createActivityLogEntry({
+        type: "collection",
+        amount,
+        vaultId: collectVaultId.trim(),
+        ref: `تحصيل ${amount.toLocaleString("en-US")} ج.م من فاتورة ${collectInv.invoiceNumber ?? collectInv.id} — ${collectInv.customerName} — إيداع في ${vaultName}`,
+        createdBy: user?.id,
+      });
+      setCollectInv(null);
+      setCollectAmount(0);
+      setCollectVaultId("");
+      loadData();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setCollectSaving(false);
+    }
+  };
+
   const toTelHref = (raw: string) => {
     const digits = (raw || "").replace(/\D/g, "");
     if (digits.length < 10) return "";
@@ -187,15 +264,23 @@ export default function CustomersPage() {
               title={item.nameAr}
               subtitle={item.nameEn ? [item.nameEn, item.phone].filter(Boolean).join(" • ") : item.phone || undefined}
               meta={
-                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexWrap: "wrap", mt: 0.5 }}>
-                  <Chip
-                    label={STAGE_LABELS[item.stage ?? "lead"]}
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap", mt: 0.5 }}>
+                  {(() => {
+                    const st = getCustomerStats(item.id);
+                    return (
+                      <Typography variant="body2" sx={{ fontFamily: "var(--font-cairo)", color: "text.secondary" }}>
+                        إجمالي الفواتير: {st.invoiceCount} • غير مسددة: {st.notFullyPaidCount} • مستحق التحصيل: {st.remainingToCollect.toLocaleString("en-US")} ج.م
+                      </Typography>
+                    );
+                  })()}
+                  <Button
                     size="small"
-                    sx={{ height: 22, fontSize: "0.75rem", bgcolor: "primary.light", color: "primary.contrastText" }}
-                  />
-                  {!item.active && (
-                    <Chip label="معطّل" size="small" sx={{ height: 22, fontSize: "0.75rem", bgcolor: "grey.200" }} />
-                  )}
+                    startIcon={<AssessmentIcon />}
+                    onClick={(ev) => { ev.stopPropagation(); setReportCustomer(item); }}
+                    sx={{ fontFamily: "var(--font-cairo)", fontSize: "0.75rem" }}
+                  >
+                    التفاصيل
+                  </Button>
                   {item.phone && toTelHref(item.phone) && (
                     <Button
                       component="a"
@@ -316,6 +401,188 @@ export default function CustomersPage() {
           <Button onClick={() => setDialogOpen(false)} sx={{ fontFamily: "var(--font-cairo)" }}>إلغاء</Button>
           <Button variant="contained" onClick={handleSave} disabled={!form.nameAr.trim() || !!phoneError} sx={{ fontFamily: "var(--font-cairo)" }}>
             حفظ
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={!!reportCustomer}
+        onClose={() => setReportCustomer(null)}
+        dir="rtl"
+        fullWidth
+        maxWidth="md"
+        fullScreen={isMobile}
+        PaperProps={{ sx: { borderRadius: isMobile ? 0 : 2, direction: "rtl", textAlign: "right", maxHeight: "90vh", display: "flex", flexDirection: "column" } }}
+      >
+        {reportCustomer && (
+          <>
+            <DialogTitle sx={{ fontFamily: "var(--font-cairo)", textAlign: "right", fontSize: isMobile ? "1rem" : undefined, py: isMobile ? 1.5 : 2 }}>
+              تقرير العميل — {reportCustomer.nameAr}
+            </DialogTitle>
+            <DialogContent sx={{ overflow: "auto", flex: 1, px: isMobile ? 2 : 3, pb: 2 }}>
+              {(() => {
+                const st = getCustomerStats(reportCustomer.id);
+                return (
+                  <Box sx={{ mb: 2, p: 1.5, bgcolor: "grey.50", borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
+                    <Typography variant="body2" sx={{ fontFamily: "var(--font-cairo)", color: "text.secondary", mb: 0.5 }}>
+                      المرحلة: {STAGE_LABELS[reportCustomer.stage ?? "lead"]}
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontFamily: "var(--font-cairo)", color: "text.secondary" }}>
+                      إجمالي الفواتير: {st.invoiceCount} • غير مسددة: {st.notFullyPaidCount} • مستحق التحصيل: {st.remainingToCollect.toLocaleString("en-US")} ج.م
+                    </Typography>
+                  </Box>
+                );
+              })()}
+              {(() => {
+                const invs = getCustomerStats(reportCustomer.id).invoices;
+                const formatDate = (ts: number) => new Date(ts).toLocaleDateString("ar-EG", { day: "2-digit", month: "2-digit", year: "numeric" });
+                if (invs.length === 0) {
+                  return <Typography variant="body2" sx={{ fontFamily: "var(--font-cairo)", color: "text.secondary" }}>لا توجد فواتير</Typography>;
+                }
+                if (isMobile) {
+                  return (
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                      {invs.map((inv) => {
+                        const paid = inv.amountPaid ?? 0;
+                        const remaining = Math.max(0, inv.totalAmount - paid);
+                        return (
+                          <Box
+                            key={inv.id}
+                            sx={{
+                              p: 1.5,
+                              borderRadius: 2,
+                              border: "1px solid",
+                              borderColor: "divider",
+                              bgcolor: "background.paper",
+                            }}
+                          >
+                            <Typography variant="subtitle2" sx={{ fontFamily: "var(--font-cairo)", fontWeight: 600, mb: 1 }}>
+                              {inv.invoiceNumber ?? inv.id}
+                            </Typography>
+                            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
+                              <Typography variant="body2" sx={{ fontFamily: "var(--font-cairo)", color: "text.secondary" }}>
+                                التاريخ: {formatDate(inv.invoiceDate)}
+                              </Typography>
+                              <Typography variant="body2" sx={{ fontFamily: "var(--font-cairo)" }}>
+                                الإجمالي: {inv.totalAmount.toLocaleString("en-US")} ج.م • المحصل: {paid.toLocaleString("en-US")} ج.م • المتبقي: {remaining.toLocaleString("en-US")} ج.م
+                              </Typography>
+                              <Typography variant="caption" sx={{ fontFamily: "var(--font-cairo)", color: "text.secondary" }}>
+                                الحالة: {inv.status === "draft" ? "مسودة" : "منتهية"}
+                              </Typography>
+                              {remaining > 0 && (
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  color="primary"
+                                  onClick={() => {
+                                    setCollectInv(inv);
+                                    setCollectAmount(0);
+                                    setCollectVaultId(inv.paidToVaultId ?? (vaults[0]?.id ?? ""));
+                                  }}
+                                  sx={{ fontFamily: "var(--font-cairo)", mt: 1, alignSelf: "flex-start" }}
+                                >
+                                  تحصيل
+                                </Button>
+                              )}
+                            </Box>
+                          </Box>
+                        );
+                      })}
+                    </Box>
+                  );
+                }
+                return (
+                  <Table size="small" sx={{ "& td, & th": { fontFamily: "var(--font-cairo)", textAlign: "right" } }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 600 }}>رقم الفاتورة</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>التاريخ</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>الإجمالي</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>المحصل</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>المتبقي</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>الحالة</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }} />
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {invs.map((inv) => {
+                        const paid = inv.amountPaid ?? 0;
+                        const remaining = Math.max(0, inv.totalAmount - paid);
+                        return (
+                          <TableRow key={inv.id}>
+                            <TableCell>{inv.invoiceNumber ?? inv.id}</TableCell>
+                            <TableCell>{formatDate(inv.invoiceDate)}</TableCell>
+                            <TableCell>{inv.totalAmount.toLocaleString("en-US")} ج.م</TableCell>
+                            <TableCell>{paid.toLocaleString("en-US")} ج.م</TableCell>
+                            <TableCell>{remaining.toLocaleString("en-US")} ج.م</TableCell>
+                            <TableCell>{inv.status === "draft" ? "مسودة" : "منتهية"}</TableCell>
+                            <TableCell padding="none">
+                              {remaining > 0 && (
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  color="primary"
+                                  onClick={() => {
+                                    setCollectInv(inv);
+                                    setCollectAmount(0);
+                                    setCollectVaultId(inv.paidToVaultId ?? (vaults[0]?.id ?? ""));
+                                  }}
+                                  sx={{ fontFamily: "var(--font-cairo)" }}
+                                >
+                                  تحصيل
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                );
+              })()}
+            </DialogContent>
+            <DialogActions sx={{ direction: "rtl", justifyContent: "flex-start", px: isMobile ? 2 : 3, pb: 2 }}>
+              <Button onClick={() => setReportCustomer(null)} sx={{ fontFamily: "var(--font-cairo)" }}>إغلاق</Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
+
+      <Dialog open={!!collectInv} onClose={() => !collectSaving && setCollectInv(null)} dir="rtl" fullWidth maxWidth="xs" fullScreen={isMobile} PaperProps={{ sx: { borderRadius: isMobile ? 0 : 2, direction: "rtl" } }}>
+        <DialogTitle sx={{ fontFamily: "var(--font-cairo)", textAlign: "right" }}>تحصيل من عميل</DialogTitle>
+        <DialogContent sx={{ textAlign: "right" }}>
+          {collectInv && (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ fontFamily: "var(--font-cairo)" }}>
+                {collectInv.invoiceNumber ?? collectInv.id} — متبقي {Math.max(0, collectInv.totalAmount - (collectInv.amountPaid ?? 0)).toLocaleString("en-US")} ج.م
+              </Typography>
+              <TextField
+                label="مبلغ التحصيل (ج.م)"
+                type="number"
+                value={collectAmount === 0 ? "" : collectAmount}
+                onChange={(e) => setCollectAmount(parseFloat(e.target.value) || 0)}
+                fullWidth
+                size="small"
+                inputProps={{ min: 0, max: Math.max(0, collectInv.totalAmount - (collectInv.amountPaid ?? 0)), step: 0.01, inputMode: "decimal" }}
+                InputLabelProps={{ style: { textAlign: "right" } }}
+                sx={{ "& .MuiInputBase-input": { fontFamily: "var(--font-cairo)", textAlign: "right" } }}
+              />
+              <MobileFriendlySelect
+                label="الإيداع في حساب"
+                options={vaults.map((v) => ({ value: v.id, label: v.name }))}
+                value={collectVaultId}
+                onChange={setCollectVaultId}
+                fullWidth
+                size="small"
+                sx={{ fontFamily: "var(--font-cairo)", textAlign: "right" }}
+              />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ direction: "rtl", justifyContent: "flex-start" }}>
+          <Button onClick={() => !collectSaving && setCollectInv(null)} sx={{ fontFamily: "var(--font-cairo)" }}>إلغاء</Button>
+          <Button variant="contained" onClick={handleCollect} disabled={collectSaving || !collectInv || collectAmount <= 0 || !collectVaultId.trim()} sx={{ fontFamily: "var(--font-cairo)" }}>
+            {collectSaving ? "جاري الحفظ…" : "تسجيل التحصيل"}
           </Button>
         </DialogActions>
       </Dialog>
