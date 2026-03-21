@@ -1,0 +1,71 @@
+# Sanad Projects - Database Architecture & Schema
+**Core Principle:** Strict adherence to RLS, No computed columns stored directly unless strictly necessary, UUIDs for all PKs, and strict Audit Trails.
+
+## 1. Project & Stages Engine (إدارة المشاريع وحق المرحلة)
+
+| Table Name | Column Name | Data Type | Purpose & Business Rule |
+| :--- | :--- | :--- | :--- |
+| **`projects`** | `id` | UUID (PK) | Unique identifier for the project (e.g., Sanad Zayed). |
+| | `name` | String | Project name. |
+| | `status` | Enum | `PLANNING`, `ACTIVE`, `COMPLETED`. |
+| **`project_stages`** | `id` | UUID (PK) | Unique identifier for the stage. |
+| | `project_id` | UUID (FK) | Links stage to the project. |
+| | `stage_name` | String | e.g., Land Purchase, Licensing. |
+| | `unit_type` | Enum | `LAND_METER`, `APARTMENT_METER`. |
+| | `base_unit_price` | Decimal | Base cost per unit before management fees. |
+| | `status` | Enum | `OPEN` (Accepting funds), `CLOSED` (Locked for evaluation). |
+| **`investor_contracts`** | `id` | UUID (PK) | Unique identifier for the investor's contract. |
+| | `investor_id` | UUID (FK) | Links to the investor's profile. |
+| | `stage_id` | UUID (FK) | The specific project stage they invested in. |
+| | `unit_quantity` | Decimal | Number of units/meters purchased. |
+| | `unit_price_at_contract`| Decimal | **SNAPSHOT:** Locked price at the time of contract. |
+| | `management_fee_pct` | Decimal | Specific management fee percentage for this investor. |
+| | `total_contract_value`| Decimal | **GENERATED:** (unit_quantity * unit_price) + Management Fee. |
+
+## 2. Treasury, Banks & Petty Cash (إدارة الخزينة والعهد)
+
+| Table Name | Column Name | Data Type | Purpose & Business Rule |
+| :--- | :--- | :--- | :--- |
+| **`financial_accounts`**| `id` | UUID (PK) | Unique identifier for the safe/bank. |
+| | `account_name` | String | e.g., CIB Bank, HQ Cash Safe, Eng. Ahmed Petty Cash. |
+| | `account_type` | Enum | `BANK`, `SAFE_CASH`, `PETTY_CASH`. |
+| | `custodian_id` | UUID (FK/Null)| Links to employee if type is PETTY_CASH. |
+| | `current_balance` | Decimal | Actual funds. Updated ONLY via DB Triggers/RPC. |
+| **`petty_cash_requests`**| `id` | UUID (PK) | Request for funds by an employee. |
+| | `employee_id` | UUID (FK) | Employee requesting the cash. |
+| | `amount_requested` | Decimal | Amount needed. |
+| | `status` | Enum | `PENDING`, `APPROVED`, `DISBURSED`, `SETTLED`. |
+| | `disbursed_from_safe`| UUID (FK/Null)| Which main safe funded this petty cash. |
+
+## 3. Cost Allocation & Settlements (تسويات المصروفات وإثبات الأرباح)
+
+| Table Name | Column Name | Data Type | Purpose & Business Rule |
+| :--- | :--- | :--- | :--- |
+| **`expense_settlements`**| `id` | UUID (PK) | Settlement record for any project expense. |
+| | `financial_account_id`| UUID (FK) | The source of the actual payment (Bank/Petty Cash). |
+| | `project_stage_id` | UUID (FK) | The stage to bear the cost. |
+| | `expense_category` | String | e.g., Brokerage, Licensing fees. |
+| | `allocated_project_cost`| Decimal | The cost loaded onto the project (e.g., 15 EGP). |
+| | `actual_paid_amount` | Decimal | The actual cash out from treasury (e.g., 10 EGP). |
+| | `operational_profit` | Decimal | **GENERATED:** allocated_project_cost - actual_paid_amount. |
+| | `invoice_url` | String | Supabase Storage link to the receipt. |
+| | `workflow_status` | Enum | `PENDING_AUDIT`, `APPROVED`. |
+
+## 4. Operational Expenses (بيانات التشغيل اليومية)
+
+| Table Name | Column Name | Data Type | Purpose & Business Rule |
+| :--- | :--- | :--- | :--- |
+| **`operational_expenses`**| `id` | UUID (PK) | Unique identifier for the expense. |
+| | `project_stage_id` | UUID (FK) | Links to project stage. |
+| | `expense_date` | Date | Actual date of payment. |
+| | `description` | String | Details of the expense. |
+| | `actual_cost` | Decimal | Cash out. |
+| | `management_fee_pct`| Decimal | Management percentage applied. |
+| | `financial_account_id`| UUID (FK) | Source of funds. |
+| | `status` | Enum | `PENDING_REVIEW`, `APPROVED`. |
+| | `attachment_url` | String | Receipt proof. |
+| | `created_by` | UUID (FK) | Audit: User who logged it. |
+| | `updated_by` | UUID (FK) | Audit: Last user to modify. |
+| | `executed_at` | Timestamptz| Exact time of financial approval. |
+
+*Note to AI Agent (Antigravity/Cursor): Use Supabase RPC to ensure atomicity when settling expenses (deducting from treasury and applying cost to project simultaneously). Do not use sequential client-side API calls for financial transactions.*

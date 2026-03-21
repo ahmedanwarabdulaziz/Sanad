@@ -11,8 +11,9 @@ export default function ConditionalLayout({
 }) {
   const pathname = usePathname();
   const isNAdmin = pathname?.includes("/n-admin");
+  const isErpAdmin = pathname?.includes("/admin") && !pathname?.includes("/n-admin");
 
-  if (isNAdmin) {
+  if (isNAdmin || isErpAdmin) {
     return <>{children}</>;
   }
 
