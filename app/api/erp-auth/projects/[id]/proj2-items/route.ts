@@ -54,8 +54,12 @@ export async function POST(
     const { id } = await params;
     const body = await request.json();
 
-    if (!body.category_id || !body.name || !body.unit) {
+    const isSystem = !!body.is_system;
+    if (!isSystem && (!body.category_id || !body.name || !body.unit)) {
       return NextResponse.json({ error: "جميع الحقول (المجموعة، الاسم، الوحدة) مطلوبة" }, { status: 400 });
+    }
+    if (!body.name || !body.unit) {
+      return NextResponse.json({ error: "الاسم والوحدة مطلوبان" }, { status: 400 });
     }
 
     const { data: existing } = await supabase.from("proj2_items").select("code").eq("project_id", id);
@@ -73,10 +77,11 @@ export async function POST(
       .from("proj2_items")
       .insert({
         project_id: id,
-        category_id: body.category_id,
+        category_id: body.category_id || null,
         code,
         name: body.name,
         unit: body.unit,
+        is_system: isSystem,
       })
       .select("*, category:proj2_categories(name)")
       .single();

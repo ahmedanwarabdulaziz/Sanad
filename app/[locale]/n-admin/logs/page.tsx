@@ -184,7 +184,7 @@ export default function LogsPage() {
   }, [salesInvoices, purchaseInvoices, expenses, transfers, activityLogs, vaults, userNames, expenseTypeNames, dateFrom, dateTo]);
 
   const formatDateTime = (ts: number) =>
-    new Date(ts).toLocaleString("ar-EG", {
+    new Date(ts).toLocaleString("en-US", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",

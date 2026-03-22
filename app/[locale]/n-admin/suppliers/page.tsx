@@ -410,7 +410,7 @@ export default function SuppliersPage() {
               })()}
               {(() => {
                 const invs = getSupplierStats(reportSupplier.id).invoices;
-                const formatDate = (ts: number) => new Date(ts).toLocaleDateString("ar-EG", { day: "2-digit", month: "2-digit", year: "numeric" });
+                const formatDate = (ts: number) => new Date(ts).toLocaleDateString("en-US", { day: "2-digit", month: "2-digit", year: "numeric" });
                 if (invs.length === 0) {
                   return <Typography variant="body2" sx={{ fontFamily: "var(--font-cairo)", color: "text.secondary" }}>لا توجد فواتير</Typography>;
                 }

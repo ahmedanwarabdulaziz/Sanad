@@ -28,7 +28,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
   const body = await req.json();
   const {
-    category_id, expense_type, purchase_order_ids, sale_order_ids,
+    category_id, expense_type, purchase_order_ids, sale_order_ids, lot_order_ids,
     description, amount, payment_status,
     paid_amount, vault_id, expense_date, notes
   } = body;
@@ -75,6 +75,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       expense_type: expense_type || "general",
       purchase_order_ids: Array.isArray(purchase_order_ids) ? purchase_order_ids : [],
       sale_order_ids: Array.isArray(sale_order_ids) ? sale_order_ids : [],
+      lot_order_ids: Array.isArray(lot_order_ids) ? lot_order_ids : [],
       description, amount: Number(amount),
       payment_status: payment_status || "future",
       paid_amount: actualPaid,

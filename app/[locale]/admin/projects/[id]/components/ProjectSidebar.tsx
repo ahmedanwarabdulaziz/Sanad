@@ -24,6 +24,7 @@ import {
   MessageOutlined,
   PointOfSaleOutlined,
   PhotoLibraryOutlined,
+  Inventory2Outlined,
 } from "@mui/icons-material";
 
 import { IconButton } from "@mui/material";
@@ -55,6 +56,7 @@ export default function ProjectSidebar({ projectId, projectName, projectSlug }: 
         { label: "عروض الأسعار", href: `${basePath}/proj2-quotes`, icon: RequestQuoteOutlined },
         { label: "فواتير البيع", href: `${basePath}/proj2-sales`, icon: PointOfSaleOutlined },
         { label: "المخزن", href: `${basePath}/proj2-stock`, icon: WarehouseOutlined },
+        { label: "اللوتات", href: `${basePath}/proj2-lots`, icon: Inventory2Outlined },
         { label: "معرض الصور", href: `${basePath}/proj2-gallery`, icon: PhotoLibraryOutlined },
         { label: "قوالب الرسائل", href: `${basePath}/proj2-msg-templates`, icon: MessageOutlined },
       ]

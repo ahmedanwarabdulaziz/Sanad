@@ -429,7 +429,8 @@ export default function Proj2GalleryPage() {
                       <div key={img.id} style={{ borderRadius: "16px", overflow: "hidden", position: "relative", background: "rgba(30,41,59,0.5)", border: selectedIds.has(img.id) ? "2px solid #3b82f6" : "1px solid rgba(148,163,184,0.08)", cursor: "pointer", transition: "border-color 0.2s" }}
                         onClick={() => selectionMode ? toggleSelection(img.id) : setLightboxImg(img)}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={img.thumbnail_url || img.url} alt={img.title || ""} style={{ width: "100%", display: "block", transition: "transform 0.3s ease", opacity: selectionMode && !selectedIds.has(img.id) ? 0.6 : 1 }}
+                        <img src={img.thumbnail_url || img.url} alt={img.title || ""} loading="lazy" decoding="async"
+                          style={{ width: "100%", aspectRatio: "4/3", objectFit: "cover", display: "block", transition: "transform 0.3s ease", opacity: selectionMode && !selectedIds.has(img.id) ? 0.6 : 1 }}
                           onMouseEnter={e => { if (!selectionMode) e.currentTarget.style.transform = "scale(1.03)"; }}
                           onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")} />
                         {/* Selection checkmark overlay */}

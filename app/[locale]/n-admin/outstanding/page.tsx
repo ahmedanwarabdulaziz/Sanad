@@ -124,7 +124,7 @@ export default function OutstandingPage() {
   };
 
   const getExpenseTypeName = (id: string) => expenseTypes.find((e) => e.id === id)?.nameAr ?? id;
-  const formatDate = (ts: number) => new Date(ts).toLocaleDateString("ar-EG", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const formatDate = (ts: number) => new Date(ts).toLocaleDateString("en-US", { day: "2-digit", month: "2-digit", year: "numeric" });
 
   const getExpenseInvoiceNo = (item: Expense): string => {
     if (item.salesInvoiceId) {

@@ -16,6 +16,12 @@ export default function StockPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Filters
+  const [period, setPeriod]       = useState<"month"|"year"|"all">("month");
+  const [dateFrom, setDateFrom]   = useState("");
+  const [dateTo, setDateTo]       = useState("");
+  const [typeFilter, setTypeFilter] = useState<"all"|"in"|"out">("all");
+
   const fetchAll = useCallback(async () => {
     const [movRes, expRes, ordRes] = await Promise.all([
       fetch(`/api/erp-auth/projects/${projectId}/proj2-stock`),
@@ -78,6 +84,22 @@ export default function StockPage() {
     });
   });
 
+  // Filter movements by date and type
+  const filteredMovements = movements
+    .filter(m => {
+      if (typeFilter !== "all" && m.type !== typeFilter) return false;
+      if (!m.movement_date) return true;
+      const d = new Date(m.movement_date);
+      if (isNaN(d.getTime())) return true;
+      const now = new Date();
+      if (dateFrom) { const f = new Date(dateFrom); if (d < f) return false; }
+      if (dateTo)   { const t = new Date(dateTo); t.setHours(23,59,59); if (d > t) return false; }
+      if (dateFrom || dateTo) return true;
+      if (period === "month") return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+      if (period === "year")  return d.getFullYear() === now.getFullYear();
+      return true;
+    })
+    .sort((a, b) => new Date(b.movement_date || 0).getTime() - new Date(a.movement_date || 0).getTime());
 
   return (
     <div>
@@ -139,9 +161,41 @@ export default function StockPage() {
             </div>
           ) : (
             <div>
-              <p style={{ fontSize: "13px", fontWeight: 600, color: "#64748b", fontFamily: "var(--font-cairo)", marginBottom: "12px" }}>سجل الحركات</p>
+              {/* Filters row */}
+              <div style={{ display: "flex", gap: "6px", marginBottom: "14px", flexWrap: "wrap", alignItems: "center", direction: "rtl" }}>
+                {(["month", "year", "all"] as const).map(p => (
+                  <button key={p} onClick={() => { setPeriod(p); setDateFrom(""); setDateTo(""); }}
+                    style={{ padding: "5px 16px", borderRadius: "20px", fontSize: "12px", fontFamily: "var(--font-cairo)", cursor: "pointer", border: "none", fontWeight: 600, transition: "all 0.15s",
+                      background: period === p && !dateFrom && !dateTo ? "linear-gradient(135deg,#8b5cf6,#6d28d9)" : "rgba(30,41,59,0.8)",
+                      color: period === p && !dateFrom && !dateTo ? "#fff" : "#94a3b8",
+                      outline: period === p && !dateFrom && !dateTo ? "none" : "1px solid rgba(148,163,184,0.15)" }}>
+                    {p === "month" ? "الشهر الحالي" : p === "year" ? "السنة الحالية" : "الكل"}
+                  </button>
+                ))}
+                {/* Type filter */}
+                {(["all", "in", "out"] as const).map(t => (
+                  <button key={t} onClick={() => setTypeFilter(t)}
+                    style={{ padding: "5px 14px", borderRadius: "20px", fontSize: "11px", fontFamily: "var(--font-cairo)", cursor: "pointer", border: "none", fontWeight: 600, transition: "all 0.15s",
+                      background: typeFilter === t ? (t === "in" ? "rgba(16,185,129,0.25)" : t === "out" ? "rgba(239,68,68,0.25)" : "rgba(100,116,139,0.35)") : "rgba(30,41,59,0.8)",
+                      color: typeFilter === t ? (t === "in" ? "#34d399" : t === "out" ? "#f87171" : "#94a3b8") : "#64748b",
+                      outline: typeFilter === t ? (t === "in" ? "1px solid rgba(52,211,153,0.4)" : t === "out" ? "1px solid rgba(248,113,113,0.4)" : "1px solid rgba(148,163,184,0.3)") : "1px solid rgba(148,163,184,0.15)" }}>
+                    {t === "all" ? "الكل" : t === "in" ? "▼ دخول" : "▲ خروج"}
+                  </button>
+                ))}
+                {/* Date range */}
+                <div style={{ display: "flex", gap: "4px", alignItems: "center", background: (dateFrom||dateTo) ? "rgba(139,92,246,0.1)" : "rgba(30,41,59,0.6)", borderRadius: "10px", padding: "2px 7px", outline: (dateFrom||dateTo) ? "1px solid rgba(139,92,246,0.35)" : "1px solid rgba(148,163,184,0.12)" }}>
+                  <span style={{ fontSize: "10px", color: "#64748b", fontFamily: "var(--font-cairo)" }}>من</span>
+                  <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ background: "transparent", border: "none", outline: "none", color: "#e2e8f0", fontSize: "11px", fontFamily: "monospace", width: "110px", cursor: "pointer", colorScheme: "dark" }} />
+                  <span style={{ fontSize: "10px", color: "#64748b", fontFamily: "var(--font-cairo)" }}>إلى</span>
+                  <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ background: "transparent", border: "none", outline: "none", color: "#e2e8f0", fontSize: "11px", fontFamily: "monospace", width: "110px", cursor: "pointer", colorScheme: "dark" }} />
+                  {(dateFrom||dateTo) && <button onClick={() => { setDateFrom(""); setDateTo(""); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#f87171", fontSize: "13px", lineHeight: 1, padding: "0 2px" }}>✕</button>}
+                </div>
+                <span style={{ fontSize: "10px", color: "#475569", fontFamily: "var(--font-cairo)" }}>{filteredMovements.length} حركة</span>
+              </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {movements.map(m => (
+                {filteredMovements.length === 0 ? (
+                  <p style={{ textAlign: "center", color: "#475569", fontFamily: "var(--font-cairo)", fontSize: "14px", padding: "28px 0" }}>لا توجد حركات في هذه الفترة</p>
+                ) : filteredMovements.map(m => (
                   <div key={m.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", padding: "14px 16px", borderRadius: "14px", background: "rgba(30,41,59,0.5)", border: "1px solid rgba(148,163,184,0.08)" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
                       <div style={{ width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: m.type === "in" ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)", flexShrink: 0 }}>

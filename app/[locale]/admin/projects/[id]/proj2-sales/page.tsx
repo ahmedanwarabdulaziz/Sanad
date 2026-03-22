@@ -2,8 +2,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type JsPDFType from "jspdf";
 import { useProject } from "../layout";
-import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress, Alert, IconButton, Chip, Autocomplete, InputAdornment } from "@mui/material";
-import { AddOutlined, DeleteOutline, EditOutlined, PaymentsOutlined, CheckCircleOutlined, LocalShippingOutlined, MoneyOffOutlined, AddCircleOutline, RemoveCircleOutline, CalendarMonthOutlined, AccountBalanceWalletOutlined, PrintOutlined, WhatsApp, EmailOutlined } from "@mui/icons-material";
+import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress, Alert, IconButton, Chip, Autocomplete, InputAdornment, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
+import { AddOutlined, DeleteOutline, EditOutlined, PaymentsOutlined, CheckCircleOutlined, LocalShippingOutlined, MoneyOffOutlined, AddCircleOutline, RemoveCircleOutline, CalendarMonthOutlined, AccountBalanceWalletOutlined, PrintOutlined, WhatsApp, EmailOutlined, VisibilityOutlined } from "@mui/icons-material";
 
 const fmt = (n: number) => new Intl.NumberFormat("en-US").format(n);
 const fmtD = (d: string) => { if (!d) return "—"; const p = d.split("-"); return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : d; };
@@ -96,9 +96,29 @@ export default function SalesPage() {
   
   const [printSale, setPrintSale] = useState<any>(null);
   const [shareQuote, setShareQuote] = useState<any>(null);
+  const [detailSale, setDetailSale] = useState<any>(null);
   const captureRef = useRef<HTMLDivElement>(null);
   const [sharing, setSharing] = useState<string | null>(null);
   const [waTemplate, setWaTemplate] = useState<string>("");
+
+  // Filters
+  const [period, setPeriod]     = useState<"month"|"year"|"all">("month");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo]     = useState("");
+
+  // Unpaid receivables dialog
+  const [recOpen, setRecOpen]           = useState(false);
+  const [recInlineId, setRecInlineId]   = useState<string|null>(null);
+  const [recInlineForm, setRecInlineForm] = useState({ vault_id: "", amount: "", notes: "", payment_date: fmtD(new Date().toISOString().split("T")[0]) });
+  const [recBulkVault, setRecBulkVault] = useState("");
+  const [recBulkSaving, setRecBulkSaving] = useState(false);
+
+  // Unpaid expenses dialog
+  const [uExpOpen, setUExpOpen]           = useState(false);
+  const [uExpInlineId, setUExpInlineId]   = useState<string|null>(null);
+  const [uExpInlineForm, setUExpInlineForm] = useState({ vault_id: "", amount: "", notes: "", payment_date: fmtD(new Date().toISOString().split("T")[0]) });
+  const [uExpBulkVault, setUExpBulkVault] = useState("");
+  const [uExpBulkSaving, setUExpBulkSaving] = useState(false);
 
   const fetchAll = useCallback(async () => {
     const [sr, er, cr, ir, vr, tr] = await Promise.all([
@@ -120,6 +140,60 @@ export default function SalesPage() {
   const itTotal = (its: SI[]) => its.reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.unit_price) || 0), 0);
   const mapItems = (its: SI[]) => its.filter(i => i.item_id && Number(i.quantity) > 0 && Number(i.unit_price) > 0).map(i => ({ item_id: i.item_id, quantity: Number(i.quantity), unit_price: Number(i.unit_price) }));
   const patch = async (url: string, body: any) => fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+
+  // Filter helpers
+  const parseSaleDate = (d: string) => { if (!d) return null; const dt = new Date(d); return isNaN(dt.getTime()) ? null : dt; };
+  const filteredSales = sales.filter(s => {
+    const d = parseSaleDate(s.sale_date);
+    if (!d) return true;
+    const now = new Date();
+    if (dateFrom) { const f = new Date(dateFrom); if (d < f) return false; }
+    if (dateTo)   { const t = new Date(dateTo); t.setHours(23,59,59); if (d > t) return false; }
+    if (dateFrom || dateTo) return true;
+    if (period === "month") return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    if (period === "year")  return d.getFullYear() === now.getFullYear();
+    return true;
+  });
+
+  // Unpaid totals
+  const unpaidSales = sales.filter(s => Number(s.total_amount) > Number(s.paid_amount || 0));
+  const totalUnpaidRec = unpaidSales.reduce((sum, s) => sum + Number(s.total_amount) - Number(s.paid_amount || 0), 0);
+  const unpaidExpList = expenses.filter(e => e.expense_type === "sale" && Number(e.amount) > Number(e.paid_amount || 0));
+  const totalUnpaidExp = unpaidExpList.reduce((sum, e) => sum + Number(e.amount) - Number(e.paid_amount || 0), 0);
+
+  const todayFmt = () => fmtD(new Date().toISOString().split("T")[0]);
+
+  const handleBulkPayRec = async () => {
+    if (!recBulkVault) return;
+    setRecBulkSaving(true);
+    for (const s of unpaidSales) {
+      const rem = Number(s.total_amount) - Number(s.paid_amount || 0);
+      if (rem <= 0) continue;
+      await patch(`/api/erp-auth/projects/${projectId}/proj2-sales/${s.id}`, { action: "pay", vault_id: recBulkVault, amount: rem, notes: "", payment_date: fmtD(new Date().toISOString().split("T")[0]) });
+    }
+    setRecBulkSaving(false); setRecOpen(false); setSuccess("تم تحصيل المستحقات"); fetchAll();
+  };
+  const handleInlinePayRec = async (id: string) => {
+    setRecBulkSaving(true);
+    await patch(`/api/erp-auth/projects/${projectId}/proj2-sales/${id}`, { action: "pay", ...recInlineForm, amount: Number(recInlineForm.amount), payment_date: fmtD(recInlineForm.payment_date) });
+    setRecBulkSaving(false); setRecInlineId(null); setSuccess("تم تسجيل الدفعة"); fetchAll();
+  };
+
+  const handleBulkPayExp = async () => {
+    if (!uExpBulkVault) return;
+    setUExpBulkSaving(true);
+    for (const e of unpaidExpList) {
+      const rem = Number(e.amount) - Number(e.paid_amount || 0);
+      if (rem <= 0) continue;
+      await fetch(`/api/erp-auth/projects/${projectId}/proj2-expenses/${e.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vault_id: uExpBulkVault, amount: rem, notes: "" }) });
+    }
+    setUExpBulkSaving(false); setUExpOpen(false); setSuccess("تم سداد المصروفات"); fetchAll();
+  };
+  const handleInlinePayExp = async (id: string) => {
+    setUExpBulkSaving(true);
+    await fetch(`/api/erp-auth/projects/${projectId}/proj2-expenses/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vault_id: uExpInlineForm.vault_id, amount: Number(uExpInlineForm.amount), notes: uExpInlineForm.notes }) });
+    setUExpBulkSaving(false); setUExpInlineId(null); setSuccess("تم تسجيل الدفعة"); fetchAll();
+  };
 
   const handleAdd = async () => {
     setSaving(true);
@@ -323,8 +397,52 @@ export default function SalesPage() {
               <p style={{ fontSize: "48px", margin: "0 0 12px" }}>🛍️</p>
               <p style={{ color: "#94a3b8", fontFamily: "var(--font-cairo)", fontSize: "16px" }}>لا توجد فواتير بيع بعد</p>
             </div>
-          : <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {sales.map(sale => {
+          : (
+            <>
+              {/* Summary banners */}
+              {(totalUnpaidRec > 0 || totalUnpaidExp > 0) && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px,1fr))", gap: "10px", marginBottom: "16px" }}>
+                  {totalUnpaidRec > 0 && (
+                    <button onClick={() => { setRecBulkVault(""); setRecOpen(true); }}
+                      style={{ padding: "14px 18px", borderRadius: "14px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.3)", cursor: "pointer", textAlign: "right", direction: "rtl" }}>
+                      <p style={{ margin: "0 0 4px", fontSize: "11px", color: "#64748b", fontFamily: "var(--font-cairo)", fontWeight: 600 }}>💰 مستحقات غير محصلة</p>
+                      <p style={{ margin: 0, fontSize: "20px", fontWeight: 700, color: "#34d399", fontFamily: "var(--font-cairo)" }}>{fmt(totalUnpaidRec)} <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 400 }}>جنيه</span></p>
+                      <p style={{ margin: "3px 0 0", fontSize: "10px", color: "#34d399", fontFamily: "var(--font-cairo)" }}>{unpaidSales.length} فاتورة — اضغط للتحصيل</p>
+                    </button>
+                  )}
+                  {totalUnpaidExp > 0 && (
+                    <button onClick={() => { setUExpBulkVault(""); setUExpOpen(true); }}
+                      style={{ padding: "14px 18px", borderRadius: "14px", background: "rgba(192,132,252,0.08)", border: "1px solid rgba(192,132,252,0.3)", cursor: "pointer", textAlign: "right", direction: "rtl" }}>
+                      <p style={{ margin: "0 0 4px", fontSize: "11px", color: "#64748b", fontFamily: "var(--font-cairo)", fontWeight: 600 }}>📌 مصروفات غير مسددة</p>
+                      <p style={{ margin: 0, fontSize: "20px", fontWeight: 700, color: "#c084fc", fontFamily: "var(--font-cairo)" }}>{fmt(totalUnpaidExp)} <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 400 }}>جنيه</span></p>
+                      <p style={{ margin: "3px 0 0", fontSize: "10px", color: "#c084fc", fontFamily: "var(--font-cairo)" }}>{unpaidExpList.length} مصروف — اضغط للسداد</p>
+                    </button>
+                  )}
+                </div>
+              )}
+              {/* Filter pills */}
+              <div style={{ display: "flex", gap: "6px", marginBottom: "14px", flexWrap: "wrap", alignItems: "center", direction: "rtl" }}>
+                {(["month", "year", "all"] as const).map(p => (
+                  <button key={p} onClick={() => { setPeriod(p); setDateFrom(""); setDateTo(""); }}
+                    style={{ padding: "5px 16px", borderRadius: "20px", fontSize: "12px", fontFamily: "var(--font-cairo)", cursor: "pointer", border: "none", fontWeight: 600, transition: "all 0.15s",
+                      background: period === p && !dateFrom && !dateTo ? "linear-gradient(135deg,#10b981,#059669)" : "rgba(30,41,59,0.8)",
+                      color: period === p && !dateFrom && !dateTo ? "#fff" : "#94a3b8",
+                      outline: period === p && !dateFrom && !dateTo ? "none" : "1px solid rgba(148,163,184,0.15)" }}>
+                    {p === "month" ? "الشهر الحالي" : p === "year" ? "السنة الحالية" : "الكل"}
+                  </button>
+                ))}
+                <div style={{ display: "flex", gap: "4px", alignItems: "center", background: (dateFrom||dateTo) ? "rgba(16,185,129,0.1)" : "rgba(30,41,59,0.6)", borderRadius: "10px", padding: "2px 7px", outline: (dateFrom||dateTo) ? "1px solid rgba(16,185,129,0.35)" : "1px solid rgba(148,163,184,0.12)" }}>
+                  <span style={{ fontSize: "10px", color: "#64748b", fontFamily: "var(--font-cairo)" }}>من</span>
+                  <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ background: "transparent", border: "none", outline: "none", color: "#e2e8f0", fontSize: "11px", fontFamily: "monospace", width: "110px", cursor: "pointer", colorScheme: "dark" }} />
+                  <span style={{ fontSize: "10px", color: "#64748b", fontFamily: "var(--font-cairo)" }}>إلى</span>
+                  <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ background: "transparent", border: "none", outline: "none", color: "#e2e8f0", fontSize: "11px", fontFamily: "monospace", width: "110px", cursor: "pointer", colorScheme: "dark" }} />
+                  {(dateFrom||dateTo) && <button onClick={() => { setDateFrom(""); setDateTo(""); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#f87171", fontSize: "13px", lineHeight: 1, padding: "0 2px" }}>✕</button>}
+                </div>
+                <span style={{ fontSize: "10px", color: "#475569", fontFamily: "var(--font-cairo)" }}>{filteredSales.length} فاتورة</span>
+              </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            {filteredSales.map(sale => {
+
               const ps = PSTAT[sale.payment_status] || PSTAT.pending;
               const ds = DSTAT[sale.status] || DSTAT.pending;
               const linkedExpenses = expenses.filter(e => e.expense_type === "sale" && Array.isArray(e.sale_order_ids) && e.sale_order_ids.includes(sale.id));
@@ -341,6 +459,7 @@ export default function SalesPage() {
                       <Chip label={ps.label} size="small" sx={{ background: `${ps.color}22`, color: ps.color, fontFamily: "var(--font-cairo)", fontSize: "11px", height: "20px" }} />
                     </div>
                     <div style={{ display: "flex", gap: "4px" }}>
+                      <IconButton size="small" title="تفاصيل الفاتورة" onClick={() => setDetailSale(sale)} sx={{ color: "#a78bfa", "&:hover": { background: "rgba(167,139,250,0.1)" } }}><VisibilityOutlined sx={{ fontSize: 16 }} /></IconButton>
                       <IconButton size="small" title="إرسال عبر واتساب" onClick={() => handleWhatsApp(sale)} disabled={sharing === sale.id} sx={{ color: "#22c55e", "&:hover": { background: "rgba(34,197,94,0.1)" } }}>
                         {sharing === sale.id ? <CircularProgress size={14} sx={{ color: "#22c55e" }} /> : <WhatsApp sx={{ fontSize: 16 }} />}
                       </IconButton>
@@ -364,31 +483,27 @@ export default function SalesPage() {
                       <IconButton size="small" onClick={() => { setDeleteTarget(sale); setDeleteOpen(true); }} sx={{ color: "#64748b", "&:hover": { color: "#f87171", background: "rgba(248,113,113,0.1)" } }}><DeleteOutline sx={{ fontSize: 16 }} /></IconButton>
                     </div>
                   </div>
-                  {/* Items */}
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "10px" }}>
-                    {(sale.items || []).map((it: any, i: number) => (
-                      <span key={i} style={{ fontSize: "12px", color: "#94a3b8", fontFamily: "var(--font-cairo)", background: "rgba(15,23,42,0.4)", padding: "4px 10px", borderRadius: "8px" }}>
-                        {it.item?.name || "—"} × {it.quantity} {it.item?.unit} @ {fmt(it.unit_price)} جنيه
-                      </span>
-                    ))}
-                  </div>
                   {/* Totals & Profit */}
                   {(() => {
                     const expPaid = linkedExpenses.reduce((s: number, e: any) => s + Number(e.paid_amount), 0);
                     const expRemaining = expTotal - expPaid;
                     const revenue = Number(sale.total_amount);
-                    const profit = revenue - expTotal;
+                    const cogs = (sale.items || []).reduce((s: number, it: any) => s + (Number(it.avg_unit_cost) || 0) * (Number(it.quantity) || 0), 0);
+                    const totalCost = cogs + expTotal;
+                    const profit = revenue - totalCost;
                     const profitPct = revenue > 0 ? (profit / revenue) * 100 : 0;
                     return (
-                      <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center", direction: "rtl", background: "rgba(15,23,42,0.3)", padding: "10px", borderRadius: "8px", border: "1px solid rgba(148,163,184,0.05)" }}>
+                      <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center", direction: "rtl", background: "rgba(15,23,42,0.3)", padding: "10px", borderRadius: "8px", border: "1px solid rgba(148,163,184,0.05)" }}>
                         <span style={{ fontSize: "13px", fontFamily: "var(--font-cairo)", color: "#64748b" }}>الإيرادات: <strong style={{ color: "#f1f5f9" }}>{fmt(revenue)} جنيه</strong></span>
                         <span style={{ fontSize: "13px", fontFamily: "var(--font-cairo)", color: "#10b981" }}>محصَّل: <strong>{fmt(Number(sale.paid_amount))} جنيه</strong></span>
                         {Number(sale.paid_amount) < revenue && (
-                          <span style={{ fontSize: "13px", fontFamily: "var(--font-cairo)", color: "#f87171", background: "rgba(248,113,113,0.1)", padding: "2px 6px", borderRadius: "6px" }}>متبقي للتحصيل: <strong>{fmt(revenue - Number(sale.paid_amount))} جنيه</strong></span>
+                          <span style={{ fontSize: "13px", fontFamily: "var(--font-cairo)", color: "#f87171", background: "rgba(248,113,113,0.1)", padding: "2px 6px", borderRadius: "6px" }}>متبقي: <strong>{fmt(revenue - Number(sale.paid_amount))} جنيه</strong></span>
                         )}
-                        <span style={{ fontSize: "13px", fontFamily: "var(--font-cairo)", color: "#f59e0b" }}>التكلفة (المصروفات): <strong>{fmt(expTotal)} جنيه</strong></span>
+                        <span style={{ width: "100%", height: 0, flexBasis: "100%" }} />
+                        {cogs > 0 && <span style={{ fontSize: "12px", fontFamily: "var(--font-cairo)", color: "#94a3b8" }}>تكلفة الأصناف: <strong style={{ color: "#e2e8f0" }}>{fmt(cogs)} جنيه</strong></span>}
+                        {expTotal > 0 && <span style={{ fontSize: "12px", fontFamily: "var(--font-cairo)", color: "#f59e0b" }}>المصاريف: <strong>{fmt(expTotal)} جنيه</strong></span>}
                         {expRemaining > 0 && (
-                          <span style={{ fontSize: "13px", fontFamily: "var(--font-cairo)", color: "#c084fc", background: "rgba(192,132,252,0.1)", padding: "2px 6px", borderRadius: "6px" }}>مصروفات متبقية: <strong>{fmt(expRemaining)} جنيه</strong></span>
+                          <span style={{ fontSize: "12px", fontFamily: "var(--font-cairo)", color: "#c084fc", background: "rgba(192,132,252,0.1)", padding: "2px 6px", borderRadius: "6px" }}>مصروفات متبقية: <strong>{fmt(expRemaining)} جنيه</strong></span>
                         )}
                         <span style={{ fontSize: "13px", fontFamily: "var(--font-cairo)", color: profit >= 0 ? "#34d399" : "#f87171", background: profit >= 0 ? "rgba(52,211,153,0.1)" : "rgba(248,113,113,0.1)", padding: "2px 8px", borderRadius: "6px" }}>
                           الربح: <strong>{fmt(profit)} جنيه</strong> <span style={{ opacity: 0.8, fontSize: "11px" }}>({profitPct.toFixed(1)}%)</span>
@@ -411,7 +526,185 @@ export default function SalesPage() {
               );
             })}
           </div>
+          </>
+        )
       }
+
+      {/* Unpaid Receivables Dialog */}
+      <Dialog open={recOpen} onClose={() => setRecOpen(false)} sx={{ "& .MuiDialog-paper": { background: "linear-gradient(135deg,#1e293b,#0f172a)", border: "1px solid rgba(148,163,184,0.12)", borderRadius: "20px", color: "#e2e8f0", direction: "rtl" as const, minWidth: "min(580px,96vw)", maxHeight: "85vh" } }}>
+        <DialogTitle sx={{ fontFamily: "var(--font-cairo)", fontWeight: 700, fontSize: "18px", color: "#34d399" }}>تحصيل مستحقات غير محصلة ({unpaidSales.length})</DialogTitle>
+        <DialogContent sx={{ pt: "4px !important" }}>
+          <div style={{ padding: "10px 12px", borderRadius: "12px", background: "rgba(16,185,129,0.07)", border: "1px solid rgba(16,185,129,0.25)", marginBottom: "12px", display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+            <span style={{ fontSize: "13px", color: "#34d399", fontFamily: "var(--font-cairo)", fontWeight: 700 }}>الإجمالي: {fmt(totalUnpaidRec)} ج.م</span>
+            <span style={{ flex: 1 }} />
+            <FormControl size="small" sx={{ minWidth: 140, ...fieldSx }}><InputLabel>الخزنة</InputLabel>
+              <Select value={recBulkVault} onChange={e => setRecBulkVault(e.target.value)} label="الخزنة" sx={{ color: "#e2e8f0" }}>
+                {vaults.map(v => <MenuItem key={v.id} value={v.id} sx={{ fontFamily: "var(--font-cairo)" }}>{v.name} — {fmt(Number(v.balance))}</MenuItem>)}
+              </Select>
+            </FormControl>
+            <Button size="small" variant="contained" disabled={recBulkSaving || !recBulkVault} onClick={handleBulkPayRec}
+              sx={{ borderRadius: "10px", fontFamily: "var(--font-cairo)", fontWeight: 600, textTransform: "none", background: "linear-gradient(135deg,#10b981,#059669)", whiteSpace: "nowrap" }}>
+              {recBulkSaving ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : "تحصيل الكل"}
+            </Button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {unpaidSales.map(s => {
+              const rem = Number(s.total_amount) - Number(s.paid_amount || 0);
+              const isOpen = recInlineId === s.id;
+              return (
+                <div key={s.id} style={{ padding: "10px 14px", borderRadius: "12px", background: "rgba(15,23,42,0.45)", border: "1px solid rgba(16,185,129,0.1)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "11px", fontWeight: 700, color: "#34d399", fontFamily: "monospace", background: "rgba(52,211,153,0.1)", padding: "2px 7px", borderRadius: "6px" }}>{s.code}</span>
+                    <span style={{ fontSize: "13px", color: "#f1f5f9", fontFamily: "var(--font-cairo)", flex: 1 }}>{s.customer?.name || s.customer_name || "—"}</span>
+                    <span style={{ fontSize: "13px", fontWeight: 700, color: "#34d399", fontFamily: "var(--font-cairo)", whiteSpace: "nowrap" }}>متبقي: {fmt(rem)} ج.م</span>
+                    <Button size="small" variant="outlined" onClick={() => { setRecInlineId(isOpen ? null : s.id); setRecInlineForm({ vault_id: "", amount: String(rem), notes: "", payment_date: todayFmt() }); }}
+                      sx={{ borderRadius: "8px", fontFamily: "var(--font-cairo)", fontSize: "11px", borderColor: "#10b981", color: "#10b981", textTransform: "none", whiteSpace: "nowrap" }}>
+                      {isOpen ? "إلغاء" : "تحصيل"}
+                    </Button>
+                  </div>
+                  {isOpen && (
+                    <div style={{ marginTop: "10px", display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "flex-end" }}>
+                      <FormControl size="small" sx={{ minWidth: 130, ...fieldSx }}><InputLabel>الخزنة *</InputLabel>
+                        <Select value={recInlineForm.vault_id} onChange={e => setRecInlineForm(p => ({ ...p, vault_id: e.target.value }))} label="الخزنة *" sx={{ color: "#e2e8f0" }}>
+                          {vaults.map(v => <MenuItem key={v.id} value={v.id} sx={{ fontFamily: "var(--font-cairo)" }}>{v.name}</MenuItem>)}
+                        </Select>
+                      </FormControl>
+                      <TextField size="small" label="المبلغ" type="number" value={recInlineForm.amount} onChange={e => setRecInlineForm(p => ({ ...p, amount: e.target.value }))} sx={{ width: 110, ...fieldSx, "& .MuiInputBase-input": { textAlign: "left" } }} />
+                      <TextField size="small" label="ملاحظات" value={recInlineForm.notes} onChange={e => setRecInlineForm(p => ({ ...p, notes: e.target.value }))} sx={{ flex: 1, minWidth: 100, ...fieldSx }} />
+                      <Button size="small" variant="contained" disabled={recBulkSaving || !recInlineForm.vault_id || !recInlineForm.amount} onClick={() => handleInlinePayRec(s.id)}
+                        sx={{ borderRadius: "8px", fontFamily: "var(--font-cairo)", fontWeight: 600, textTransform: "none", background: "linear-gradient(135deg,#10b981,#059669)" }}>
+                        {recBulkSaving ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : "تأكيد"}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unpaid Expenses Dialog */}
+      <Dialog open={uExpOpen} onClose={() => setUExpOpen(false)} sx={{ "& .MuiDialog-paper": { background: "linear-gradient(135deg,#1e293b,#0f172a)", border: "1px solid rgba(148,163,184,0.12)", borderRadius: "20px", color: "#e2e8f0", direction: "rtl" as const, minWidth: "min(580px,96vw)", maxHeight: "85vh" } }}>
+        <DialogTitle sx={{ fontFamily: "var(--font-cairo)", fontWeight: 700, fontSize: "18px", color: "#c084fc" }}>مصروفات غير مسددة ({unpaidExpList.length})</DialogTitle>
+        <DialogContent sx={{ pt: "4px !important" }}>
+          <div style={{ padding: "10px 12px", borderRadius: "12px", background: "rgba(192,132,252,0.07)", border: "1px solid rgba(192,132,252,0.25)", marginBottom: "12px", display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+            <span style={{ fontSize: "13px", color: "#c084fc", fontFamily: "var(--font-cairo)", fontWeight: 700 }}>الإجمالي: {fmt(totalUnpaidExp)} ج.م</span>
+            <span style={{ flex: 1 }} />
+            <FormControl size="small" sx={{ minWidth: 140, ...fieldSx }}><InputLabel>الخزنة</InputLabel>
+              <Select value={uExpBulkVault} onChange={e => setUExpBulkVault(e.target.value)} label="الخزنة" sx={{ color: "#e2e8f0" }}>
+                {vaults.map(v => <MenuItem key={v.id} value={v.id} sx={{ fontFamily: "var(--font-cairo)" }}>{v.name} — {fmt(Number(v.balance))}</MenuItem>)}
+              </Select>
+            </FormControl>
+            <Button size="small" variant="contained" disabled={uExpBulkSaving || !uExpBulkVault} onClick={handleBulkPayExp}
+              sx={{ borderRadius: "10px", fontFamily: "var(--font-cairo)", fontWeight: 600, textTransform: "none", background: "linear-gradient(135deg,#c084fc,#a855f7)", whiteSpace: "nowrap" }}>
+              {uExpBulkSaving ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : "سداد الكل"}
+            </Button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {unpaidExpList.map(e => {
+              const rem = Number(e.amount) - Number(e.paid_amount || 0);
+              const isOpen = uExpInlineId === e.id;
+              return (
+                <div key={e.id} style={{ padding: "10px 14px", borderRadius: "12px", background: "rgba(15,23,42,0.45)", border: "1px solid rgba(192,132,252,0.1)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "11px", fontWeight: 700, color: "#60a5fa", fontFamily: "monospace", background: "rgba(59,130,246,0.1)", padding: "2px 7px", borderRadius: "6px" }}>{e.code}</span>
+                    <span style={{ fontSize: "13px", color: "#f1f5f9", fontFamily: "var(--font-cairo)", flex: 1 }}>{e.description || "—"}</span>
+                    <span style={{ fontSize: "13px", fontWeight: 700, color: "#c084fc", fontFamily: "var(--font-cairo)", whiteSpace: "nowrap" }}>متبقي: {fmt(rem)} ج.م</span>
+                    <Button size="small" variant="outlined" onClick={() => { setUExpInlineId(isOpen ? null : e.id); setUExpInlineForm({ vault_id: "", amount: String(rem), notes: "", payment_date: todayFmt() }); }}
+                      sx={{ borderRadius: "8px", fontFamily: "var(--font-cairo)", fontSize: "11px", borderColor: "#c084fc", color: "#c084fc", textTransform: "none", whiteSpace: "nowrap" }}>
+                      {isOpen ? "إلغاء" : "سداد"}
+                    </Button>
+                  </div>
+                  {isOpen && (
+                    <div style={{ marginTop: "10px", display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "flex-end" }}>
+                      <FormControl size="small" sx={{ minWidth: 130, ...fieldSx }}><InputLabel>الخزنة *</InputLabel>
+                        <Select value={uExpInlineForm.vault_id} onChange={ev => setUExpInlineForm(p => ({ ...p, vault_id: ev.target.value }))} label="الخزنة *" sx={{ color: "#e2e8f0" }}>
+                          {vaults.map(v => <MenuItem key={v.id} value={v.id} sx={{ fontFamily: "var(--font-cairo)" }}>{v.name}</MenuItem>)}
+                        </Select>
+                      </FormControl>
+                      <TextField size="small" label="المبلغ" type="number" value={uExpInlineForm.amount} onChange={ev => setUExpInlineForm(p => ({ ...p, amount: ev.target.value }))} sx={{ width: 110, ...fieldSx, "& .MuiInputBase-input": { textAlign: "left" } }} />
+                      <TextField size="small" label="ملاحظات" value={uExpInlineForm.notes} onChange={ev => setUExpInlineForm(p => ({ ...p, notes: ev.target.value }))} sx={{ flex: 1, minWidth: 100, ...fieldSx }} />
+                      <Button size="small" variant="contained" disabled={uExpBulkSaving || !uExpInlineForm.vault_id || !uExpInlineForm.amount} onClick={() => handleInlinePayExp(e.id)}
+                        sx={{ borderRadius: "8px", fontFamily: "var(--font-cairo)", fontWeight: 600, textTransform: "none", background: "linear-gradient(135deg,#c084fc,#a855f7)" }}>
+                        {uExpBulkSaving ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : "تأكيد"}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+
+
+      {/* Details Dialog */}
+      <Dialog open={!!detailSale} onClose={() => setDetailSale(null)}
+        sx={{ "& .MuiDialog-paper": { background: "linear-gradient(160deg,#1e293b 0%,#0f172a 100%)", border: "1px solid rgba(148,163,184,0.12)", borderRadius: "24px", color: "#e2e8f0", direction: "rtl" as const, minWidth: "min(560px,96vw)", maxHeight: "88vh" } }}>
+        {detailSale && (
+          <>
+            {/* Header */}
+            <div style={{ padding: "20px 24px 12px", borderBottom: "1px solid rgba(148,163,184,0.08)", direction: "rtl" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                  <p style={{ margin: "0 0 4px", fontSize: "11px", color: "#64748b", fontFamily: "var(--font-cairo)", fontWeight: 600 }}>🛍️ تفاصيل فاتورة البيع</p>
+                  <h2 style={{ margin: "0 0 4px", fontSize: "20px", fontWeight: 800, color: "#f1f5f9", fontFamily: "var(--font-cairo)" }}>{detailSale.customer?.name || detailSale.customer_name || "—"}</h2>
+                  <span style={{ fontSize: "12px", fontWeight: 700, color: "#34d399", fontFamily: "monospace", background: "rgba(52,211,153,0.1)", padding: "2px 8px", borderRadius: "6px" }}>{detailSale.code}</span>
+                </div>
+                <div style={{ textAlign: "left", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
+                  <span style={{ fontSize: "10px", color: "#64748b", fontFamily: "var(--font-cairo)" }}>إجمالي الفاتورة</span>
+                  <span style={{ fontSize: "22px", fontWeight: 800, color: "#34d399", fontFamily: "var(--font-cairo)" }}>{fmt(Number(detailSale.total_amount))} <span style={{ fontSize: "11px", color: "#475569", fontWeight: 400 }}>ج.م</span></span>
+                  <span style={{ fontSize: "10px", color: "#64748b", fontFamily: "var(--font-cairo)" }}>{fmtD(detailSale.sale_date)}</span>
+                </div>
+              </div>
+            </div>
+            <DialogContent sx={{ pt: "14px !important", direction: "rtl" }}>
+              {/* Items table */}
+              <p style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", fontFamily: "var(--font-cairo)", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>الأصناف</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "16px" }}>
+                {(detailSale.items || []).map((it: any, i: number) => {
+                  const rowTotal = (Number(it.quantity) || 0) * (Number(it.unit_price) || 0);
+                  return (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", borderRadius: "10px", background: "rgba(15,23,42,0.5)", border: "1px solid rgba(148,163,184,0.07)", direction: "rtl" }}>
+                      <span style={{ fontSize: "13px", fontWeight: 600, color: "#f1f5f9", fontFamily: "var(--font-cairo)", flex: 1 }}>{it.item?.name || "—"} {it.item?.unit ? `(${it.item.unit})` : ""}</span>
+                      <span style={{ fontSize: "12px", color: "#94a3b8", fontFamily: "var(--font-cairo)", whiteSpace: "nowrap" }}>× {fmt(Number(it.quantity))}</span>
+                      <span style={{ fontSize: "12px", color: "#64748b", fontFamily: "var(--font-cairo)", whiteSpace: "nowrap" }}>@ {fmt(Number(it.unit_price))}</span>
+                      <span style={{ fontSize: "14px", fontWeight: 700, color: "#34d399", fontFamily: "var(--font-cairo)", whiteSpace: "nowrap" }}>{fmt(rowTotal)} ج.م</span>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Payments history */}
+              {(detailSale.payments || []).length > 0 && (
+                <>
+                  <p style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", fontFamily: "var(--font-cairo)", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>سجل الدفعات</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "5px", marginBottom: "16px" }}>
+                    {detailSale.payments.map((p: any, i: number) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 14px", borderRadius: "10px", background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.12)" }}>
+                        <span style={{ fontSize: "12px", color: "#34d399", fontFamily: "var(--font-cairo)" }}>💰 {fmt(Number(p.amount))} ج.م</span>
+                        <span style={{ flex: 1 }} />
+                        <span style={{ fontSize: "11px", color: "#475569", fontFamily: "var(--font-cairo)" }}>{fmtD(p.payment_date)}</span>
+                        {p.notes && <span style={{ fontSize: "11px", color: "#64748b", fontFamily: "var(--font-cairo)" }}>{p.notes}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+              {/* Notes */}
+              {detailSale.notes && (
+                <div style={{ padding: "10px 14px", borderRadius: "10px", background: "rgba(30,41,59,0.5)", border: "1px solid rgba(148,163,184,0.08)" }}>
+                  <p style={{ margin: 0, fontSize: "13px", color: "#94a3b8", fontFamily: "var(--font-cairo)" }}>{detailSale.notes}</p>
+                </div>
+              )}
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 3, direction: "rtl" }}>
+              <Button onClick={() => setDetailSale(null)} variant="outlined" sx={{ borderRadius: "12px", color: "#94a3b8", fontFamily: "var(--font-cairo)", textTransform: "none", borderColor: "rgba(148,163,184,0.2)" }}>إغلاق</Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
 
       {/* Add Dialog */}
       <Dialog open={addOpen} onClose={() => setAddOpen(false)} sx={dlgSx}>

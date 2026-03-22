@@ -36,7 +36,7 @@ interface ContractItem {
 }
 
 const formatNumber = (n: number) => new Intl.NumberFormat("en-US").format(n);
-const formatDate = (d: string) => new Date(d).toLocaleDateString("ar-EG");
+const formatDate = (d: string) => new Date(d).toLocaleDateString("en-US");
 
 const fieldSx = {
   "& .MuiOutlinedInput-root": {

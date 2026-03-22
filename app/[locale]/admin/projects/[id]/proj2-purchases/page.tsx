@@ -6,7 +6,7 @@ import {
   TextField, CircularProgress, Alert, IconButton, Chip, Autocomplete,
   FormControl, InputLabel, Select, MenuItem, InputAdornment
 } from "@mui/material";
-import { AddOutlined, DeleteOutline, CheckCircleOutlined, PaymentsOutlined, AddCircleOutline, RemoveCircleOutline, EditOutlined, MoneyOffOutlined, CalendarMonthOutlined, AccountBalanceWalletOutlined } from "@mui/icons-material";
+import { AddOutlined, DeleteOutline, CheckCircleOutlined, PaymentsOutlined, AddCircleOutline, RemoveCircleOutline, EditOutlined, MoneyOffOutlined, CalendarMonthOutlined, AccountBalanceWalletOutlined, ReceiptLongOutlined, CloseOutlined } from "@mui/icons-material";
 
 const fieldSx = {
   "& .MuiOutlinedInput-root": { borderRadius: "12px", backgroundColor: "rgba(15,23,42,0.5)", color: "#e2e8f0", fontFamily: "var(--font-cairo)", "& fieldset": { borderColor: "rgba(148,163,184,0.15)" }, "&:hover fieldset": { borderColor: "rgba(59,130,246,0.4)" }, "&.Mui-focused fieldset": { borderColor: "#3b82f6" } },
@@ -121,6 +121,25 @@ export default function PurchasesPage() {
   const [expOrderIds, setExpOrderIds] = useState<string[]>([]);
   const [expForm, setExpForm] = useState({ description: "", amount: "", advance_amount: "", vault_id: "", payment_status: "immediate" });
 
+  // Details drawer
+  const [detailsOrder, setDetailsOrder] = useState<any>(null);
+
+  // Period filter
+  const [listPeriod, setListPeriod] = useState<"month" | "year" | "all">("month");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+
+  // Summary dialogs
+  const [summaryOpen, setSummaryOpen] = useState<"orders" | "expenses" | null>(null);
+  // Inline pay state for summary dialogs
+  const [inlinePayOrderId, setInlinePayOrderId] = useState<string | null>(null);
+  const [inlinePayForm, setInlinePayForm] = useState({ vault_id: "", amount: "", notes: "", payment_date: today() });
+  const [inlinePayExpId, setInlinePayExpId] = useState<string | null>(null);
+  const [inlinePayExpForm, setInlinePayExpForm] = useState({ vault_id: "", amount: "", notes: "", payment_date: today() });
+  const [bulkPayForm, setBulkPayForm] = useState({ vault_id: "", notes: "", payment_date: today() });
+  const [bulkSaving, setBulkSaving] = useState(false);
+
   const fetchAll = useCallback(async () => {
     const [ordRes, supRes, itmRes, vltRes, expRes] = await Promise.all([
       fetch(`/api/erp-auth/projects/${projectId}/proj2-purchases`),
@@ -233,6 +252,85 @@ export default function PurchasesPage() {
     setEditSaving(false);
   };
 
+  // ── Computed summaries (ALL orders, not filtered) ──────────────────────
+  const allUnpaidOrders = orders.filter(o => Number(o.total_amount) > Number(o.paid_amount || 0));
+  const totalUnpaidOrdersAmt = allUnpaidOrders.reduce((s, o) => s + Number(o.total_amount) - Number(o.paid_amount || 0), 0);
+
+  const allUnpaidExpenses: any[] = [];
+  orders.forEach(o => {
+    expenses.filter(e => e.expense_type === "purchase" && Array.isArray(e.purchase_order_ids) && e.purchase_order_ids.includes(o.id))
+      .forEach(e => { if (Number(e.amount) > Number(e.paid_amount || 0)) allUnpaidExpenses.push({ ...e, _order: o }); });
+  });
+  const totalUnpaidExpensesAmt = allUnpaidExpenses.reduce((s, e) => s + Number(e.amount) - Number(e.paid_amount || 0), 0);
+
+  // ── Period-filtered order list ───────────────────────────────────────
+  const now = new Date();
+  const filteredOrders = orders.filter(o => {
+    const raw = o.order_date || "";
+    let d: Date;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) d = new Date(raw);
+    else { const [dd, mm, yy] = raw.split("-"); d = new Date(`${yy}-${mm}-${dd}`); }
+    if (dateFrom && d < new Date(dateFrom)) return false;
+    if (dateTo   && d > new Date(dateTo))   return false;
+    if (dateFrom || dateTo) return true; // custom range overrides period
+    if (listPeriod === "all") return true;
+    if (listPeriod === "month") return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    return d.getFullYear() === now.getFullYear();
+  });
+
+
+  // ── Bulk pay all unpaid orders ───────────────────────────────────────
+  const handleBulkPayOrders = async () => {
+    if (!bulkPayForm.vault_id) return;
+    setBulkSaving(true);
+    for (const o of allUnpaidOrders) {
+      const rem = Number(o.total_amount) - Number(o.paid_amount || 0);
+      if (rem <= 0) continue;
+      await fetch(`/api/erp-auth/projects/${projectId}/proj2-purchases/${o.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "pay", vault_id: bulkPayForm.vault_id, amount: rem, notes: bulkPayForm.notes, payment_date: fmtD(bulkPayForm.payment_date) }),
+      });
+    }
+    setBulkSaving(false); setSummaryOpen(null); setSuccess("تم سداد جميع الفواتير"); fetchAll();
+  };
+
+  // ── Bulk pay all unpaid expenses ─────────────────────────────────────
+  const handleBulkPayExpenses = async () => {
+    if (!bulkPayForm.vault_id) return;
+    setBulkSaving(true);
+    for (const e of allUnpaidExpenses) {
+      const rem = Number(e.amount) - Number(e.paid_amount || 0);
+      if (rem <= 0) continue;
+      await fetch(`/api/erp-auth/projects/${projectId}/proj2-expenses/${e.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vault_id: bulkPayForm.vault_id, amount: rem, notes: bulkPayForm.notes, payment_date: fmtD(bulkPayForm.payment_date) }),
+      });
+    }
+    setBulkSaving(false); setSummaryOpen(null); setSuccess("تم سداد جميع المصاريف"); fetchAll();
+  };
+
+  // ── Inline pay a single order ────────────────────────────────────────
+  const handleInlinePayOrder = async (orderId: string) => {
+    if (!inlinePayForm.vault_id || !inlinePayForm.amount) return;
+    setBulkSaving(true);
+    await fetch(`/api/erp-auth/projects/${projectId}/proj2-purchases/${orderId}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "pay", ...inlinePayForm, payment_date: fmtD(inlinePayForm.payment_date), amount: Number(inlinePayForm.amount) }),
+    });
+    setBulkSaving(false); setInlinePayOrderId(null); setSuccess("تم تسجيل الدفعة"); fetchAll();
+  };
+
+  // ── Inline pay a single expense ──────────────────────────────────────
+  const handleInlinePayExpense = async (expId: string) => {
+    if (!inlinePayExpForm.vault_id || !inlinePayExpForm.amount) return;
+    setBulkSaving(true);
+    await fetch(`/api/erp-auth/projects/${projectId}/proj2-expenses/${expId}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ vault_id: inlinePayExpForm.vault_id, amount: Number(inlinePayExpForm.amount), notes: inlinePayExpForm.notes, payment_date: fmtD(inlinePayExpForm.payment_date) }),
+    });
+    setBulkSaving(false); setInlinePayExpId(null); setSuccess("تم سداد المصروف"); fetchAll();
+  };
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
@@ -246,116 +344,148 @@ export default function PurchasesPage() {
         </Button>
       </div>
 
+      {/* ── Summary Banner ── */}
+      {!loading && (totalUnpaidOrdersAmt > 0 || totalUnpaidExpensesAmt > 0) && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "10px", marginBottom: "18px" }}>
+          {totalUnpaidOrdersAmt > 0 && (
+            <button onClick={() => { setBulkPayForm({ vault_id: "", notes: "", payment_date: today() }); setSummaryOpen("orders"); }}
+              style={{ padding: "14px 18px", borderRadius: "16px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", cursor: "pointer", textAlign: "right", direction: "rtl" }}>
+              <p style={{ margin: "0 0 4px", fontSize: "11px", color: "#64748b", fontFamily: "var(--font-cairo)", fontWeight: 600 }}>📤 مبالغ فواتير غير مسددة</p>
+              <p style={{ margin: "0 0 2px", fontSize: "20px", fontWeight: 800, color: "#f87171", fontFamily: "var(--font-cairo)" }}>{fmt(totalUnpaidOrdersAmt)} <span style={{ fontSize: "11px", fontWeight: 400, color: "#475569" }}>ج.م</span></p>
+              <p style={{ margin: 0, fontSize: "10px", color: "#ef4444", fontFamily: "var(--font-cairo)" }}>{allUnpaidOrders.length} فاتورة — اضغط للعرض والسداد</p>
+            </button>
+          )}
+          {totalUnpaidExpensesAmt > 0 && (
+            <button onClick={() => { setBulkPayForm({ vault_id: "", notes: "", payment_date: today() }); setSummaryOpen("expenses"); }}
+              style={{ padding: "14px 18px", borderRadius: "16px", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)", cursor: "pointer", textAlign: "right", direction: "rtl" }}>
+              <p style={{ margin: "0 0 4px", fontSize: "11px", color: "#64748b", fontFamily: "var(--font-cairo)", fontWeight: 600 }}>🧾 مصاريف غير مسددة</p>
+              <p style={{ margin: "0 0 2px", fontSize: "20px", fontWeight: 800, color: "#f59e0b", fontFamily: "var(--font-cairo)" }}>{fmt(totalUnpaidExpensesAmt)} <span style={{ fontSize: "11px", fontWeight: 400, color: "#475569" }}>ج.م</span></p>
+              <p style={{ margin: 0, fontSize: "10px", color: "#d97706", fontFamily: "var(--font-cairo)" }}>{allUnpaidExpenses.length} مصروف — اضغط للعرض والسداد</p>
+            </button>
+          )}
+        </div>
+      )}
+
       {error && <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2, borderRadius: "12px", backgroundColor: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#fca5a5", fontFamily: "var(--font-cairo)", direction: "rtl", textAlign: "right" }}>{error}</Alert>}
       {success && <Alert severity="success" onClose={() => setSuccess(null)} sx={{ mb: 2, borderRadius: "12px", backgroundColor: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", color: "#86efac", fontFamily: "var(--font-cairo)", direction: "rtl", textAlign: "right" }}>{success}</Alert>}
 
+      {/* ── Period filter pills ── */}
+      {!loading && orders.length > 0 && (
+        <div style={{ display: "flex", gap: "6px", marginBottom: "14px", flexWrap: "wrap", alignItems: "center" }}>
+          {/* Period pills — dimmed when custom range active */}
+          {(["month", "year", "all"] as const).map(p => (
+            <button key={p} onClick={() => { setListPeriod(p); setDateFrom(""); setDateTo(""); }}
+              style={{ padding: "5px 16px", borderRadius: "20px", fontSize: "12px", fontFamily: "var(--font-cairo)", cursor: "pointer", border: "none", fontWeight: 600, transition: "all 0.15s",
+                background: listPeriod === p && !dateFrom && !dateTo ? "linear-gradient(135deg,#f59e0b,#d97706)" : "rgba(30,41,59,0.8)",
+                color: listPeriod === p && !dateFrom && !dateTo ? "#fff" : "#94a3b8",
+                outline: listPeriod === p && !dateFrom && !dateTo ? "none" : "1px solid rgba(148,163,184,0.15)" }}>
+              {p === "month" ? "الشهر الحالي" : p === "year" ? "السنة الحالية" : "الكل"}
+            </button>
+          ))}
+          {/* Date range inputs */}
+          <div style={{ display: "flex", gap: "4px", alignItems: "center", background: (dateFrom || dateTo) ? "rgba(245,158,11,0.12)" : "rgba(30,41,59,0.6)", borderRadius: "12px", padding: "3px 8px", outline: (dateFrom || dateTo) ? "1px solid rgba(245,158,11,0.35)" : "1px solid rgba(148,163,184,0.12)" }}>
+            <span style={{ fontSize: "11px", color: "#64748b", fontFamily: "var(--font-cairo)", whiteSpace: "nowrap" }}>من</span>
+            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+              style={{ background: "transparent", border: "none", outline: "none", color: "#e2e8f0", fontSize: "12px", fontFamily: "monospace", width: "120px", cursor: "pointer", colorScheme: "dark" }} />
+            <span style={{ fontSize: "11px", color: "#64748b", fontFamily: "var(--font-cairo)", whiteSpace: "nowrap" }}>إلى</span>
+            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+              style={{ background: "transparent", border: "none", outline: "none", color: "#e2e8f0", fontSize: "12px", fontFamily: "monospace", width: "120px", cursor: "pointer", colorScheme: "dark" }} />
+            {(dateFrom || dateTo) && (
+              <button onClick={() => { setDateFrom(""); setDateTo(""); }} title="مسح التواريخ"
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#f87171", fontSize: "14px", lineHeight: 1, padding: "0 2px" }}>✕</button>
+            )}
+          </div>
+          <span style={{ fontSize: "11px", color: "#475569", fontFamily: "var(--font-cairo)", marginRight: "4px" }}>{filteredOrders.length} فاتورة</span>
+        </div>
+      )}
+
       {loading ? <div style={{ textAlign: "center", padding: "60px 0" }}><CircularProgress sx={{ color: "#f59e0b" }} /></div>
-        : orders.length === 0 ? (
+        : filteredOrders.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 24px", borderRadius: "20px", background: "rgba(30,41,59,0.4)", border: "1px solid rgba(148,163,184,0.08)" }}>
             <p style={{ fontSize: "48px", margin: "0 0 12px" }}>🛒</p>
-            <p style={{ color: "#94a3b8", fontFamily: "var(--font-cairo)", fontSize: "16px" }}>لا توجد فواتير شراء بعد</p>
+            <p style={{ color: "#94a3b8", fontFamily: "var(--font-cairo)", fontSize: "16px" }}>{orders.length === 0 ? "لا توجد فواتير شراء بعد" : "لا توجد فواتير في هذه الفترة"}</p>
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {orders.map(order => (
-              <div key={order.id} style={{ padding: "18px", borderRadius: "16px", background: "rgba(30,41,59,0.5)", border: "1px solid rgba(148,163,184,0.08)" }}>
-                {/* Header */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "8px", marginBottom: "12px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                    <span style={{ fontSize: "13px", fontWeight: 700, color: "#60a5fa", fontFamily: "monospace", background: "rgba(59,130,246,0.1)", padding: "3px 8px", borderRadius: "8px" }}>{order.code}</span>
-                    <span style={{ fontSize: "14px", fontWeight: 600, color: "#f1f5f9", fontFamily: "var(--font-cairo)" }}>{order.supplier?.name || "—"}</span>
-                    <Chip label={ORDER_STATUS[order.status]?.label} size="small" sx={{ background: `${ORDER_STATUS[order.status]?.color}22`, color: ORDER_STATUS[order.status]?.color, fontFamily: "var(--font-cairo)", fontSize: "11px", height: "20px" }} />
-                    <Chip label={PAYMENT_STATUS[order.payment_status]?.label} size="small" sx={{ background: `${PAYMENT_STATUS[order.payment_status]?.color}22`, color: PAYMENT_STATUS[order.payment_status]?.color, fontFamily: "var(--font-cairo)", fontSize: "11px", height: "20px" }} />
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {filteredOrders.map(order => {
+              const linkedExpenses = expenses.filter(e =>
+                e.expense_type === "purchase" &&
+                Array.isArray(e.purchase_order_ids) &&
+                e.purchase_order_ids.includes(order.id)
+              );
+              const expTotal = linkedExpenses.reduce((s: number, e: any) => s + Number(e.amount), 0);
+              const expPaid  = linkedExpenses.reduce((s: number, e: any) => s + Number(e.paid_amount), 0);
+              const expRemaining = expTotal - expPaid;
+              const remaining = Number(order.total_amount) - Number(order.paid_amount || 0);
+              const ps  = PAYMENT_STATUS[order.payment_status] || PAYMENT_STATUS.unpaid;
+              const os  = ORDER_STATUS[order.status]    || ORDER_STATUS.ordered;
+              return (
+                <div key={order.id} style={{ padding: "14px 16px", borderRadius: "16px", background: "rgba(30,41,59,0.5)", border: `1px solid ${remaining > 0 ? "rgba(245,158,11,0.2)" : "rgba(148,163,184,0.08)"}` }}>
+                  {/* ── Row 1: code + supplier + status chips ── */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "10px" }}>
+                    <span style={{ fontSize: "12px", fontWeight: 700, color: "#60a5fa", fontFamily: "monospace", background: "rgba(59,130,246,0.1)", padding: "2px 8px", borderRadius: "8px", whiteSpace: "nowrap" }}>{order.code}</span>
+                    {order.lot_id && <span style={{ fontSize: "10px", fontWeight: 700, color: "#a78bfa", background: "rgba(139,92,246,0.15)", padding: "2px 7px", borderRadius: "6px", whiteSpace: "nowrap", border: "1px solid rgba(139,92,246,0.3)" }}>📦 لوت</span>}
+                    <span style={{ fontSize: "14px", fontWeight: 600, color: "#f1f5f9", fontFamily: "var(--font-cairo)", flex: 1, minWidth: 0 }}>{order.supplier?.name || "—"}</span>
+                    <Chip label={os.label} size="small" sx={{ background: `${os.color}22`, color: os.color, fontFamily: "var(--font-cairo)", fontSize: "11px", height: 20 }} />
+                    <Chip label={ps.label} size="small" sx={{ background: `${ps.color}22`, color: ps.color, fontFamily: "var(--font-cairo)", fontSize: "11px", height: 20 }} />
                   </div>
-                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                    {order.status === "ordered" && (
-                      <Button size="small" variant="outlined" startIcon={<CheckCircleOutlined sx={{ fontSize: 14 }} />} onClick={() => handleReceive(order)}
-                        sx={{ borderRadius: "8px", fontFamily: "var(--font-cairo)", fontSize: "11px", borderColor: "#10b981", color: "#10b981", textTransform: "none", "&:hover": { background: "rgba(16,185,129,0.1)" } }}>
-                        تسجيل الاستلام
-                      </Button>
-                    )}
-                    {order.payment_status !== "paid" && (
-                      <Button size="small" variant="outlined" startIcon={<PaymentsOutlined sx={{ fontSize: 14 }} />} onClick={() => { setPayOrder(order); setPayForm({ vault_id: "", amount: "", notes: "", payment_date: today() }); setPayOpen(true); }}
-                        sx={{ borderRadius: "8px", fontFamily: "var(--font-cairo)", fontSize: "11px", borderColor: "#f59e0b", color: "#f59e0b", textTransform: "none", "&:hover": { background: "rgba(245,158,11,0.1)" } }}>
-                        تسجيل دفع
-                      </Button>
-                    )}
-                    <IconButton size="small" title="تعديل الفاتورة"
-                      onClick={() => {
-                        setEditOrder(order);
-                        setEditForm({ supplier_id: order.supplier_id || "", notes: order.notes || "", order_date: fmtD(order.order_date || "") });
-                        setEditItems((order.items || []).map((i: any) => ({ item_id: i.item_id, quantity: String(i.quantity), unit_price: String(i.unit_price) })));
-                        setEditOpen(true);
-                      }}
-                      sx={{ color: "#60a5fa", "&:hover": { background: "rgba(59,130,246,0.1)" } }}>
-                      <EditOutlined sx={{ fontSize: 16 }} />
-                    </IconButton>
-                    <IconButton size="small" title="إضافة مصروف للفاتورة"
-                      onClick={() => { setExpOrderIds([order.id]); setExpForm({ description: "", amount: "", advance_amount: "", vault_id: "", payment_status: "immediate" }); setExpOpen(true); }}
-                      sx={{ color: "#f59e0b", "&:hover": { background: "rgba(245,158,11,0.1)" } }}>
-                      <MoneyOffOutlined sx={{ fontSize: 16 }} />
-                    </IconButton>
-                    {(() => {
-                      const linkedExpenses = expenses.filter(e => e.expense_type === "purchase" && Array.isArray(e.purchase_order_ids) && e.purchase_order_ids.includes(order.id));
-                      const expTotal = linkedExpenses.reduce((s: number, e: any) => s + Number(e.amount), 0);
-                      const expPaid = linkedExpenses.reduce((s: number, e: any) => s + Number(e.paid_amount), 0);
-                      const expRemaining = expTotal - expPaid;
-                      return expRemaining > 0 ? (
-                        <IconButton size="small" title="سداد المصاريف" onClick={() => { setPayExpOrder(order); setPayExpMax(expRemaining); setPayExpForm({ vault_id: "", amount: String(expRemaining), notes: "", payment_date: fmtD(new Date().toISOString().split("T")[0]) }); setPayExpOpen(true); }} sx={{ color: "#c084fc", "&:hover": { background: "rgba(192,132,252,0.1)" } }}><AccountBalanceWalletOutlined sx={{ fontSize: 16 }} /></IconButton>
-                      ) : null;
-                    })()}
-                    <IconButton size="small" onClick={() => { setDeleteTarget(order); setDeleteOpen(true); }} sx={{ color: "#64748b", "&:hover": { color: "#f87171", background: "rgba(248,113,113,0.1)" } }}><DeleteOutline sx={{ fontSize: 16 }} /></IconButton>
-                  </div>
-                </div>
 
-                {/* Items */}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "10px" }}>
-                  {(order.items || []).map((it: any, i: number) => (
-                    <span key={i} style={{ fontSize: "12px", color: "#94a3b8", fontFamily: "var(--font-cairo)", background: "rgba(15,23,42,0.4)", padding: "4px 10px", borderRadius: "8px" }}>
-                      {it.item?.name || "—"} × {it.quantity} {it.item?.unit} @ {fmt(it.unit_price)} جنيه
-                    </span>
-                  ))}
-                </div>
-
-                {/* Totals + Expenses */}
-                {(() => {
-                  const linkedExpenses = expenses.filter(e =>
-                    e.expense_type === "purchase" &&
-                    Array.isArray(e.purchase_order_ids) &&
-                    e.purchase_order_ids.includes(order.id)
-                  );
-                  const expTotal = linkedExpenses.reduce((s: number, e: any) => s + Number(e.amount), 0);
-                  const grandTotal = Number(order.total_amount) + expTotal;
-                  return (
-                    <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center", direction: "rtl" }}>
-                      <span style={{ fontSize: "13px", fontFamily: "var(--font-cairo)", color: "#64748b" }}>الإجمالي: <strong style={{ color: "#f1f5f9" }}>{fmt(order.total_amount)} جنيه</strong></span>
-                      <span style={{ fontSize: "13px", fontFamily: "var(--font-cairo)", color: "#10b981" }}>مدفوع: <strong>{fmt(order.paid_amount)} جنيه</strong></span>
-                      {order.paid_amount < order.total_amount && <span style={{ fontSize: "13px", fontFamily: "var(--font-cairo)", color: "#f87171" }}>متبقي: <strong>{fmt(order.total_amount - order.paid_amount)} جنيه</strong></span>}
-                      {expTotal > 0 && (
-                        <>
-                          <span style={{ fontSize: "13px", fontFamily: "var(--font-cairo)", color: "#f59e0b" }}>مصروفات: <strong>{fmt(expTotal)} جنيه</strong></span>
-                          {expTotal - linkedExpenses.reduce((s: number, e: any) => s + Number(e.paid_amount), 0) > 0 && (
-                            <span style={{ fontSize: "13px", fontFamily: "var(--font-cairo)", color: "#c084fc", fontWeight: 700 }}>مصروفات متبقية: {fmt(expTotal - linkedExpenses.reduce((s: number, e: any) => s + Number(e.paid_amount), 0))} جنيه</span>
-                          )}
-                          <span style={{ fontSize: "13px", fontFamily: "var(--font-cairo)", color: "#c084fc", fontWeight: 700 }}>التكلفة الكاملة: {fmt(grandTotal)} جنيه</span>
-                        </>
-                      )}
+                  {/* ── Row 2: date + amounts + actions ── */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                    {/* Amounts */}
+                    <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", flex: 1, alignItems: "center" }}>
+                      <span style={{ fontSize: "11px", color: "#64748b", fontFamily: "var(--font-cairo)", whiteSpace: "nowrap" }}>{order.order_date}</span>
+                      <span style={{ fontSize: "13px", fontFamily: "var(--font-cairo)", color: "#94a3b8", whiteSpace: "nowrap" }}>الإجمالي: <strong style={{ color: "#f1f5f9" }}>{fmt(order.total_amount)}</strong> ج.م</span>
+                      {Number(order.paid_amount) > 0 && <span style={{ fontSize: "13px", fontFamily: "var(--font-cairo)", color: "#10b981", whiteSpace: "nowrap" }}>مدفوع: <strong>{fmt(order.paid_amount)}</strong></span>}
+                      {remaining > 0 && <span style={{ fontSize: "13px", fontFamily: "var(--font-cairo)", color: "#f87171", whiteSpace: "nowrap" }}>متبقي: <strong>{fmt(remaining)}</strong></span>}
+                      {expTotal > 0 && <span style={{ fontSize: "12px", color: "#f59e0b", fontFamily: "var(--font-cairo)", whiteSpace: "nowrap" }}>مصاريف: {fmt(expTotal)}</span>}
+                      {expRemaining > 0 && <span style={{ fontSize: "12px", color: "#f87171", fontFamily: "var(--font-cairo)", whiteSpace: "nowrap", fontWeight: 700 }}>مصاريف متبقية: {fmt(expRemaining)}</span>}
                     </div>
-                  );
-                })()}
 
-                {/* Payments */}
-                {order.payments?.length > 0 && (
-                  <div style={{ marginTop: "10px", display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                    {order.payments.map((p: any, i: number) => (
-                      <span key={i} style={{ fontSize: "11px", color: "#60a5fa", background: "rgba(59,130,246,0.08)", padding: "3px 10px", borderRadius: "8px", fontFamily: "var(--font-cairo)" }}>
-                        💳 {p.vault?.name}: {fmt(p.amount)} جنيه
-                      </span>
-                    ))}
+                    {/* Action buttons */}
+                    <div style={{ display: "flex", gap: "2px", flexShrink: 0, alignItems: "center" }}>
+                      {/* Details icon */}
+                      <IconButton size="small" title="تفاصيل الفاتورة" onClick={() => setDetailsOrder(order)}
+                        sx={{ color: "#38bdf8", "&:hover": { background: "rgba(56,189,248,0.1)" } }}>
+                        <ReceiptLongOutlined sx={{ fontSize: 17 }} />
+                      </IconButton>
+                      {order.status === "ordered" && (
+                        <IconButton size="small" title="تسجيل الاستلام" onClick={() => handleReceive(order)}
+                          sx={{ color: "#10b981", "&:hover": { background: "rgba(16,185,129,0.1)" } }}>
+                          <CheckCircleOutlined sx={{ fontSize: 17 }} />
+                        </IconButton>
+                      )}
+                      {order.payment_status !== "paid" && (
+                        <IconButton size="small" title="تسجيل دفعة" onClick={() => { setPayOrder(order); setPayForm({ vault_id: "", amount: "", notes: "", payment_date: today() }); setPayOpen(true); }}
+                          sx={{ color: "#f59e0b", "&:hover": { background: "rgba(245,158,11,0.1)" } }}>
+                          <PaymentsOutlined sx={{ fontSize: 17 }} />
+                        </IconButton>
+                      )}
+                      <IconButton size="small" title="تعديل الفاتورة"
+                        onClick={() => { setEditOrder(order); setEditForm({ supplier_id: order.supplier_id || "", notes: order.notes || "", order_date: fmtD(order.order_date || "") }); setEditItems((order.items || []).map((i: any) => ({ item_id: i.item_id, quantity: String(i.quantity), unit_price: String(i.unit_price) }))); setEditOpen(true); }}
+                        sx={{ color: "#60a5fa", "&:hover": { background: "rgba(59,130,246,0.1)" } }}>
+                        <EditOutlined sx={{ fontSize: 16 }} />
+                      </IconButton>
+                      <IconButton size="small" title="إضافة مصروف"
+                        onClick={() => { setExpOrderIds([order.id]); setExpForm({ description: "", amount: "", advance_amount: "", vault_id: "", payment_status: "immediate" }); setExpOpen(true); }}
+                        sx={{ color: "#c084fc", "&:hover": { background: "rgba(192,132,252,0.1)" } }}>
+                        <MoneyOffOutlined sx={{ fontSize: 16 }} />
+                      </IconButton>
+                      {expRemaining > 0 && (
+                        <IconButton size="small" title="سداد المصاريف" onClick={() => { setPayExpOrder(order); setPayExpMax(expRemaining); setPayExpForm({ vault_id: "", amount: String(expRemaining), notes: "", payment_date: fmtD(new Date().toISOString().split("T")[0]) }); setPayExpOpen(true); }}
+                          sx={{ color: "#a78bfa", "&:hover": { background: "rgba(167,139,250,0.1)" } }}>
+                          <AccountBalanceWalletOutlined sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      )}
+                      <IconButton size="small" onClick={() => { setDeleteTarget(order); setDeleteOpen(true); }}
+                        sx={{ color: "#64748b", "&:hover": { color: "#f87171", background: "rgba(248,113,113,0.1)" } }}>
+                        <DeleteOutline sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </div>
                   </div>
-                )}
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -611,6 +741,210 @@ export default function PurchasesPage() {
             {editSaving ? <CircularProgress size={20} sx={{ color: "#fff" }} /> : "تسجيل المصروف"}
           </Button>
         </DialogActions>
+      </Dialog>
+      {/* ─── Invoice Details Dialog ─── */}
+      <Dialog open={!!detailsOrder} onClose={() => setDetailsOrder(null)}
+        sx={{ "& .MuiDialog-paper": { ...dialogSx["& .MuiDialog-paper"], minWidth: "min(580px, 96vw)", maxWidth: "640px" } }}>
+        <DialogTitle sx={{ fontFamily: "var(--font-cairo)", fontWeight: 700, fontSize: "18px", display: "flex", justifyContent: "space-between", alignItems: "center", pb: 1 }}>
+          <span>تفاصيل الفاتورة — <span style={{ color: "#60a5fa", fontFamily: "monospace" }}>{detailsOrder?.code}</span></span>
+          <IconButton onClick={() => setDetailsOrder(null)} sx={{ color: "#64748b" }}><CloseOutlined /></IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: "4px !important", pb: 2 }}>
+          {detailsOrder && (() => {
+            const linkedExp = expenses.filter(e => e.expense_type === "purchase" && Array.isArray(e.purchase_order_ids) && e.purchase_order_ids.includes(detailsOrder.id));
+            const expTotal = linkedExp.reduce((s: number, e: any) => s + Number(e.amount), 0);
+            const grandTotal = Number(detailsOrder.total_amount) + expTotal;
+            const remaining = Number(detailsOrder.total_amount) - Number(detailsOrder.paid_amount || 0);
+            const ps = PAYMENT_STATUS[detailsOrder.payment_status] || PAYMENT_STATUS.unpaid;
+            const os = ORDER_STATUS[detailsOrder.status] || ORDER_STATUS.ordered;
+            return (
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px", direction: "rtl" }}>
+                {/* Meta */}
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+                  <span style={{ fontSize: "12px", color: "#94a3b8", fontFamily: "var(--font-cairo)" }}>المورد: <strong style={{ color: "#f1f5f9" }}>{detailsOrder.supplier?.name || "—"}</strong></span>
+                  <span style={{ fontSize: "12px", color: "#94a3b8", fontFamily: "var(--font-cairo)" }}>التاريخ: <strong style={{ color: "#f1f5f9" }}>{detailsOrder.order_date}</strong></span>
+                  <Chip label={os.label} size="small" sx={{ background: `${os.color}22`, color: os.color, fontFamily: "var(--font-cairo)", fontSize: "11px", height: 20 }} />
+                  <Chip label={ps.label} size="small" sx={{ background: `${ps.color}22`, color: ps.color, fontFamily: "var(--font-cairo)", fontSize: "11px", height: 20 }} />
+                </div>
+
+                {/* Items table */}
+                <div>
+                  <p style={{ margin: "0 0 8px", fontSize: "13px", fontWeight: 700, color: "#94a3b8", fontFamily: "var(--font-cairo)" }}>📦 الأصناف</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    {(detailsOrder.items || []).map((it: any, i: number) => (
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", borderRadius: "10px", background: "rgba(15,23,42,0.5)", gap: "12px", flexWrap: "wrap" }}>
+                        <span style={{ fontSize: "13px", color: "#e2e8f0", fontFamily: "var(--font-cairo)", flex: 1 }}>{it.item?.name || "—"} {it.item?.unit && <span style={{ color: "#64748b", fontSize: "11px" }}>({it.item.unit})</span>}</span>
+                        <span style={{ fontSize: "12px", color: "#94a3b8", fontFamily: "var(--font-cairo)", whiteSpace: "nowrap" }}>{it.quantity} × {fmt(it.unit_price)} ج.م</span>
+                        <span style={{ fontSize: "13px", fontWeight: 700, color: "#60a5fa", fontFamily: "monospace", whiteSpace: "nowrap" }}>{fmt(Number(it.quantity) * Number(it.unit_price))} ج.م</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Summary */}
+                <div style={{ padding: "12px 14px", borderRadius: "12px", background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.15)", display: "flex", gap: "16px", flexWrap: "wrap" }}>
+                  <span style={{ fontSize: "13px", fontFamily: "var(--font-cairo)", color: "#94a3b8" }}>الإجمالي: <strong style={{ color: "#f1f5f9" }}>{fmt(detailsOrder.total_amount)} ج.م</strong></span>
+                  <span style={{ fontSize: "13px", fontFamily: "var(--font-cairo)", color: "#10b981" }}>مدفوع: <strong>{fmt(detailsOrder.paid_amount || 0)} ج.م</strong></span>
+                  {remaining > 0 && <span style={{ fontSize: "13px", fontFamily: "var(--font-cairo)", color: "#f87171" }}>متبقي: <strong>{fmt(remaining)} ج.م</strong></span>}
+                  {expTotal > 0 && <span style={{ fontSize: "13px", fontFamily: "var(--font-cairo)", color: "#f59e0b" }}>مصاريف: <strong>{fmt(expTotal)} ج.م</strong></span>}
+                  {expTotal > 0 && <span style={{ fontSize: "13px", fontFamily: "var(--font-cairo)", color: "#c084fc", fontWeight: 700 }}>التكلفة الكاملة: {fmt(grandTotal)} ج.م</span>}
+                </div>
+
+                {/* Payments */}
+                {detailsOrder.payments?.length > 0 && (
+                  <div>
+                    <p style={{ margin: "0 0 8px", fontSize: "13px", fontWeight: 700, color: "#94a3b8", fontFamily: "var(--font-cairo)" }}>💳 الدفعات</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                      {detailsOrder.payments.map((p: any, i: number) => (
+                        <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 12px", borderRadius: "10px", background: "rgba(59,130,246,0.07)", flexWrap: "wrap", gap: "8px" }}>
+                          <span style={{ fontSize: "12px", color: "#60a5fa", fontFamily: "var(--font-cairo)" }}>{p.vault?.name || "—"}</span>
+                          <span style={{ fontSize: "11px", color: "#475569", fontFamily: "var(--font-cairo)" }}>{p.payment_date}</span>
+                          <span style={{ fontSize: "13px", fontWeight: 700, color: "#34d399", fontFamily: "monospace" }}>{fmt(p.amount)} ج.م</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Linked expenses */}
+                {linkedExp.length > 0 && (
+                  <div>
+                    <p style={{ margin: "0 0 8px", fontSize: "13px", fontWeight: 700, color: "#94a3b8", fontFamily: "var(--font-cairo)" }}>🧾 المصاريف المرتبطة</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                      {linkedExp.map((e: any, i: number) => (
+                        <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 12px", borderRadius: "10px", background: "rgba(245,158,11,0.06)", flexWrap: "wrap", gap: "8px" }}>
+                          <span style={{ fontSize: "12px", color: "#e2e8f0", fontFamily: "var(--font-cairo)", flex: 1 }}>{e.description}</span>
+                          <span style={{ fontSize: "11px", color: Number(e.paid_amount) >= Number(e.amount) ? "#34d399" : "#f59e0b", fontFamily: "var(--font-cairo)", whiteSpace: "nowrap" }}>
+                            {fmt(e.paid_amount)} / {fmt(e.amount)} ج.م
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {detailsOrder.notes && (
+                  <p style={{ margin: 0, fontSize: "12px", color: "#64748b", fontFamily: "var(--font-cairo)", borderTop: "1px solid rgba(148,163,184,0.1)", paddingTop: "12px" }}>{detailsOrder.notes}</p>
+                )}
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+      {/* ─── Summary: Unpaid Orders Dialog ─── */}
+      <Dialog open={summaryOpen === "orders"} onClose={() => setSummaryOpen(null)}
+        sx={{ "& .MuiDialog-paper": { background: "linear-gradient(135deg,#1e293b 0%,#0f172a 100%)", border: "1px solid rgba(148,163,184,0.12)", borderRadius: "20px", color: "#e2e8f0", direction: "rtl", minWidth: "min(580px,96vw)", maxHeight: "85vh" } }}>
+        <DialogTitle sx={{ fontFamily: "var(--font-cairo)", fontWeight: 700, fontSize: "18px", display: "flex", justifyContent: "space-between", alignItems: "center", color: "#f87171" }}>
+          <span>📤 فواتير غير مسددة ({allUnpaidOrders.length})</span>
+          <IconButton onClick={() => setSummaryOpen(null)} sx={{ color: "#64748b" }}><CloseOutlined /></IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: "4px !important" }}>
+          {/* Bulk pay bar */}
+          <div style={{ padding: "12px 14px", borderRadius: "12px", background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)", marginBottom: "14px", display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+            <span style={{ fontSize: "13px", color: "#f87171", fontFamily: "var(--font-cairo)", fontWeight: 700 }}>الإجمالي: {fmt(totalUnpaidOrdersAmt)} ج.م</span>
+            <span style={{ flex: 1 }} />
+            <FormControl size="small" sx={{ minWidth: 140, ...fieldSx }}><InputLabel>الخزنة</InputLabel>
+              <Select value={bulkPayForm.vault_id} onChange={e => setBulkPayForm(p => ({ ...p, vault_id: e.target.value }))} label="الخزنة" sx={{ color: "#e2e8f0" }} MenuProps={{ PaperProps: { sx: { background: "#1e293b", borderRadius: "12px", "& .MuiMenuItem-root": { fontFamily: "var(--font-cairo)", color: "#e2e8f0" } } } }}>
+                {vaults.map(v => <MenuItem key={v.id} value={v.id} sx={{ fontFamily: "var(--font-cairo)" }}>{v.name} — {fmt(Number(v.balance))}</MenuItem>)}
+              </Select></FormControl>
+            <Button size="small" variant="contained" disabled={bulkSaving || !bulkPayForm.vault_id} onClick={handleBulkPayOrders}
+              sx={{ borderRadius: "10px", fontFamily: "var(--font-cairo)", fontWeight: 600, textTransform: "none", background: "linear-gradient(135deg,#ef4444,#dc2626)", whiteSpace: "nowrap" }}>
+              {bulkSaving ? <CircularProgress size={18} sx={{ color: "#fff" }} /> : "سداد الكل"}
+            </Button>
+          </div>
+          {/* List */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {allUnpaidOrders.map(o => {
+              const rem = Number(o.total_amount) - Number(o.paid_amount || 0);
+              const isOpen = inlinePayOrderId === o.id;
+              return (
+                <div key={o.id} style={{ padding: "12px 14px", borderRadius: "12px", background: "rgba(15,23,42,0.45)", border: "1px solid rgba(239,68,68,0.12)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "12px", fontWeight: 700, color: "#60a5fa", fontFamily: "monospace", background: "rgba(59,130,246,0.1)", padding: "2px 7px", borderRadius: "6px" }}>{o.code}</span>
+                    <span style={{ fontSize: "13px", color: "#f1f5f9", fontFamily: "var(--font-cairo)", flex: 1 }}>{o.supplier?.name || "—"}</span>
+                    <span style={{ fontSize: "13px", fontWeight: 700, color: "#f87171", fontFamily: "var(--font-cairo)", whiteSpace: "nowrap" }}>متبقي: {fmt(rem)} ج.م</span>
+                    <Button size="small" variant="outlined" onClick={() => { setInlinePayOrderId(isOpen ? null : o.id); setInlinePayForm({ vault_id: "", amount: String(rem), notes: "", payment_date: today() }); }}
+                      sx={{ borderRadius: "8px", fontFamily: "var(--font-cairo)", fontSize: "11px", borderColor: "#f87171", color: "#f87171", textTransform: "none", whiteSpace: "nowrap", "&:hover": { background: "rgba(248,113,113,0.1)" } }}>
+                      {isOpen ? "إلغاء" : "سداد"}
+                    </Button>
+                  </div>
+                  {isOpen && (
+                    <div style={{ marginTop: "10px", display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "flex-end" }}>
+                      <FormControl size="small" sx={{ minWidth: 130, ...fieldSx }}><InputLabel>الخزنة *</InputLabel>
+                        <Select value={inlinePayForm.vault_id} onChange={e => setInlinePayForm(p => ({ ...p, vault_id: e.target.value }))} label="الخزنة *" sx={{ color: "#e2e8f0" }} MenuProps={{ PaperProps: { sx: { background: "#1e293b", borderRadius: "12px", "& .MuiMenuItem-root": { fontFamily: "var(--font-cairo)", color: "#e2e8f0" } } } }}>
+                          {vaults.map(v => <MenuItem key={v.id} value={v.id} sx={{ fontFamily: "var(--font-cairo)" }}>{v.name}</MenuItem>)}
+                        </Select></FormControl>
+                      <TextField size="small" label="المبلغ" type="number" value={inlinePayForm.amount} onChange={e => setInlinePayForm(p => ({ ...p, amount: e.target.value }))} sx={{ width: 110, ...fieldSx, "& .MuiInputBase-input": { textAlign: "left" } }} />
+                      <TextField size="small" label="ملاحظات" value={inlinePayForm.notes} onChange={e => setInlinePayForm(p => ({ ...p, notes: e.target.value }))} sx={{ flex: 1, minWidth: 100, ...fieldSx }} />
+                      <Button size="small" variant="contained" disabled={bulkSaving || !inlinePayForm.vault_id || !inlinePayForm.amount} onClick={() => handleInlinePayOrder(o.id)}
+                        sx={{ borderRadius: "8px", fontFamily: "var(--font-cairo)", fontWeight: 600, textTransform: "none", background: "#ef4444", whiteSpace: "nowrap" }}>
+                        {bulkSaving ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : "تأكيد السداد"}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Summary: Unpaid Expenses Dialog ─── */}
+      <Dialog open={summaryOpen === "expenses"} onClose={() => setSummaryOpen(null)}
+        sx={{ "& .MuiDialog-paper": { background: "linear-gradient(135deg,#1e293b 0%,#0f172a 100%)", border: "1px solid rgba(148,163,184,0.12)", borderRadius: "20px", color: "#e2e8f0", direction: "rtl", minWidth: "min(580px,96vw)", maxHeight: "85vh" } }}>
+        <DialogTitle sx={{ fontFamily: "var(--font-cairo)", fontWeight: 700, fontSize: "18px", display: "flex", justifyContent: "space-between", alignItems: "center", color: "#f59e0b" }}>
+          <span>🧾 مصاريف غير مسددة ({allUnpaidExpenses.length})</span>
+          <IconButton onClick={() => setSummaryOpen(null)} sx={{ color: "#64748b" }}><CloseOutlined /></IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: "4px !important" }}>
+          {/* Bulk pay bar */}
+          <div style={{ padding: "12px 14px", borderRadius: "12px", background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.2)", marginBottom: "14px", display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+            <span style={{ fontSize: "13px", color: "#f59e0b", fontFamily: "var(--font-cairo)", fontWeight: 700 }}>الإجمالي: {fmt(totalUnpaidExpensesAmt)} ج.م</span>
+            <span style={{ flex: 1 }} />
+            <FormControl size="small" sx={{ minWidth: 140, ...fieldSx }}><InputLabel>الخزنة</InputLabel>
+              <Select value={bulkPayForm.vault_id} onChange={e => setBulkPayForm(p => ({ ...p, vault_id: e.target.value }))} label="الخزنة" sx={{ color: "#e2e8f0" }} MenuProps={{ PaperProps: { sx: { background: "#1e293b", borderRadius: "12px", "& .MuiMenuItem-root": { fontFamily: "var(--font-cairo)", color: "#e2e8f0" } } } }}>
+                {vaults.map(v => <MenuItem key={v.id} value={v.id} sx={{ fontFamily: "var(--font-cairo)" }}>{v.name} — {fmt(Number(v.balance))}</MenuItem>)}
+              </Select></FormControl>
+            <Button size="small" variant="contained" disabled={bulkSaving || !bulkPayForm.vault_id} onClick={handleBulkPayExpenses}
+              sx={{ borderRadius: "10px", fontFamily: "var(--font-cairo)", fontWeight: 600, textTransform: "none", background: "linear-gradient(135deg,#f59e0b,#d97706)", whiteSpace: "nowrap" }}>
+              {bulkSaving ? <CircularProgress size={18} sx={{ color: "#fff" }} /> : "سداد الكل"}
+            </Button>
+          </div>
+          {/* List */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {allUnpaidExpenses.map(e => {
+              const rem = Number(e.amount) - Number(e.paid_amount || 0);
+              const isOpen = inlinePayExpId === e.id;
+              return (
+                <div key={e.id} style={{ padding: "12px 14px", borderRadius: "12px", background: "rgba(15,23,42,0.45)", border: "1px solid rgba(245,158,11,0.12)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "11px", color: "#60a5fa", fontFamily: "monospace", background: "rgba(59,130,246,0.1)", padding: "2px 7px", borderRadius: "6px" }}>{e._order?.code}</span>
+                    <span style={{ fontSize: "13px", color: "#f1f5f9", fontFamily: "var(--font-cairo)", flex: 1 }}>{e.description}</span>
+                    <span style={{ fontSize: "13px", fontWeight: 700, color: "#f59e0b", fontFamily: "var(--font-cairo)", whiteSpace: "nowrap" }}>متبقي: {fmt(rem)} ج.م</span>
+                    <Button size="small" variant="outlined" onClick={() => { setInlinePayExpId(isOpen ? null : e.id); setInlinePayExpForm({ vault_id: "", amount: String(rem), notes: "", payment_date: today() }); }}
+                      sx={{ borderRadius: "8px", fontFamily: "var(--font-cairo)", fontSize: "11px", borderColor: "#f59e0b", color: "#f59e0b", textTransform: "none", whiteSpace: "nowrap", "&:hover": { background: "rgba(245,158,11,0.1)" } }}>
+                      {isOpen ? "إلغاء" : "سداد"}
+                    </Button>
+                  </div>
+                  {isOpen && (
+                    <div style={{ marginTop: "10px", display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "flex-end" }}>
+                      <FormControl size="small" sx={{ minWidth: 130, ...fieldSx }}><InputLabel>الخزنة *</InputLabel>
+                        <Select value={inlinePayExpForm.vault_id} onChange={ev => setInlinePayExpForm(p => ({ ...p, vault_id: ev.target.value }))} label="الخزنة *" sx={{ color: "#e2e8f0" }} MenuProps={{ PaperProps: { sx: { background: "#1e293b", borderRadius: "12px", "& .MuiMenuItem-root": { fontFamily: "var(--font-cairo)", color: "#e2e8f0" } } } }}>
+                          {vaults.map(v => <MenuItem key={v.id} value={v.id} sx={{ fontFamily: "var(--font-cairo)" }}>{v.name}</MenuItem>)}
+                        </Select></FormControl>
+                      <TextField size="small" label="المبلغ" type="number" value={inlinePayExpForm.amount} onChange={ev => setInlinePayExpForm(p => ({ ...p, amount: ev.target.value }))} sx={{ width: 110, ...fieldSx, "& .MuiInputBase-input": { textAlign: "left" } }} />
+                      <TextField size="small" label="ملاحظات" value={inlinePayExpForm.notes} onChange={ev => setInlinePayExpForm(p => ({ ...p, notes: ev.target.value }))} sx={{ flex: 1, minWidth: 100, ...fieldSx }} />
+                      <Button size="small" variant="contained" disabled={bulkSaving || !inlinePayExpForm.vault_id || !inlinePayExpForm.amount} onClick={() => handleInlinePayExpense(e.id)}
+                        sx={{ borderRadius: "8px", fontFamily: "var(--font-cairo)", fontWeight: 600, textTransform: "none", background: "#f59e0b", whiteSpace: "nowrap" }}>
+                        {bulkSaving ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : "تأكيد السداد"}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </DialogContent>
       </Dialog>
     </div>
   );

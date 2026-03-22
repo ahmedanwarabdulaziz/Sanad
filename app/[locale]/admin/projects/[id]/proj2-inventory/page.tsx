@@ -70,6 +70,9 @@ export default function Proj2InventoryPage() {
   const [itemForm, setItemForm] = useState({ category_id: "", name: "", unit: "متر مربع" });
   const [saving, setSaving] = useState(false);
 
+  // Category filter for items tab
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+
   // Delete
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteType, setDeleteType] = useState<"category" | "item">("category");
@@ -218,25 +221,115 @@ export default function Proj2InventoryPage() {
           <p style={{ color: "#94a3b8", fontFamily: "var(--font-cairo)", fontSize: "16px" }}>لا توجد أصناف بعد</p>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          {items.map((it) => (
-            <div key={it.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", padding: "14px 16px", borderRadius: "14px", background: "rgba(30,41,59,0.5)", border: "1px solid rgba(148,163,184,0.08)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
-                <span style={{ fontSize: "11px", fontWeight: 700, color: "#38bdf8", background: "rgba(56,189,248,0.1)", borderRadius: "8px", padding: "3px 8px", direction: "ltr", flexShrink: 0, fontFamily: "monospace" }}>{it.code || "—"}</span>
-                <div style={{ minWidth: 0 }}>
-                  <p style={{ fontSize: "14px", fontWeight: 600, color: "#e2e8f0", margin: 0, fontFamily: "var(--font-cairo)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.name}</p>
-                  <div style={{ display: "flex", gap: "8px", marginTop: "3px", flexWrap: "wrap" }}>
-                    <span style={{ fontSize: "11px", color: "#94a3b8", fontFamily: "var(--font-cairo)" }}>{it.category?.name || "—"}</span>
-                    <span style={{ fontSize: "11px", color: "#a78bfa", fontFamily: "var(--font-cairo)", fontWeight: 600 }}>· {it.unit}</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          {/* Category filter chips */}
+          {categories.length > 1 && (
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+              <span style={{ fontSize: "12px", color: "#64748b", fontFamily: "var(--font-cairo)", flexShrink: 0 }}>تصفية:</span>
+              {/* All chip */}
+              <button onClick={() => setCategoryFilter(null)}
+                style={{
+                  padding: "4px 14px", borderRadius: "20px", fontSize: "12px", fontFamily: "var(--font-cairo)",
+                  cursor: "pointer", border: "none", fontWeight: 600, transition: "all 0.15s",
+                  background: categoryFilter === null ? "linear-gradient(135deg,#3b82f6,#8b5cf6)" : "rgba(30,41,59,0.8)",
+                  color: categoryFilter === null ? "#fff" : "#94a3b8",
+                  outline: categoryFilter === null ? "none" : "1px solid rgba(148,163,184,0.15)",
+                }}>
+                الكل ({items.length})
+              </button>
+              {categories.map(c => {
+                const count = items.filter((it: any) => it.category_id === c.id).length;
+                if (count === 0) return null;
+                const active = categoryFilter === c.id;
+                return (
+                  <button key={c.id} onClick={() => setCategoryFilter(active ? null : c.id)}
+                    style={{
+                      padding: "4px 14px", borderRadius: "20px", fontSize: "12px", fontFamily: "var(--font-cairo)",
+                      cursor: "pointer", border: "none", fontWeight: 600, transition: "all 0.15s",
+                      background: active ? "linear-gradient(135deg,#3b82f6,#8b5cf6)" : "rgba(30,41,59,0.8)",
+                      color: active ? "#fff" : "#94a3b8",
+                      outline: active ? "none" : "1px solid rgba(148,163,184,0.15)",
+                    }}>
+                    {c.name} ({count})
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Items grouped by category */}
+          {categories
+            .filter(c => categoryFilter === null || c.id === categoryFilter)
+            .map(c => {
+              const catItems = items.filter((it: any) => it.category_id === c.id);
+              if (catItems.length === 0) return null;
+              return (
+                <div key={c.id}>
+                  {/* Category header */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                    <span style={{ fontSize: "11px", fontWeight: 700, color: "#60a5fa", background: "rgba(59,130,246,0.1)", borderRadius: "8px", padding: "3px 10px", fontFamily: "monospace", flexShrink: 0 }}>
+                      {c.code || "—"}
+                    </span>
+                    <span style={{ fontSize: "14px", fontWeight: 700, color: "#e2e8f0", fontFamily: "var(--font-cairo)" }}>{c.name}</span>
+                    <span style={{ fontSize: "12px", color: "#475569", fontFamily: "var(--font-cairo)" }}>· {catItems.length} صنف</span>
+                    <div style={{ flex: 1, height: "1px", background: "rgba(148,163,184,0.1)" }} />
+                  </div>
+
+                  {/* Items under this category */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", paddingRight: "8px", borderRight: "2px solid rgba(59,130,246,0.2)" }}>
+                    {catItems.map((it: any) => (
+                      <div key={it.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", padding: "12px 16px", borderRadius: "12px", background: "rgba(30,41,59,0.5)", border: "1px solid rgba(148,163,184,0.08)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+                          <span style={{ fontSize: "10px", fontWeight: 700, color: "#38bdf8", background: "rgba(56,189,248,0.1)", borderRadius: "6px", padding: "2px 7px", direction: "ltr", flexShrink: 0, fontFamily: "monospace" }}>
+                            {it.code || "—"}
+                          </span>
+                          <div style={{ minWidth: 0 }}>
+                            <p style={{ fontSize: "14px", fontWeight: 600, color: "#e2e8f0", margin: 0, fontFamily: "var(--font-cairo)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.name}</p>
+                            <span style={{ fontSize: "11px", color: "#a78bfa", fontFamily: "var(--font-cairo)", fontWeight: 600 }}>{it.unit}</span>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
+                          {!it.is_system && <>
+                            <IconButton size="small" onClick={() => openEditItem(it)} sx={{ color: "#f59e0b", "&:hover": { background: "rgba(245,158,11,0.1)" } }}><EditOutlined sx={{ fontSize: 16 }} /></IconButton>
+                            <IconButton size="small" onClick={() => { setDeleteTarget(it); setDeleteType("item"); setDeleteOpen(true); }} sx={{ color: "#64748b", "&:hover": { color: "#f87171", background: "rgba(248,113,113,0.1)" } }}><DeleteOutline sx={{ fontSize: 16 }} /></IconButton>
+                          </>}
+                          {it.is_system && <span style={{ fontSize: "10px", color: "#475569", fontFamily: "var(--font-cairo)", padding: "2px 8px", background: "rgba(30,41,59,0.6)", borderRadius: "6px" }}>نظام</span>}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
+              );
+            })
+          }
+
+          {/* Items with no category (fallback) */}
+          {(() => {
+            const catIds = new Set(categories.map((c: any) => c.id));
+            const orphans = items.filter((it: any) => !catIds.has(it.category_id));
+            if (!orphans.length || (categoryFilter !== null)) return null;
+            return (
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                  <span style={{ fontSize: "14px", fontWeight: 700, color: "#64748b", fontFamily: "var(--font-cairo)" }}>بدون مجموعة</span>
+                  <div style={{ flex: 1, height: "1px", background: "rgba(148,163,184,0.1)" }} />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  {orphans.map((it: any) => (
+                    <div key={it.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", padding: "12px 16px", borderRadius: "12px", background: "rgba(30,41,59,0.5)", border: "1px solid rgba(148,163,184,0.08)" }}>
+                      <p style={{ fontSize: "14px", fontWeight: 600, color: "#e2e8f0", margin: 0, fontFamily: "var(--font-cairo)" }}>{it.name}</p>
+                      <div style={{ display: "flex", gap: "4px" }}>
+                        {!it.is_system && <>
+                          <IconButton size="small" onClick={() => openEditItem(it)} sx={{ color: "#f59e0b", "&:hover": { background: "rgba(245,158,11,0.1)" } }}><EditOutlined sx={{ fontSize: 16 }} /></IconButton>
+                          <IconButton size="small" onClick={() => { setDeleteTarget(it); setDeleteType("item"); setDeleteOpen(true); }} sx={{ color: "#64748b", "&:hover": { color: "#f87171", background: "rgba(248,113,113,0.1)" } }}><DeleteOutline sx={{ fontSize: 16 }} /></IconButton>
+                        </>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
-                <IconButton size="small" onClick={() => openEditItem(it)} sx={{ color: "#f59e0b", "&:hover": { background: "rgba(245,158,11,0.1)" } }}><EditOutlined sx={{ fontSize: 16 }} /></IconButton>
-                <IconButton size="small" onClick={() => { setDeleteTarget(it); setDeleteType("item"); setDeleteOpen(true); }} sx={{ color: "#64748b", "&:hover": { color: "#f87171", background: "rgba(248,113,113,0.1)" } }}><DeleteOutline sx={{ fontSize: 16 }} /></IconButton>
-              </div>
-            </div>
-          ))}
+            );
+          })()}
         </div>
       )}
 

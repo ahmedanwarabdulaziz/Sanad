@@ -7,8 +7,9 @@ import {
   CircularProgress, Alert, IconButton, Chip, Autocomplete, Tabs, Tab, InputAdornment
 } from "@mui/material";
 import {
-  AddOutlined, DeleteOutline, SettingsOutlined, PaymentsOutlined, EditOutlined, CalendarMonthOutlined
+  AddOutlined, DeleteOutline, SettingsOutlined, PaymentsOutlined, EditOutlined, CalendarMonthOutlined, CloseOutlined
 } from "@mui/icons-material";
+
 
 const fieldSx = {
   "& .MuiOutlinedInput-root": { borderRadius: "12px", backgroundColor: "rgba(15,23,42,0.5)", color: "#e2e8f0", fontFamily: "var(--font-cairo)", "& fieldset": { borderColor: "rgba(148,163,184,0.15)" }, "&:hover fieldset": { borderColor: "rgba(59,130,246,0.4)" }, "&.Mui-focused fieldset": { borderColor: "#3b82f6" } },
@@ -66,6 +67,7 @@ const DateField = ({ label, value, onChange }: { label: string; value: string; o
 const EXPENSE_TYPES = [
   { value: "purchase", label: "🧾 مصروف شراء", color: "#f59e0b" },
   { value: "sale",     label: "💼 مصروف بيع",  color: "#8b5cf6" },
+  { value: "lot",      label: "📦 مصروف لوت", color: "#ec4899" },
   { value: "general",  label: "📋 مصروف عام",  color: "#3b82f6" },
 ];
 const PAYMENT_STATUS = [
@@ -87,6 +89,7 @@ export default function Proj2ExpensesPage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [vaults, setVaults] = useState<any[]>([]);
   const [purchases, setPurchases] = useState<any[]>([]);
+  const [lots, setLots] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -121,18 +124,32 @@ export default function Proj2ExpensesPage() {
   const [payForm, setPayForm] = useState({ vault_id: "", amount: "", notes: "" });
   const [paySaving, setPaySaving] = useState(false);
 
+  // Filters
+  const [period, setPeriod] = useState<"month" | "year" | "all">("month");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo]   = useState("");
+
+  // Unpaid dialog
+  const [unpaidOpen, setUnpaidOpen]       = useState(false);
+  const [expInlineId, setExpInlineId]     = useState<string | null>(null);
+  const [expInlineForm, setExpInlineForm] = useState({ vault_id: "", amount: "", notes: "", payment_date: new Date().toISOString().split("T")[0] });
+  const [expBulkForm, setExpBulkForm]     = useState({ vault_id: "", notes: "", payment_date: new Date().toISOString().split("T")[0] });
+  const [expBulkSaving, setExpBulkSaving] = useState(false);
+
   const fetchAll = useCallback(async () => {
-    const [expRes, catRes, vltRes, purRes] = await Promise.all([
+    const [expRes, catRes, vltRes, purRes, lotRes] = await Promise.all([
       fetch(`/api/erp-auth/projects/${projectId}/proj2-expenses`),
       fetch(`/api/erp-auth/projects/${projectId}/proj2-expense-categories`),
       fetch(`/api/erp-auth/projects/${projectId}/proj2-vaults`),
       fetch(`/api/erp-auth/projects/${projectId}/proj2-purchases`),
+      fetch(`/api/erp-auth/projects/${projectId}/proj2-lots`),
     ]);
-    const [ed, cd, vd, pd] = await Promise.all([expRes.json(), catRes.json(), vltRes.json(), purRes.json()]);
+    const [ed, cd, vd, pd, ld] = await Promise.all([expRes.json(), catRes.json(), vltRes.json(), purRes.json(), lotRes.json()]);
     setExpenses(ed.expenses || []);
     setCategories(cd.categories || []);
     setVaults(vd.vaults || []);
     setPurchases(pd.orders || []);
+    setLots(ld.lots || []);
     setLoading(false);
   }, [projectId]);
 
@@ -207,8 +224,60 @@ export default function Proj2ExpensesPage() {
     setEditSaving(false);
   };
 
+  const todayIso = () => new Date().toISOString().split("T")[0];
+
+  // expense_date from API is yyyy-mm-dd
+  const parseExpDate = (d: string) => {
+    if (!d) return null;
+    const dt = new Date(d);
+    return isNaN(dt.getTime()) ? null : dt;
+  };
+
+
+  const filteredExpenses = expenses.filter(exp => {
+    const d = parseExpDate(exp.expense_date);
+    if (!d) return true;
+    const now = new Date();
+    if (dateFrom) { const f = new Date(dateFrom); if (d < f) return false; }
+    if (dateTo)   { const t = new Date(dateTo); t.setHours(23,59,59); if (d > t) return false; }
+    if (dateFrom || dateTo) return true;
+    if (period === "month") return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    if (period === "year")  return d.getFullYear() === now.getFullYear();
+    return true;
+  });
+
+  const unpaidExpenses = expenses.filter(e => Number(e.amount) > Number(e.paid_amount || 0));
+
+  const handleBulkPayExp = async () => {
+    if (!expBulkForm.vault_id) return;
+    setExpBulkSaving(true);
+    const dt = expBulkForm.payment_date || todayIso();
+    for (const e of unpaidExpenses) {
+      const rem = Number(e.amount) - Number(e.paid_amount || 0);
+      if (rem <= 0) continue;
+      await fetch(`/api/erp-auth/projects/${projectId}/proj2-expenses/${e.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vault_id: expBulkForm.vault_id, amount: rem, notes: expBulkForm.notes, payment_date: dt }),
+      });
+    }
+    setExpBulkSaving(false); setUnpaidOpen(false); setSuccess("تم سداد المصروفات"); fetchAll();
+  };
+
+  const handleInlinePayExp = async (id: string) => {
+    if (!expInlineForm.vault_id || !expInlineForm.amount) return;
+    setExpBulkSaving(true);
+    const dt = expInlineForm.payment_date || todayIso();
+    await fetch(`/api/erp-auth/projects/${projectId}/proj2-expenses/${id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ vault_id: expInlineForm.vault_id, amount: Number(expInlineForm.amount), notes: expInlineForm.notes, payment_date: dt }),
+    });
+    setExpBulkSaving(false); setExpInlineId(null); setSuccess("تم تسجيل الدفعة"); fetchAll();
+  };
+
   const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount), 0);
-  const totalPaid = expenses.reduce((s, e) => s + Number(e.paid_amount), 0);
+  const totalPaid     = expenses.reduce((s, e) => s + Number(e.paid_amount), 0);
+  const totalUnpaid   = totalExpenses - totalPaid;
+
 
   return (
     <div>
@@ -234,15 +303,29 @@ export default function Proj2ExpensesPage() {
       {expenses.length > 0 && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "12px", marginBottom: "20px" }}>
           {[
-            { label: "إجمالي المصروفات", val: totalExpenses, color: "#ef4444" },
-            { label: "إجمالي المدفوع", val: totalPaid, color: "#10b981" },
-            { label: "المتبقي", val: totalExpenses - totalPaid, color: "#f59e0b" },
+            { label: "إجمالي المصروفات", val: totalExpenses, color: "#ef4444", click: false },
+            { label: "إجمالي المدفوع",   val: totalPaid,     color: "#10b981", click: false },
           ].map(s => (
             <div key={s.label} style={{ padding: "16px 18px", borderRadius: "16px", background: "rgba(30,41,59,0.5)", border: "1px solid rgba(148,163,184,0.08)" }}>
               <p style={{ fontSize: "12px", color: "#64748b", margin: "0 0 6px", fontFamily: "var(--font-cairo)" }}>{s.label}</p>
               <p style={{ fontSize: "20px", fontWeight: 700, color: s.color, margin: 0, direction: "ltr", textAlign: "right" }}>{fmt(s.val)} <span style={{ fontSize: "12px", fontWeight: 400, color: "#64748b" }}>جنيه</span></p>
             </div>
           ))}
+          {/* Unpaid card — clickable */}
+          {totalUnpaid > 0 && (
+            <button onClick={() => { setExpBulkForm({ vault_id: "", notes: "", payment_date: todayIso() }); setUnpaidOpen(true); }}
+              style={{ padding: "16px 18px", borderRadius: "16px", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)", cursor: "pointer", textAlign: "right", direction: "rtl" }}>
+              <p style={{ fontSize: "12px", color: "#64748b", margin: "0 0 6px", fontFamily: "var(--font-cairo)", fontWeight: 600 }}>💰 المتبقي غير المسدد</p>
+              <p style={{ fontSize: "20px", fontWeight: 700, color: "#f59e0b", margin: 0, fontFamily: "var(--font-cairo)" }}>{fmt(totalUnpaid)} <span style={{ fontSize: "12px", fontWeight: 400, color: "#64748b" }}>جنيه</span></p>
+              <p style={{ fontSize: "10px", color: "#f59e0b", margin: "4px 0 0", fontFamily: "var(--font-cairo)" }}>{unpaidExpenses.length} مصروف — اضغط للسداد</p>
+            </button>
+          )}
+          {totalUnpaid <= 0 && (
+            <div style={{ padding: "16px 18px", borderRadius: "16px", background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.15)" }}>
+              <p style={{ fontSize: "12px", color: "#64748b", margin: "0 0 6px", fontFamily: "var(--font-cairo)" }}>المتبقي</p>
+              <p style={{ fontSize: "20px", fontWeight: 700, color: "#10b981", margin: 0, fontFamily: "var(--font-cairo)" }}>{fmt(0)} <span style={{ fontSize: "12px", fontWeight: 400, color: "#64748b" }}>جنيه</span></p>
+            </div>
+          )}
         </div>
       )}
 
@@ -263,8 +346,35 @@ export default function Proj2ExpensesPage() {
               <p style={{ color: "#94a3b8", fontFamily: "var(--font-cairo)", fontSize: "16px" }}>لا توجد مصروفات بعد</p>
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              {expenses.map(exp => {
+            <>
+              {/* Filter pills */}
+              <div style={{ display: "flex", gap: "6px", marginBottom: "14px", flexWrap: "wrap", alignItems: "center", direction: "rtl" }}>
+                {(["month", "year", "all"] as const).map(p => (
+                  <button key={p} onClick={() => { setPeriod(p); setDateFrom(""); setDateTo(""); }}
+                    style={{ padding: "5px 16px", borderRadius: "20px", fontSize: "12px", fontFamily: "var(--font-cairo)", cursor: "pointer", border: "none", fontWeight: 600, transition: "all 0.15s",
+                      background: period === p && !dateFrom && !dateTo ? "linear-gradient(135deg,#ef4444,#dc2626)" : "rgba(30,41,59,0.8)",
+                      color: period === p && !dateFrom && !dateTo ? "#fff" : "#94a3b8",
+                      outline: period === p && !dateFrom && !dateTo ? "none" : "1px solid rgba(148,163,184,0.15)" }}>
+                    {p === "month" ? "الشهر الحالي" : p === "year" ? "السنة الحالية" : "الكل"}
+                  </button>
+                ))}
+                <div style={{ display: "flex", gap: "4px", alignItems: "center", background: (dateFrom || dateTo) ? "rgba(239,68,68,0.1)" : "rgba(30,41,59,0.6)", borderRadius: "10px", padding: "2px 7px", outline: (dateFrom || dateTo) ? "1px solid rgba(239,68,68,0.35)" : "1px solid rgba(148,163,184,0.12)" }}>
+                  <span style={{ fontSize: "10px", color: "#64748b", fontFamily: "var(--font-cairo)" }}>من</span>
+                  <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                    style={{ background: "transparent", border: "none", outline: "none", color: "#e2e8f0", fontSize: "11px", fontFamily: "monospace", width: "110px", cursor: "pointer", colorScheme: "dark" }} />
+                  <span style={{ fontSize: "10px", color: "#64748b", fontFamily: "var(--font-cairo)" }}>إلى</span>
+                  <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+                    style={{ background: "transparent", border: "none", outline: "none", color: "#e2e8f0", fontSize: "11px", fontFamily: "monospace", width: "110px", cursor: "pointer", colorScheme: "dark" }} />
+                  {(dateFrom || dateTo) && (
+                    <button onClick={() => { setDateFrom(""); setDateTo(""); }}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "#f87171", fontSize: "13px", lineHeight: 1, padding: "0 2px" }}>✕</button>
+                  )}
+                </div>
+                <span style={{ fontSize: "10px", color: "#475569", fontFamily: "var(--font-cairo)" }}>{filteredExpenses.length} مصروف</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                {filteredExpenses.map(exp => {
+
                 const etype = EXPENSE_TYPES.find(t => t.value === exp.expense_type);
                 const pstat = PAYMENT_STATUS.find(s => s.value === exp.payment_status);
                 return (
@@ -310,14 +420,22 @@ export default function Proj2ExpensesPage() {
                       </div>
                     </div>
                     <p style={{ fontSize: "14px", color: "#e2e8f0", margin: "0 0 8px", fontFamily: "var(--font-cairo)" }}>{exp.description || "—"}</p>
-                    {/* Linked orders */}
-                    {exp.purchase_order_ids?.length > 0 && (
+                    {/* Linked orders / lots */}
+                    {(exp.purchase_order_ids?.length > 0 || exp.lot_order_ids?.length > 0) && (
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "8px" }}>
-                        {(exp.purchase_order_ids as string[]).map(oid => {
+                        {(exp.purchase_order_ids as string[] || []).map(oid => {
                           const po = purchases.find(p => p.id === oid);
                           return po ? (
                             <span key={oid} style={{ fontSize: "12px", color: "#94a3b8", fontFamily: "var(--font-cairo)", background: "rgba(15,23,42,0.4)", padding: "4px 8px", borderRadius: "8px" }}>
                               🧾 {po.code} — {po.supplier?.name || ""}
+                            </span>
+                          ) : null;
+                        })}
+                        {(exp.lot_order_ids as string[] || []).map(oid => {
+                          const lot = lots.find(l => l.id === oid);
+                          return lot ? (
+                            <span key={oid} style={{ fontSize: "12px", color: "#ec4899", fontFamily: "var(--font-cairo)", background: "rgba(236,72,153,0.1)", padding: "4px 8px", borderRadius: "8px", border: "1px solid rgba(236,72,153,0.2)" }}>
+                              📦 {lot.code} — {lot.description || ""}
                             </span>
                           ) : null;
                         })}
@@ -336,8 +454,9 @@ export default function Proj2ExpensesPage() {
                     </div>
                   </div>
                 );
-              })}
-            </div>
+                })}
+              </div>
+            </>
           )
       ) : (
         /* Categories tab */
@@ -643,6 +762,68 @@ export default function Proj2ExpensesPage() {
             {editSaving ? <CircularProgress size={20} sx={{ color: "#fff" }} /> : "حفظ التعديلات"}
           </Button>
         </DialogActions>
+      </Dialog>
+
+      {/* Unpaid Expenses Dialog */}
+      <Dialog open={unpaidOpen} onClose={() => setUnpaidOpen(false)}
+        sx={{ "& .MuiDialog-paper": { background: "linear-gradient(135deg,#1e293b,#0f172a)", border: "1px solid rgba(148,163,184,0.12)", borderRadius: "20px", color: "#e2e8f0", direction: "rtl" as const, minWidth: "min(580px,96vw)", maxHeight: "85vh" } }}>
+        <DialogTitle sx={{ fontFamily: "var(--font-cairo)", fontWeight: 700, fontSize: "18px", display: "flex", justifyContent: "space-between", alignItems: "center", color: "#f59e0b" }}>
+          <span>💰 مصروفات غير مسددة ({unpaidExpenses.length})</span>
+          <IconButton onClick={() => setUnpaidOpen(false)} sx={{ color: "#64748b" }}><CloseOutlined /></IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: "4px !important" }}>
+          {/* Bulk bar */}
+          <div style={{ padding: "12px 14px", borderRadius: "12px", background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.25)", marginBottom: "14px", display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+            <span style={{ fontSize: "13px", color: "#f59e0b", fontFamily: "var(--font-cairo)", fontWeight: 700 }}>الإجمالي المتبقي: {fmt(totalUnpaid)} ج.م</span>
+            <span style={{ flex: 1 }} />
+            <FormControl size="small" sx={{ minWidth: 140, ...fieldSx }}><InputLabel>الخزنة</InputLabel>
+              <Select value={expBulkForm.vault_id} onChange={e => setExpBulkForm(p => ({ ...p, vault_id: e.target.value }))} label="الخزنة" sx={{ color: "#e2e8f0" }} MenuProps={menuSx}>
+                {vaults.map(v => <MenuItem key={v.id} value={v.id} sx={{ fontFamily: "var(--font-cairo)" }}>{v.name} — {fmt(Number(v.balance))}</MenuItem>)}
+              </Select>
+            </FormControl>
+            <Button size="small" variant="contained" disabled={expBulkSaving || !expBulkForm.vault_id} onClick={handleBulkPayExp}
+              sx={{ borderRadius: "10px", fontFamily: "var(--font-cairo)", fontWeight: 600, textTransform: "none", background: "linear-gradient(135deg,#f59e0b,#d97706)", whiteSpace: "nowrap" }}>
+              {expBulkSaving ? <CircularProgress size={18} sx={{ color: "#fff" }} /> : "سداد الكل"}
+            </Button>
+          </div>
+          {/* Items */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {unpaidExpenses.map(exp => {
+              const rem     = Number(exp.amount) - Number(exp.paid_amount || 0);
+              const isOpen  = expInlineId === exp.id;
+              const etype   = EXPENSE_TYPES.find(t => t.value === exp.expense_type);
+              return (
+                <div key={exp.id} style={{ padding: "12px 14px", borderRadius: "12px", background: "rgba(15,23,42,0.45)", border: "1px solid rgba(245,158,11,0.1)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "11px", fontWeight: 700, color: "#60a5fa", fontFamily: "monospace", background: "rgba(59,130,246,0.1)", padding: "2px 7px", borderRadius: "6px" }}>{exp.code}</span>
+                    <span style={{ color: etype?.color, background: `${etype?.color}18`, padding: "2px 8px", borderRadius: "6px", fontFamily: "var(--font-cairo)", fontSize: "11px" }}>{etype?.label}</span>
+                    <span style={{ fontSize: "13px", color: "#f1f5f9", fontFamily: "var(--font-cairo)", flex: 1 }}>{exp.description || "—"}</span>
+                    <span style={{ fontSize: "13px", fontWeight: 700, color: "#f59e0b", fontFamily: "var(--font-cairo)", whiteSpace: "nowrap" }}>متبقي: {fmt(rem)} ج.م</span>
+                    <Button size="small" variant="outlined" onClick={() => { setExpInlineId(isOpen ? null : exp.id); setExpInlineForm({ vault_id: "", amount: String(rem), notes: "", payment_date: todayIso() }); }}
+                      sx={{ borderRadius: "8px", fontFamily: "var(--font-cairo)", fontSize: "11px", borderColor: "#f59e0b", color: "#f59e0b", textTransform: "none", whiteSpace: "nowrap", "&:hover": { background: "rgba(245,158,11,0.1)" } }}>
+                      {isOpen ? "إلغاء" : "سداد"}
+                    </Button>
+                  </div>
+                  {isOpen && (
+                    <div style={{ marginTop: "10px", display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "flex-end" }}>
+                      <FormControl size="small" sx={{ minWidth: 130, ...fieldSx }}><InputLabel>الخزنة *</InputLabel>
+                        <Select value={expInlineForm.vault_id} onChange={e => setExpInlineForm(p => ({ ...p, vault_id: e.target.value }))} label="الخزنة *" sx={{ color: "#e2e8f0" }} MenuProps={menuSx}>
+                          {vaults.map(v => <MenuItem key={v.id} value={v.id} sx={{ fontFamily: "var(--font-cairo)" }}>{v.name}</MenuItem>)}
+                        </Select>
+                      </FormControl>
+                      <TextField size="small" label="المبلغ" type="number" value={expInlineForm.amount} onChange={e => setExpInlineForm(p => ({ ...p, amount: e.target.value }))} sx={{ width: 110, ...fieldSx, "& .MuiInputBase-input": { textAlign: "left" } }} />
+                      <TextField size="small" label="ملاحظات" value={expInlineForm.notes} onChange={e => setExpInlineForm(p => ({ ...p, notes: e.target.value }))} sx={{ flex: 1, minWidth: 100, ...fieldSx }} />
+                      <Button size="small" variant="contained" disabled={expBulkSaving || !expInlineForm.vault_id || !expInlineForm.amount} onClick={() => handleInlinePayExp(exp.id)}
+                        sx={{ borderRadius: "8px", fontFamily: "var(--font-cairo)", fontWeight: 600, textTransform: "none", background: "linear-gradient(135deg,#f59e0b,#d97706)", whiteSpace: "nowrap" }}>
+                        {expBulkSaving ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : "تأكيد"}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </DialogContent>
       </Dialog>
     </div>
   );

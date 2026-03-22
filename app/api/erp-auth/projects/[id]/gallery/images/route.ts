@@ -31,7 +31,7 @@ export async function GET(
   let query = supabase
     .from("gallery_images")
     .select(`
-      id, r2_key, url, title, created_at,
+      id, r2_key, url, thumbnail_url, title, created_at,
       gallery_image_tags(
         gallery_tags(id, name, gallery_tag_groups(id, name))
       )

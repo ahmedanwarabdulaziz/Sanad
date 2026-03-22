@@ -20,7 +20,38 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     .eq("project_id", id)
     .order("created_at", { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ sales: data });
+
+  // Compute weighted-average unit cost for each item from received purchase orders
+  const { data: poItems } = await supabase
+    .from("proj2_purchase_order_items")
+    .select("item_id, quantity, unit_price, purchase_order:proj2_purchase_orders!inner(status, project_id)")
+    .eq("purchase_order.project_id", id)
+    .eq("purchase_order.status", "received");
+
+  // Build avg_cost map: item_id → weighted avg price
+  const costMap: Record<string, number> = {};
+  if (poItems) {
+    const totals: Record<string, { cost: number; qty: number }> = {};
+    for (const row of poItems) {
+      if (!totals[row.item_id]) totals[row.item_id] = { cost: 0, qty: 0 };
+      totals[row.item_id].cost += Number(row.unit_price) * Number(row.quantity);
+      totals[row.item_id].qty  += Number(row.quantity);
+    }
+    for (const [k, v] of Object.entries(totals)) {
+      costMap[k] = v.qty > 0 ? v.cost / v.qty : 0;
+    }
+  }
+
+  // Attach avg_unit_cost to every sale item
+  const enriched = (data || []).map(sale => ({
+    ...sale,
+    items: (sale.items || []).map((si: any) => ({
+      ...si,
+      avg_unit_cost: costMap[si.item_id] ?? 0,
+    })),
+  }));
+
+  return NextResponse.json({ sales: enriched });
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

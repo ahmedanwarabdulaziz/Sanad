@@ -15,6 +15,10 @@ export async function PATCH(
     const { id, itemId } = await params;
     const body = await request.json();
 
+    // Guard: system items cannot be modified
+    const { data: existing } = await supabase.from("proj2_items").select("is_system").eq("id", itemId).single();
+    if (existing?.is_system) return NextResponse.json({ error: "هذا صنف نظام ولا يمكن تعديله" }, { status: 403 });
+
     if (!body.name || !body.unit || !body.category_id) return NextResponse.json({ error: "الاسم والوحدة والمجموعة مطلوبين" }, { status: 400 });
 
     const { data, error } = await supabase
@@ -38,6 +42,11 @@ export async function DELETE(
 ) {
   try {
     const { id, itemId } = await params;
+
+    // Guard: system items cannot be deleted
+    const { data: existing } = await supabase.from("proj2_items").select("is_system").eq("id", itemId).single();
+    if (existing?.is_system) return NextResponse.json({ error: "هذا صنف نظام ولا يمكن حذفه" }, { status: 403 });
+
     const { error } = await supabase
       .from("proj2_items")
       .delete()

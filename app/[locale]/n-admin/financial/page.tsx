@@ -427,9 +427,9 @@ export default function FinancialPage() {
     return { vault: v, opening, totalIn, totalOut, balance: balances[v.id] ?? 0 };
   });
 
-  const formatDate = (ts: number) => new Date(ts).toLocaleDateString("ar-EG", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const formatDate = (ts: number) => new Date(ts).toLocaleDateString("en-US", { day: "2-digit", month: "2-digit", year: "numeric" });
   const formatDateTime = (ts: number) =>
-    new Date(ts).toLocaleString("ar-EG", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    new Date(ts).toLocaleString("en-US", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
   if (!user) return null;
 
