@@ -7,7 +7,13 @@ const supabase = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
-// POST — receive a PDF blob, upload to Supabase Storage, return public URL
+/** Generate a short random token, e.g. "xk9mpqr2" */
+function shortToken() {
+  return Math.random().toString(36).slice(2, 6) + Math.random().toString(36).slice(2, 6);
+}
+
+// POST — receive a PDF blob, upload to Supabase Storage, return a short proxy URL
+// on the app's own domain (/api/pdf/xk9mpqr2) so the link is not Supabase CDN.
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; quoteId: string }> }
@@ -20,31 +26,31 @@ export async function POST(
     if (!file) return NextResponse.json({ error: "لا يوجد ملف PDF" }, { status: 400 });
 
     const timestamp = Date.now();
-    const path = `${id}/${quoteId}-${timestamp}.pdf`;
+    const storagePath = `${id}/${quoteId}-${timestamp}.pdf`;
+    const bucket = "quote-pdfs";
 
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const buffer = Buffer.from(await file.arrayBuffer());
 
     const { error: uploadError } = await supabase.storage
-      .from("quote-pdfs")
-      .upload(path, buffer, { contentType: "application/pdf", upsert: true });
+      .from(bucket)
+      .upload(storagePath, buffer, { contentType: "application/pdf", upsert: true });
 
     if (uploadError) {
       return NextResponse.json({ error: uploadError.message }, { status: 500 });
     }
 
-    const { data: urlData } = supabase.storage
-      .from("quote-pdfs")
-      .getPublicUrl(path);
+    // Insert a short token into the pdf_tokens table
+    const token = shortToken();
+    const { error: dbErr } = await supabase
+      .from("pdf_tokens")
+      .insert({ token, bucket, storage_path: storagePath });
 
-    // Shorten the URL via TinyURL (free, no API key needed)
-    let finalUrl = urlData.publicUrl;
-    try {
-      const tiny = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(urlData.publicUrl)}`);
-      if (tiny.ok) finalUrl = await tiny.text();
-    } catch { /* silent fallback to full URL */ }
+    if (dbErr) {
+      return NextResponse.json({ error: dbErr.message }, { status: 500 });
+    }
 
-    return NextResponse.json({ url: finalUrl });
+    const origin = (process.env.NEXT_PUBLIC_BASE_URL || request.nextUrl.origin).replace(/\/$/, "");
+    return NextResponse.json({ url: `${origin}/api/pdf/${token}` });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || "خطأ في رفع الملف" }, { status: 500 });
   }
