@@ -22,7 +22,7 @@ export default function TrustBar() {
     return (
         <Box
             sx={{
-                bgcolor: "#ffffff",
+                bgcolor: "#f8f9fa",
                 py: { xs: 4, md: 6 },
                 borderBottom: '1px solid rgba(0,0,0,0.05)',
                 position: 'relative',
@@ -54,16 +54,17 @@ export default function TrustBar() {
                                     spacing={1.5}
                                     alignItems="center"
                                     sx={{
-                                        p: 2,
+                                        p: 2.5,
                                         height: '100%',
-                                        bgcolor: 'rgba(21, 66, 120, 0.02)',
+                                        bgcolor: '#ffffff',
                                         borderRadius: 2,
-                                        border: '1px solid rgba(21, 66, 120, 0.05)',
+                                        border: '1px solid rgba(21, 66, 120, 0.15)',
+                                        boxShadow: '0 0 20px rgba(21, 66, 120, 0.12)',
                                         transition: 'all 0.3s ease',
                                         '&:hover': {
                                             transform: 'translateY(-3px)',
-                                            boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-                                            bgcolor: 'rgba(21, 66, 120, 0.04)'
+                                            boxShadow: '0 0 30px rgba(21, 66, 120, 0.25)',
+                                            borderColor: 'rgba(21, 66, 120, 0.3)'
                                         }
                                     }}
                                 >

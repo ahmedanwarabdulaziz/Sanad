@@ -106,9 +106,14 @@ export default function Hero() {
                                 }}
                             >
                                 <LanIcon sx={{ color: '#C29B40', fontSize: 28 }} />
-                                <Typography sx={{ fontSize: '0.95rem', lineHeight: 1.6, color: '#d1d0c6' }}>
-                                    {t("milestoneNote")}
-                                </Typography>
+                                <Box>
+                                    <Typography sx={{ fontSize: '0.95rem', lineHeight: 1.6, color: '#d1d0c6' }}>
+                                        {t("milestoneNote")}
+                                    </Typography>
+                                    <Typography sx={{ fontSize: '0.85rem', lineHeight: 1.5, color: 'rgba(209, 208, 198, 0.7)', mt: 0.5 }}>
+                                        {t("milestoneSubNote")}
+                                    </Typography>
+                                </Box>
                             </Box>
 
                             <Stack
