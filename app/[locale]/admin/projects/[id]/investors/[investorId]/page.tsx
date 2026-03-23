@@ -65,7 +65,7 @@ interface Contract {
 }
 
 interface Account { id: string; account_name: string; account_type: string; }
-interface Stage { id: string; stage_name: string; status: string; management_percentage: number; }
+interface Stage { id: string; stage_name: string; status: string; management_percentage: number; sort_order: number; }
 interface ProjectExpense { id: string; investor_amount: number; stage_id: string; }
 
 const formatNumber = (n: number) => new Intl.NumberFormat("en-US").format(n);
@@ -127,9 +127,9 @@ export default function InvestorDetailPage() {
   const [depositForm, setDepositForm] = useState({ amount: "", financial_account_id: "", notes: "", deposit_date: new Date().toISOString().split("T")[0] });
   const [depositSaving, setDepositSaving] = useState(false);
 
-  // Contract dialog
   const [contractOpen, setContractOpen] = useState(false);
   const [contractForm, setContractForm] = useState({ stage_id: "", unit_quantity: "", unit_price_at_contract: "", management_fee_pct: "" });
+  const [contractStageMgmt, setContractStageMgmt] = useState<Record<string, string>>({});
   const [contractSaving, setContractSaving] = useState(false);
 
   // Inline deposit edit
@@ -229,8 +229,7 @@ export default function InvestorDetailPage() {
           const st = stages[i];
           const stExp = projExpenses.filter(e => e.stage_id === st.id).reduce((s, e) => s + Number(e.investor_amount), 0);
           const ppm = stExp / projectArea;
-          const isContractStage = i === snapIdx;
-          const mgmt = isContractStage ? (Number(contractForm.management_fee_pct) || 0) : Number(st.management_percentage) || 0;
+          const mgmt = contractStageMgmt[st.id] !== undefined ? Number(contractStageMgmt[st.id]) : (Number(st.management_percentage) || 0);
           const total = ppm + (ppm * mgmt / 100);
           snapshot.push({ stage_id: st.id, stage_name: st.stage_name, ppm: Math.round(ppm), mgmt, total: Math.round(total) });
         }
@@ -279,7 +278,7 @@ export default function InvestorDetailPage() {
   const getEditPrice = () => {
     if (!editContractExp) return 0;
     const newMgmt = Number(editContractForm.management_fee_pct) || 0;
-    const sp = getStagePrice(editContractExp.stage_id, newMgmt);
+    const sp = getStagePrice(editContractExp.stage_id, { [editContractExp.stage_id]: newMgmt });
     if (sp.finalPrice <= 0) return editContractExp.unit_price_at_contract;
     return Math.round(sp.finalPrice);
   };
@@ -344,7 +343,7 @@ export default function InvestorDetailPage() {
   // Calculate cumulative price: each stage's management is applied to its own expenses only.
   // Previous stages use their default management_percentage.
   // Selected stage uses customMgmtPct (investor override), falls back to stage default.
-  const getStagePrice = (stageId: string, customMgmtPct?: number) => {
+  const getStagePrice = (stageId: string, customMgmtMap?: Record<string, number>) => {
     const stageIdx = stages.findIndex(s => s.id === stageId);
     if (stageIdx < 0 || projectArea <= 0) return { investorTotal: 0, pricePerMeter: 0, mgmtPct: 0, mgmtPerMeter: 0, finalPrice: 0 };
 
@@ -358,9 +357,12 @@ export default function InvestorDetailPage() {
       const stageExp = projExpenses.filter(e => e.stage_id === st.id).reduce((s, e) => s + Number(e.investor_amount), 0);
       totalInvestorExp += stageExp;
       const stagePPM = stageExp / projectArea;
-      const mgmt = (i === stageIdx && customMgmtPct !== undefined)
-        ? customMgmtPct
-        : Number(st.management_percentage) || 0;
+      
+      let mgmt = Number(st.management_percentage) || 0;
+      if (customMgmtMap && customMgmtMap[st.id] !== undefined) {
+         mgmt = customMgmtMap[st.id];
+      }
+      
       const mgmtPM = stagePPM * mgmt / 100;
       totalMgmtPerMeter += mgmtPM;
       finalPrice += stagePPM + mgmtPM;
@@ -368,7 +370,7 @@ export default function InvestorDetailPage() {
 
     const pricePerMeter = totalInvestorExp / projectArea;
     const selectedStage = stages[stageIdx];
-    const mgmtPct = customMgmtPct !== undefined ? customMgmtPct : Number(selectedStage.management_percentage) || 0;
+    const mgmtPct = (customMgmtMap && customMgmtMap[selectedStage.id] !== undefined) ? customMgmtMap[selectedStage.id] : Number(selectedStage.management_percentage) || 0;
 
     return { investorTotal: totalInvestorExp, pricePerMeter, mgmtPct, mgmtPerMeter: totalMgmtPerMeter, finalPrice };
   };
@@ -422,7 +424,7 @@ export default function InvestorDetailPage() {
                   sx={{ borderRadius: "10px", fontFamily: "var(--font-cairo)", fontWeight: 600, fontSize: "12px", textTransform: "none", background: "linear-gradient(135deg, #10b981 0%, #059669 100%)" }}>
                   إيداع
                 </Button>
-                <Button variant="contained" startIcon={<AddOutlined />} onClick={() => setContractOpen(true)} size="small" disabled={openStages.length === 0}
+                <Button variant="contained" startIcon={<AddOutlined />} onClick={() => setContractOpen(true)} size="small" disabled={stages.length === 0}
                   sx={{ borderRadius: "10px", fontFamily: "var(--font-cairo)", fontWeight: 600, fontSize: "12px", textTransform: "none", background: "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)" }}>
                   عقد جديد
                 </Button>
@@ -559,8 +561,10 @@ export default function InvestorDetailPage() {
                     const ppm = stExp / projectArea;
                     const isNew = i > contractStageIdx;
                     const isContract = i === contractStageIdx;
-                    const mgmt = isContract ? c.management_fee_pct
-                      : Number(st.management_percentage) || 0;
+                    
+                    const snapMgmt = c.price_snapshot?.find(s => s.stage_id === st.id)?.mgmt;
+                    const mgmt = snapMgmt !== undefined ? snapMgmt : (isContract ? c.management_fee_pct : Number(st.management_percentage) || 0);
+                    
                     const total = ppm + (ppm * mgmt / 100);
                     fullCurrentPrice += total;
                     if (!isNew) contractEraPrice += total;
@@ -707,15 +711,34 @@ export default function InvestorDetailPage() {
             <InputLabel>المرحلة</InputLabel>
             <Select value={contractForm.stage_id} onChange={(e) => {
               const sid = e.target.value;
-              const sp = getStagePrice(sid);
+              
+              // Initialize mgmt map for all stages up to selected
+              const stageIdx = stages.findIndex(s => s.id === sid);
+              const newMgmtMap: Record<string, string> = {};
+              for (let i = 0; i <= stageIdx; i++) {
+                newMgmtMap[stages[i].id] = String(stages[i].management_percentage || 0);
+              }
+              setContractStageMgmt(newMgmtMap);
+              
+              const numMap = Object.fromEntries(Object.entries(newMgmtMap).map(([k,v]) => [k, Number(v) || 0]));
+              const sp = getStagePrice(sid, numMap);
+              
               setContractForm({
                 ...contractForm,
                 stage_id: sid,
                 unit_price_at_contract: sp.finalPrice > 0 ? String(Math.round(sp.finalPrice)) : "",
-                management_fee_pct: sp.mgmtPct > 0 ? String(sp.mgmtPct) : "",
+                management_fee_pct: newMgmtMap[sid] || "0",
               });
             }} label="المرحلة" sx={{ color: "#e2e8f0" }} MenuProps={menuSx}>
-              {openStages.map((s) => <MenuItem key={s.id} value={s.id}>{s.stage_name}</MenuItem>)}
+              {stages.map((s) => (
+                <MenuItem key={s.id} value={s.id}>
+                  <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ minWidth: "22px", height: "22px", borderRadius: "50%", background: "rgba(59,130,246,0.2)", color: "#60a5fa", fontSize: "11px", fontWeight: 700, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{s.sort_order}</span>
+                    {s.stage_name}
+                    {s.status !== "OPEN" && <span style={{ fontSize: "10px", color: "#64748b", marginRight: "4px" }}>({s.status === "CLOSED" ? "مغلقة" : s.status})</span>}
+                  </span>
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
 
@@ -728,19 +751,21 @@ export default function InvestorDetailPage() {
             const balance = investor?.remaining_balance || 0;
             const canBuyMeters = actualPrice > 0 ? balance / actualPrice : 0;
 
+            const numMap = Object.fromEntries(Object.entries(contractStageMgmt).map(([k,v]) => [k, Number(v) || 0]));
+
             // Build per-stage rows
-            const rows: { name: string; exp: number; ppm: number; mgmt: number; mgmtAmt: number; total: number; isSelected: boolean }[] = [];
+            const rows: { id: string; name: string; exp: number; ppm: number; mgmt: number; mgmtAmt: number; total: number; isSelected: boolean }[] = [];
             let grandTotal = 0;
             for (let i = 0; i <= stageIdx; i++) {
               const st = stages[i];
               const stExp = projExpenses.filter(e => e.stage_id === st.id).reduce((s, e) => s + Number(e.investor_amount), 0);
               const ppm = stExp / projectArea;
               const isSelected = i === stageIdx;
-              const mgmt = isSelected ? customMgmt : Number(st.management_percentage) || 0;
+              const mgmt = numMap[st.id] !== undefined ? numMap[st.id] : (Number(st.management_percentage) || 0);
               const mgmtAmt = ppm * mgmt / 100;
               const total = ppm + mgmtAmt;
               grandTotal += total;
-              rows.push({ name: st.stage_name, exp: stExp, ppm, mgmt, mgmtAmt, total, isSelected });
+              rows.push({ id: st.id, name: st.stage_name, exp: stExp, ppm, mgmt, mgmtAmt, total, isSelected });
             }
 
             return (
@@ -761,12 +786,44 @@ export default function InvestorDetailPage() {
                     padding: "8px 16px", fontSize: "12px", fontFamily: "var(--font-cairo)",
                     background: r.isSelected ? "rgba(59,130,246,0.08)" : i % 2 === 0 ? "transparent" : "rgba(15,23,42,0.15)",
                     borderLeft: r.isSelected ? "3px solid #60a5fa" : "3px solid transparent",
+                    alignItems: "center"
                   }}>
-                    <span style={{ color: r.isSelected ? "#60a5fa" : "#e2e8f0", fontWeight: r.isSelected ? 700 : 400 }}>
+                    <span style={{ color: r.isSelected ? "#60a5fa" : "#e2e8f0", fontWeight: r.isSelected ? 700 : 400, display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span style={{ minWidth: "18px", height: "18px", borderRadius: "50%", background: r.isSelected ? "rgba(59,130,246,0.3)" : "rgba(100,116,139,0.2)", color: r.isSelected ? "#60a5fa" : "#94a3b8", fontSize: "10px", fontWeight: 700, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{stages.find(s => s.id === r.id)?.sort_order}</span>
                       {r.name} {r.isSelected ? "⬅" : ""}
                     </span>
                     <span style={{ textAlign: "center", color: "#fbbf24", fontWeight: 600 }}>{formatNumber(Math.round(r.ppm))}</span>
-                    <span style={{ textAlign: "center", color: r.isSelected ? "#60a5fa" : "#94a3b8", fontWeight: r.isSelected ? 700 : 400 }}>{r.mgmt}%</span>
+                    
+                    <div style={{ padding: "0 4px" }}>
+                      <TextField
+                        type="number"
+                        size="small"
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            height: "28px", fontSize: "12px", borderRadius: "6px",
+                            backgroundColor: "rgba(15,23,42,0.4)", color: "#e2e8f0",
+                            "& fieldset": { borderColor: "rgba(148,163,184,0.3)" },
+                            "&:hover fieldset": { borderColor: "#60a5fa" },
+                            "&.Mui-focused fieldset": { borderColor: "#3b82f6" },
+                          },
+                          "& .MuiInputBase-input": { textAlign: "center", padding: "0 4px" }
+                        }}
+                        value={contractStageMgmt[r.id] ?? r.mgmt}
+                        onChange={(e) => {
+                          const newMap = { ...contractStageMgmt, [r.id]: e.target.value };
+                          setContractStageMgmt(newMap);
+                          const numMap = Object.fromEntries(Object.entries(newMap).map(([k,v]) => [k, Number(v) || 0]));
+                          const sp = getStagePrice(contractForm.stage_id, numMap);
+                          setContractForm({
+                            ...contractForm,
+                            unit_price_at_contract: sp.finalPrice > 0 ? String(Math.round(sp.finalPrice)) : contractForm.unit_price_at_contract,
+                            management_fee_pct: newMap[contractForm.stage_id] || "0",
+                          });
+                        }}
+                        InputProps={{ endAdornment: <span style={{ color: "#94a3b8", fontSize: "10px", marginLeft: "-4px" }}>%</span> }}
+                      />
+                    </div>
+                    
                     <span style={{ textAlign: "center", color: "#a78bfa", fontWeight: 600 }}>{formatNumber(Math.round(r.mgmtAmt))}</span>
                     <span style={{ textAlign: "center", color: "#34d399", fontWeight: 600 }}>{formatNumber(Math.round(r.total))}</span>
                   </div>
@@ -794,32 +851,11 @@ export default function InvestorDetailPage() {
             helperText={contractForm.unit_price_at_contract && investor ? `الرصيد (${formatNumber(investor.remaining_balance)} ج.م) يشتري ${(investor.remaining_balance / Number(contractForm.unit_price_at_contract)).toFixed(2)} متر` : undefined}
           />
 
-          {/* Management fee & unit price — both editable */}
-          {contractForm.stage_id && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-              <TextField
-                label="سعر الوحدة (ج.م/متر)"
-                type="number"
-                value={contractForm.unit_price_at_contract}
-                onChange={(e) => setContractForm({ ...contractForm, unit_price_at_contract: e.target.value })}
-                fullWidth
-                size="small"
-                sx={fieldSx}
-              />
-              <TextField
-                label="نسبة الإدارة %"
-                type="number"
-                value={contractForm.management_fee_pct}
-                onChange={(e) => {
-                  const newPct = e.target.value;
-                  const sp = getStagePrice(contractForm.stage_id, Number(newPct) || 0);
-                  setContractForm({ ...contractForm, management_fee_pct: newPct, unit_price_at_contract: sp.finalPrice > 0 ? String(Math.round(sp.finalPrice)) : contractForm.unit_price_at_contract });
-                }}
-                fullWidth
-                size="small"
-                sx={fieldSx}
-                helperText="تغييرها يعيد حساب سعر الوحدة"
-              />
+          {/* Unit price — read-only display */}
+          {contractForm.unit_price_at_contract && (
+            <div style={{ padding: "12px 16px", borderRadius: "12px", background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.15)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "12px", color: "#94a3b8", fontFamily: "var(--font-cairo)" }}>سعر الوحدة (ج.م/متر)</span>
+              <span style={{ fontSize: "20px", fontWeight: 700, color: "#60a5fa" }}>{formatNumber(Number(contractForm.unit_price_at_contract))} <span style={{ fontSize: "12px", fontWeight: 400, color: "#64748b" }}>ج.م/متر</span></span>
             </div>
           )}
       {/* ── Contract Total (management already in price, not added again) */}

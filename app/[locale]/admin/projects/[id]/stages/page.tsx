@@ -26,6 +26,7 @@ interface Stage {
   base_unit_price: number;
   total_area: number;
   management_percentage: number;
+  sort_order: number;
   status: string;
   investor_contracts: { count: number }[];
 }
@@ -66,7 +67,7 @@ export default function StagesPage() {
   // Edit dialog
   const [editOpen, setEditOpen] = useState(false);
   const [editStage, setEditStage] = useState<Stage | null>(null);
-  const [editForm, setEditForm] = useState({ stage_name: "", unit_type: "LAND_METER", management_percentage: "", status: "OPEN" });
+  const [editForm, setEditForm] = useState({ stage_name: "", unit_type: "LAND_METER", management_percentage: "", sort_order: "", status: "OPEN" });
   const [editSaving, setEditSaving] = useState(false);
 
   // Delete confirm
@@ -135,6 +136,7 @@ export default function StagesPage() {
       stage_name: stage.stage_name,
       unit_type: stage.unit_type,
       management_percentage: String(stage.management_percentage || ""),
+      sort_order: String(stage.sort_order ?? ""),
       status: stage.status,
     });
     setEditOpen(true);
@@ -150,6 +152,7 @@ export default function StagesPage() {
           stage_name: editForm.stage_name,
           unit_type: editForm.unit_type,
           management_percentage: Number(editForm.management_percentage) || 0,
+          sort_order: editForm.sort_order !== "" ? Number(editForm.sort_order) : undefined,
           status: editForm.status,
         }),
       });
@@ -224,6 +227,11 @@ export default function StagesPage() {
               <div key={stage.id} style={{ borderRadius: "16px", overflow: "hidden", background: "rgba(30, 41, 59, 0.6)", border: "1px solid rgba(148, 163, 184, 0.08)" }}>
                 {/* Stage header row */}
                 <div style={{ padding: "16px 24px", display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+                  {/* Stage number badge */}
+                  <div style={{ minWidth: "36px", height: "36px", borderRadius: "50%", background: "linear-gradient(135deg, rgba(59,130,246,0.2), rgba(139,92,246,0.2))", border: "1px solid rgba(59,130,246,0.3)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <span style={{ fontSize: "14px", fontWeight: 700, color: "#60a5fa", fontFamily: "var(--font-cairo)" }}>{stage.sort_order ?? "—"}</span>
+                  </div>
+
                   {/* Status toggle */}
                   <IconButton size="small" onClick={() => handleToggleStatus(stage)}
                     title={stage.status === "OPEN" ? "إغلاق المرحلة" : "فتح المرحلة"}
@@ -319,6 +327,7 @@ export default function StagesPage() {
         <DialogTitle sx={{ fontFamily: "var(--font-cairo)", fontWeight: 700, fontSize: "20px" }}>تعديل المرحلة</DialogTitle>
         <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, pt: "8px !important" }}>
           <TextField label="اسم المرحلة" value={editForm.stage_name} onChange={(e) => setEditForm({ ...editForm, stage_name: e.target.value })} fullWidth sx={fieldSx} />
+          <TextField label="رقم المرحلة (ترتيب)" type="number" value={editForm.sort_order} onChange={(e) => setEditForm({ ...editForm, sort_order: e.target.value })} fullWidth sx={fieldSx} helperText="يحدد ترتيب المرحلة في القوائم (1، 2، 3...)" />
           <FormControl fullWidth sx={fieldSx}>
             <InputLabel>نوع الوحدة</InputLabel>
             <Select value={editForm.unit_type} onChange={(e) => setEditForm({ ...editForm, unit_type: e.target.value })} label="نوع الوحدة" sx={{ color: "#e2e8f0" }} MenuProps={menuSx}>
