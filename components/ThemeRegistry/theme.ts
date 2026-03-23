@@ -64,6 +64,31 @@ const theme = createTheme({
                 input: { textAlign: 'right' },
             },
         },
+        MuiAlert: {
+            styleOverrides: {
+                root: {
+                    direction: 'ltr',
+                    fontFamily: cairo.style.fontFamily,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '24px',
+                    
+                    // Floating configuration
+                    position: 'fixed',
+                    top: '24px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: 9999,
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+                    minWidth: '320px',
+                    backdropFilter: 'blur(8px)',
+
+                    "& .MuiAlert-icon": { margin: 0, padding: 0 },
+                    "& .MuiAlert-action": { margin: 0, padding: 0 },
+                    "& .MuiAlert-message": { textAlign: 'left', flexGrow: 1, padding: '8px 0' }
+                }
+            }
+        },
     }
 });
 

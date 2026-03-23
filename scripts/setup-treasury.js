@@ -1,6 +1,7 @@
 const https = require('https');
-const TOKEN = 'sbp_2a35f4fc99c707562ad10883b3657b42704c8f0a';
-const PROJECT_REF = 'vvqwizwncaattcsqnrdu';
+require('dotenv').config({ path: '.env.local' });
+const TOKEN = process.env.SUPABASE_ACCESS_TOKEN || '';
+const PROJECT_REF = process.env.SUPABASE_PROJECT_REF || '';
 
 function execSQL(sql, label) {
   return new Promise((resolve, reject) => {
