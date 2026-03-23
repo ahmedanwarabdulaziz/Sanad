@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "لوحة المبيعات - Sanad",
-  description: "لوحة إدارة المبيعات والتواصل",
+  title: "سند زايد",
+  description: "نظام إدارة الموارد - الإدارة",
+  icons: {
+    icon: "/images/short logo.png",
+  },
 };
 
 export default function NAdminLayout({

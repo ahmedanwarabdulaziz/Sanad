@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "سند للرخام والجرانيت",
-  description: "لوحة إدارة سند للرخام والجرانيت",
+  description: "نظام إدارة الموارد - الإدارة",
+  icons: {
+    icon: "/images/short logo.png",
+  },
 };
 
 export default function SMAdminLayout({

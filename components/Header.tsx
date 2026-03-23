@@ -36,7 +36,7 @@ export default function Header() {
         { label: t("milestoneRight"), href: "/milestone-right" },
         // Projects handled separately
         { label: t("about"), href: "/about" },
-        { label: t("dashboard"), href: "#" },
+        { label: t("dashboard"), href: "/admin" },
         { label: t("contact"), href: "#" },
     ];
 
@@ -102,23 +102,28 @@ export default function Header() {
         <AppBar position="fixed" sx={{ backgroundColor: "rgba(209, 208, 198, 0.5)", backdropFilter: "blur(12px)", color: "#154278", boxShadow: 'none', width: '100%', zIndex: 1100 }}>
             <Container maxWidth="xl">
                 <Toolbar disableGutters>
-                    <Box sx={{ flexGrow: 1, display: { xs: "flex", md: "none" } }}>
-                        <IconButton
-                            size="large"
-                            aria-label="open drawer"
-                            edge="start"
-                            onClick={handleDrawerToggle}
-                            color="inherit"
-                        >
-                            <MenuIcon />
-                        </IconButton>
-                    </Box>
-
-                    <Box sx={{ flexGrow: 1, display: { xs: "none", md: "flex" }, alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Link href="/" style={{ display: 'flex', alignItems: 'center' }}>
+                    {/* Responsive Full-Width Header Wrapper */}
+                    <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+                        
+                        {/* Logo Box - Pushed directly to the Right relative to Arabic context natively */}
+                        <Link href="/" style={{ display: 'flex', alignItems: 'center', zIndex: 10 }}>
                             <img src="/images/Logo.png" alt="Sanad" style={{ height: '50px', width: 'auto' }} />
                         </Link>
-                        <Box sx={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                        
+                        {/* Mobile Hamburger - Left side in RTL */}
+                        <Box sx={{ display: { xs: "flex", md: "none" } }}>
+                            <IconButton
+                                size="large"
+                                aria-label="open drawer"
+                                onClick={handleDrawerToggle}
+                                color="inherit"
+                            >
+                                <MenuIcon />
+                            </IconButton>
+                        </Box>
+
+                        {/* Desktop Nav - Left side in RTL */}
+                        <Box sx={{ display: { xs: "none", md: "flex" }, gap: 4, alignItems: 'center' }}>
                             <Link href="/" style={{ textDecoration: 'none', color: '#154278', fontWeight: isRtl ? 700 : 500, fontFamily: isRtl ? 'var(--font-cairo)' : 'inherit', fontSize: isRtl ? '1.1rem' : '1rem' }}>
                                 {t("home")}
                             </Link>

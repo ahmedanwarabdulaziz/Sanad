@@ -3,6 +3,9 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Sanad ERP - تسجيل الدخول",
   description: "نظام إدارة الموارد - سند",
+  icons: {
+    icon: "/images/short logo.png",
+  },
 };
 
 export default function AdminLayout({
