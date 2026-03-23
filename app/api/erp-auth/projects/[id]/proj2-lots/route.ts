@@ -51,22 +51,23 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const poMap: Record<string, any> = {};
   (poData || []).forEach((p: any) => { poMap[p.id] = p; });
 
-  // Fetch lot sales: find the system "لوت" item then sum its sale items
-  const { data: lotItemRow } = await supabase
+  // Fetch lot sales: find the system "لوت" items then sum their sale items
+  const { data: lotItemRows } = await supabase
     .from("proj2_items")
     .select("id")
     .eq("project_id", id)
-    .eq("name", "لوت")
-    .maybeSingle();
+    .eq("name", "لوت");
 
   let lot_sales_total = 0;
   let saleRows: any[] = [];
-  if (lotItemRow?.id) {
+  if (lotItemRows && lotItemRows.length > 0) {
+    const lotItemIds = lotItemRows.map((r: any) => r.id);
     const { data } = await supabase
       .from("proj2_sale_items")
       .select("quantity, unit_price, sale:proj2_sales!inner(project_id, sale_date)")
-      .eq("item_id", lotItemRow.id)
+      .in("item_id", lotItemIds)
       .eq("sale.project_id", id);
+
     saleRows = data || [];
     lot_sales_total = saleRows.reduce((s: number, r: any) => s + Number(r.quantity) * Number(r.unit_price), 0);
   }

@@ -284,23 +284,15 @@ export default function LotsPage() {
   let computedTotalExpenses = 0;
   let computedLotSalesTotal = 0;
 
-  if (lotSearch) {
-    // If searching specific text/LOT-Code, banners show totals ONLY for those exact matched Lots
-    computedTotalCost = filteredLots.reduce((s, l) => s + Number(l.total_cost), 0);
-    computedTotalConverted = filteredLots.reduce((s, l) => s + Number(l.converted_value), 0);
-    computedTotalExpenses = filteredLots.reduce((s, l) => s + Number(l.total_expenses), 0);
-    computedLotSalesTotal = 0; // Direct global lot-sales can't map to a text string search
-  } else {
-    // If observing Period Activity (e.g. Current Month), banners capture ALL activity that occurred IN that period
-    computedTotalCost = lots.filter(l => inPeriod(l.lot_date)).reduce((s, l) => s + Number(l.total_cost), 0);
-    computedTotalConverted = allConversions.filter(c => inPeriod(c.conversion_date)).reduce((s, c) => s + (Number(c.quantity) * Number(c.unit_price)), 0);
-    computedLotSalesTotal = lotSalesData.filter(s => inPeriod(s.sale?.sale_date)).reduce((sum, s) => sum + (Number(s.quantity) * Number(s.unit_price)), 0);
-    
-    // Extract unique expenses across all lots
-    const allExpMap = new Map();
-    lots.forEach(l => { (l.expenses || []).forEach((e: any) => allExpMap.set(e.id, e)); });
-    computedTotalExpenses = Array.from(allExpMap.values()).filter((e: any) => inPeriod(e.expense_date)).reduce((s, e: any) => s + Number(e.amount), 0);
-  }
+  // Banners now always sum up the lots currently shown in the list (filteredLots), 
+  // so the list exactly matches the summary totals.
+  computedTotalCost = filteredLots.reduce((s, l) => s + Number(l.total_cost), 0);
+  computedTotalConverted = filteredLots.reduce((s, l) => s + Number(l.converted_value), 0);
+  computedTotalExpenses = filteredLots.reduce((s, l) => s + Number(l.total_expenses), 0);
+  
+  // Always compute global lot sales for the period, even during text searches, 
+  // so the 'Direct Sales' banner doesn't abruptly drop to zero.
+  computedLotSalesTotal = lotSalesData.filter(s => inPeriod(s.sale?.sale_date)).reduce((sum, s) => sum + (Number(s.quantity) * Number(s.unit_price)), 0);
 
   const computedRemaining = Math.max(0, computedTotalCost - computedTotalConverted);
 
