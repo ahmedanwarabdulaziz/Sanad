@@ -107,35 +107,46 @@ export default function Proj2GalleryPage() {
 
   /* ── Upload dialog ── */
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadTagIds, setUploadTagIds] = useState<Record<string, string[]>>({});
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const openUpload = () => { setUploadFile(null); setUploadTitle(""); setUploadTagIds({}); setUploadOpen(true); };
+  const openUpload = () => { setUploadFiles([]); setUploadTitle(""); setUploadTagIds({}); setUploadOpen(true); };
 
   const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault(); setDragOver(false);
-    const f = e.dataTransfer.files[0];
-    if (f) setUploadFile(f);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      setUploadFiles(prev => [...prev, ...Array.from(e.dataTransfer.files)]);
+    }
   };
 
   const handleUpload = async () => {
-    if (!uploadFile) return;
+    if (uploadFiles.length === 0) return;
     setUploading(true); setError(null);
+    let successCount = 0;
     try {
-      const fd = new FormData();
-      fd.append("file", uploadFile);
-      fd.append("title", uploadTitle);
-      Object.values(uploadTagIds).flat().forEach(tid => fd.append("tagIds", tid));
-      const res = await fetch(`/api/erp-auth/projects/${projectId}/gallery/upload`, { method: "POST", body: fd });
-      if (!res.ok) { const d = await res.json(); setError(d.error); return; }
-      setSuccess("تم رفع الصورة بنجاح");
+      for (const file of uploadFiles) {
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("title", uploadTitle);
+        Object.values(uploadTagIds).flat().forEach(tid => fd.append("tagIds", tid));
+        const res = await fetch(`/api/erp-auth/projects/${projectId}/gallery/upload`, { method: "POST", body: fd });
+        if (!res.ok) { 
+          const d = await res.json(); 
+          throw new Error(d.error || `فشل رفع صورة: ${file.name}`);
+        }
+        successCount++;
+      }
+      setSuccess(`تم رفع ${successCount} صورة بنجاح`);
       setUploadOpen(false);
       fetchAll();
-    } catch { setError("فشل رفع الصورة"); }
+    } catch (e: any) { 
+      setError(e.message || "فشل رفع الصور"); 
+      if (successCount > 0) fetchAll();
+    }
     finally { setUploading(false); }
   };
 
@@ -553,12 +564,24 @@ export default function Proj2GalleryPage() {
           <div onDrop={handleFileDrop} onDragOver={e => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)}
             onClick={() => fileRef.current?.click()}
             style={{ border: `2px dashed ${dragOver ? "#3b82f6" : "rgba(148,163,184,0.2)"}`, borderRadius: "16px", padding: "32px", textAlign: "center", cursor: "pointer", transition: "all 0.2s", background: dragOver ? "rgba(59,130,246,0.05)" : "transparent" }}>
-            <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => setUploadFile(e.target.files?.[0] || null)} />
-            {uploadFile ? (
+            <input ref={fileRef} type="file" multiple accept="image/*" style={{ display: "none" }} onChange={e => { if (e.target.files) setUploadFiles(prev => [...prev, ...Array.from(e.target.files as FileList)]); }} />
+            {uploadFiles.length > 0 ? (
               <div>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={URL.createObjectURL(uploadFile)} alt="" style={{ maxHeight: "160px", maxWidth: "100%", borderRadius: "10px", marginBottom: "8px" }} />
-                <p style={{ color: "#60a5fa", fontFamily: "var(--font-cairo)", fontSize: "13px", margin: 0 }}>{uploadFile.name}</p>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "center", marginBottom: "12px" }}>
+                  {uploadFiles.map((file, idx) => (
+                    <div key={idx} style={{ position: "relative" }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={URL.createObjectURL(file)} alt="" style={{ height: "60px", width: "60px", borderRadius: "6px", objectFit: "cover", background: "rgba(15,23,42,0.4)" }} />
+                      <IconButton size="small"
+                        onClick={(e) => { e.stopPropagation(); setUploadFiles(prev => prev.filter((_, i) => i !== idx)); }}
+                        sx={{ position: "absolute", top: -8, right: -8, background: "rgba(239,68,68,0.9)", color: "#fff", "&:hover": { background: "#dc2626" }, width: "20px", height: "20px" }}>
+                        <CloseOutlined sx={{ fontSize: 12 }} />
+                      </IconButton>
+                    </div>
+                  ))}
+                </div>
+                <p style={{ color: "#60a5fa", fontFamily: "var(--font-cairo)", fontSize: "14px", margin: 0, fontWeight: 600 }}>{uploadFiles.length} صورة محددة</p>
+                <p style={{ color: "#94a3b8", fontFamily: "var(--font-cairo)", fontSize: "12px", margin: "4px 0 0" }}>اضغط لإضافة المزيد</p>
               </div>
             ) : (
               <div>
@@ -597,9 +620,9 @@ export default function Proj2GalleryPage() {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
           <Button onClick={() => setUploadOpen(false)} sx={{ color: "#94a3b8", fontFamily: "var(--font-cairo)", textTransform: "none" }}>إلغاء</Button>
-          <Button onClick={handleUpload} disabled={uploading || !uploadFile} variant="contained"
+          <Button onClick={handleUpload} disabled={uploading || uploadFiles.length === 0} variant="contained"
             sx={{ borderRadius: "10px", fontFamily: "var(--font-cairo)", fontWeight: 600, textTransform: "none", background: "linear-gradient(135deg, #10b981 0%, #059669 100%)" }}>
-            {uploading ? <CircularProgress size={20} sx={{ color: "#fff" }} /> : "رفع الصورة"}
+            {uploading ? <CircularProgress size={20} sx={{ color: "#fff" }} /> : `رفع ${uploadFiles.length} صورة`}
           </Button>
         </DialogActions>
       </Dialog>
