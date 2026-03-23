@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type JsPDFType from "jspdf";
 import { useProject } from "../layout";
-import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress, Alert, IconButton, Chip, Autocomplete, InputAdornment } from "@mui/material";
+import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress, Alert, IconButton, Chip, Autocomplete, InputAdornment, Select, MenuItem, FormControl, InputLabel } from "@mui/material";
 import { AddOutlined, DeleteOutline, EditOutlined, SendOutlined, SwapHorizOutlined, AddCircleOutline, RemoveCircleOutline, CalendarMonthOutlined, PrintOutlined, WhatsApp, EmailOutlined } from "@mui/icons-material";
 
 const fmt = (n: number) => new Intl.NumberFormat("en-US").format(n);
@@ -49,9 +49,19 @@ const DateField = ({ label, value, onChange }: { label: string; value: string; o
   );
 };
 
-type QI = { item_id: string; quantity: string; unit_price: string };
-const emptyQ = (): QI => ({ item_id: "", quantity: "", unit_price: "" });
+type QI = { item_id: string; quantity: string; unit_price: string; custom_name?: string; display_mode?: "item_only" | "custom_only" | "both" };
+const emptyQ = (): QI => ({ item_id: "", quantity: "", unit_price: "", custom_name: "", display_mode: "item_only" });
 const emptyF = () => ({ customer_id: "", customer_name: "", customer_phone: "", quote_date: today(), valid_until: "", notes: "" });
+
+const getItemDisplayName = (it: any) => {
+  const realName = it.item?.name ? `${it.item.name} ${it.item?.unit ? `(${it.item.unit})` : ""}` : "—";
+  const customName = it.custom_name || "";
+  const mode = it.display_mode || "item_only";
+  
+  if (mode === "custom_only" && customName) return customName;
+  if (mode === "both" && customName) return `${realName} - ${customName}`;
+  return realName;
+};
 
 export default function QuotesPage() {
   const { projectId } = useProject();
@@ -97,7 +107,7 @@ export default function QuotesPage() {
   const itTotal = (its: QI[]) => its.reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.unit_price) || 0), 0);
   const post = async (url: string, body: any) => fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const patch = async (url: string, body: any) => fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  const mapItems = (its: QI[]) => its.filter(i => i.item_id && Number(i.quantity) > 0 && Number(i.unit_price) > 0).map(i => ({ item_id: i.item_id, quantity: Number(i.quantity), unit_price: Number(i.unit_price) }));
+  const mapItems = (its: QI[]) => its.filter(i => i.item_id && Number(i.quantity) > 0 && Number(i.unit_price) > 0).map(i => ({ item_id: i.item_id, quantity: Number(i.quantity), unit_price: Number(i.unit_price), custom_name: i.custom_name, display_mode: i.display_mode || "item_only" }));
 
   const handleAdd = async () => {
     setSaving(true);
@@ -154,15 +164,25 @@ export default function QuotesPage() {
         <IconButton size="small" onClick={() => set([...its, emptyQ()])} sx={{ color: "#10b981" }}><AddCircleOutline sx={{ fontSize: 18 }} /></IconButton>
       </div>
       {its.map((it, i) => (
-        <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto", gap: "8px", marginBottom: "8px", alignItems: "center" }}>
-          <Autocomplete options={items} getOptionLabel={(o: any) => o.name || ""} value={items.find((o: any) => o.id === it.item_id) || null}
-            onChange={(_, val) => set(its.map((x, j) => j === i ? { ...x, item_id: val?.id || "" } : x))}
-            isOptionEqualToValue={(a, b) => a.id === b.id} noOptionsText={<span style={{ fontFamily: "var(--font-cairo)" }}>لا يوجد</span>}
-            slotProps={{ paper: acPaperSx }} renderOption={(props, o) => ro(props, <>{o.name} <span style={{ color: "#64748b", fontSize: "12px", marginRight: "4px" }}>({o.unit})</span> <span style={{ color: "#10b981", fontSize: "11px", background: "rgba(16,185,129,0.1)", padding: "2px 8px", borderRadius: "8px", marginRight: "auto", fontWeight: 700 }}>متوفر: {fmt(o.stock_quantity || 0)}</span></>)}
-            renderInput={p => <TextField {...p} placeholder="الصنف" size="small" sx={fieldSx} inputProps={{ ...p.inputProps, style: { textAlign: "right", fontFamily: "var(--font-cairo)", fontSize: "13px" } }} />} />
-          <TextField placeholder="كمية" size="small" type="number" value={it.quantity} onChange={e => set(its.map((x, j) => j === i ? { ...x, quantity: e.target.value } : x))} sx={{ ...fieldSx, width: 80, "& .MuiInputBase-input": { textAlign: "center" } }} />
-          <TextField placeholder="سعر" size="small" type="number" value={it.unit_price} onChange={e => set(its.map((x, j) => j === i ? { ...x, unit_price: e.target.value } : x))} sx={{ ...fieldSx, width: 90, "& .MuiInputBase-input": { textAlign: "center" } }} />
-          <IconButton size="small" onClick={() => set(its.filter((_, j) => j !== i))} sx={{ color: "#f87171" }}><RemoveCircleOutline sx={{ fontSize: 18 }} /></IconButton>
+        <div key={i} style={{ marginBottom: "16px", padding: "12px", background: "rgba(15,23,42,0.6)", borderRadius: "12px", border: "1px solid rgba(148,163,184,0.1)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto", gap: "8px", marginBottom: "10px", alignItems: "center" }}>
+            <Autocomplete options={items} getOptionLabel={(o: any) => o.name || ""} value={items.find((o: any) => o.id === it.item_id) || null}
+              onChange={(_, val) => set(its.map((x, j) => j === i ? { ...x, item_id: val?.id || "" } : x))}
+              isOptionEqualToValue={(a, b) => a.id === b.id} noOptionsText={<span style={{ fontFamily: "var(--font-cairo)" }}>لا يوجد</span>}
+              slotProps={{ paper: acPaperSx }} renderOption={(props, o) => ro(props, <>{o.name} <span style={{ color: "#64748b", fontSize: "12px", marginRight: "4px" }}>({o.unit})</span> <span style={{ color: "#10b981", fontSize: "11px", background: "rgba(16,185,129,0.1)", padding: "2px 8px", borderRadius: "8px", marginRight: "auto", fontWeight: 700 }}>متوفر: {fmt(o.stock_quantity || 0)}</span></>)}
+              renderInput={p => <TextField {...p} placeholder="الصنف" size="small" sx={fieldSx} inputProps={{ ...p.inputProps, style: { textAlign: "right", fontFamily: "var(--font-cairo)", fontSize: "13px" } }} />} />
+            <TextField placeholder="كمية" size="small" type="number" value={it.quantity} onChange={e => set(its.map((x, j) => j === i ? { ...x, quantity: e.target.value } : x))} sx={{ ...fieldSx, width: 80, "& .MuiInputBase-input": { textAlign: "center" } }} />
+            <TextField placeholder="سعر" size="small" type="number" value={it.unit_price} onChange={e => set(its.map((x, j) => j === i ? { ...x, unit_price: e.target.value } : x))} sx={{ ...fieldSx, width: 90, "& .MuiInputBase-input": { textAlign: "center" } }} />
+            <IconButton size="small" onClick={() => set(its.filter((_, j) => j !== i))} sx={{ color: "#f87171" }}><RemoveCircleOutline sx={{ fontSize: 18 }} /></IconButton>
+          </div>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+             <Select size="small" value={it.display_mode || "item_only"} onChange={e => set(its.map((x, j) => j === i ? { ...x, display_mode: e.target.value as any } : x))} sx={{ ...fieldSx, minWidth: 160, color: "#e2e8f0" }}>
+               <MenuItem style={{ fontFamily: "var(--font-cairo)" }} value="item_only">الصنف فقط</MenuItem>
+               <MenuItem style={{ fontFamily: "var(--font-cairo)" }} value="custom_only">الوصف المخصص فقط</MenuItem>
+               <MenuItem style={{ fontFamily: "var(--font-cairo)" }} value="both">الصنف + الوصف</MenuItem>
+             </Select>
+             <TextField size="small" placeholder="وصف مخصص يظهر في عرض السعر..." value={it.custom_name || ""} onChange={e => set(its.map((x, j) => j === i ? { ...x, custom_name: e.target.value } : x))} sx={{ ...fieldSx, flex: 1, minWidth: "200px" }} />
+          </div>
         </div>
       ))}
       <p style={{ margin: "8px 0 0", fontSize: "14px", fontWeight: 700, color: "#f1f5f9", fontFamily: "var(--font-cairo)", textAlign: "left" }}>الإجمالي: {fmt(itTotal(its))} جنيه</p>
@@ -326,7 +346,7 @@ export default function QuotesPage() {
                           {q.status === "draft" && <IconButton size="small" title="إرسال" onClick={() => handleStatus(q, "sent")} sx={{ color: "#60a5fa", "&:hover": { background: "rgba(59,130,246,0.1)" } }}><SendOutlined sx={{ fontSize: 16 }} /></IconButton>}
                           <IconButton size="small" title="تحويل لفاتورة بيع" onClick={() => handleConvert(q)} sx={{ color: "#10b981", "&:hover": { background: "rgba(16,185,129,0.1)" } }}><SwapHorizOutlined sx={{ fontSize: 16 }} /></IconButton>
                           <IconButton size="small" title="طباعة / PDF" onClick={() => { setPrintQuote(q); setTimeout(() => window.print(), 500); }} sx={{ color: "#a855f7", "&:hover": { background: "rgba(168,85,247,0.1)" } }}><PrintOutlined sx={{ fontSize: 16 }} /></IconButton>
-                          <IconButton size="small" title="تعديل" onClick={() => { setEditTarget(q); setEditForm({ customer_id: q.customer_id || "", customer_name: q.customer_name || "", customer_phone: q.customer_phone || "", quote_date: fmtD(q.quote_date || ""), valid_until: fmtD(q.valid_until || ""), notes: q.notes || "" }); setEditItems((q.items || []).map((i: any) => ({ item_id: i.item_id || "", quantity: String(i.quantity), unit_price: String(i.unit_price) }))); setEditOpen(true); }} sx={{ color: "#60a5fa", "&:hover": { background: "rgba(59,130,246,0.1)" } }}><EditOutlined sx={{ fontSize: 16 }} /></IconButton>
+                          <IconButton size="small" title="تعديل" onClick={() => { setEditTarget(q); setEditForm({ customer_id: q.customer_id || "", customer_name: q.customer_name || "", customer_phone: q.customer_phone || "", quote_date: fmtD(q.quote_date || ""), valid_until: fmtD(q.valid_until || ""), notes: q.notes || "" }); setEditItems((q.items || []).map((i: any) => ({ item_id: i.item_id || "", quantity: String(i.quantity), unit_price: String(i.unit_price), custom_name: i.custom_name || "", display_mode: i.display_mode || "item_only" }))); setEditOpen(true); }} sx={{ color: "#60a5fa", "&:hover": { background: "rgba(59,130,246,0.1)" } }}><EditOutlined sx={{ fontSize: 16 }} /></IconButton>
                         </>
                       )}
                       <IconButton size="small" onClick={() => { setDeleteTarget(q); setDeleteOpen(true); }} sx={{ color: "#64748b", "&:hover": { color: "#f87171", background: "rgba(248,113,113,0.1)" } }}><DeleteOutline sx={{ fontSize: 16 }} /></IconButton>
@@ -335,7 +355,7 @@ export default function QuotesPage() {
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "10px" }}>
                     {(q.items || []).map((it: any, i: number) => (
                       <span key={i} style={{ fontSize: "12px", color: "#94a3b8", fontFamily: "var(--font-cairo)", background: "rgba(15,23,42,0.4)", padding: "4px 10px", borderRadius: "8px" }}>
-                        {it.item?.name || "—"} × {it.quantity} {it.item?.unit} @ {fmt(it.unit_price)} جنيه
+                        {getItemDisplayName(it)} × {it.quantity} @ {fmt(it.unit_price)} جنيه
                       </span>
                     ))}
                   </div>
@@ -464,7 +484,7 @@ export default function QuotesPage() {
               <tbody>
                 {(shareQuote.items || []).map((it: any, i: number) => (
                   <tr key={i} style={{ background: i % 2 === 0 ? "#fff" : "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-                    <td style={{ padding: "10px 12px", fontWeight: 600, color: "#1e293b", border: "1px solid #e2e8f0" }}>{it.item?.name || "—"} {it.item?.unit ? `(${it.item.unit})` : ""}</td>
+                    <td style={{ padding: "10px 12px", fontWeight: 600, color: "#1e293b", border: "1px solid #e2e8f0" }}>{getItemDisplayName(it)}</td>
                     <td style={{ padding: "10px 12px", textAlign: "center", direction: "ltr", border: "1px solid #e2e8f0" }}>{fmt(Number(it.quantity))}</td>
                     <td style={{ padding: "10px 12px", textAlign: "center", direction: "ltr", border: "1px solid #e2e8f0" }}>{fmt(Number(it.unit_price))}</td>
                     <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 700, direction: "ltr", border: "1px solid #e2e8f0" }}>{fmt((Number(it.quantity) || 0) * (Number(it.unit_price) || 0))}</td>
@@ -552,7 +572,7 @@ export default function QuotesPage() {
                 const rowTotal = (Number(it.quantity) || 0) * (Number(it.unit_price) || 0);
                 return (
                   <tr key={i} style={{ borderBottom: "1px solid #e2e8f0", background: i % 2 === 0 ? "#fff" : "#f8fafc" }}>
-                    <td style={{ padding: "10px 12px", fontWeight: 600, color: "#1e293b", border: "1px solid #e2e8f0", borderTop: "none" }}>{it.item?.name || "—"} {it.item?.unit ? `(${it.item.unit})` : ""}</td>
+                    <td style={{ padding: "10px 12px", fontWeight: 600, color: "#1e293b", border: "1px solid #e2e8f0", borderTop: "none" }}>{getItemDisplayName(it)}</td>
                     <td style={{ padding: "10px 12px", textAlign: "center", color: "#475569", direction: "ltr", border: "1px solid #e2e8f0", borderTop: "none" }}>{fmt(Number(it.quantity))}</td>
                     <td style={{ padding: "10px 12px", textAlign: "center", color: "#475569", direction: "ltr", border: "1px solid #e2e8f0", borderTop: "none" }}>{fmt(Number(it.unit_price))}</td>
                     <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 700, color: "#0f172a", direction: "ltr", border: "1px solid #e2e8f0", borderTop: "none" }}>{fmt(rowTotal)}</td>
