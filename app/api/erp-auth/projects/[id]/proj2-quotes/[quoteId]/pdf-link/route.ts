@@ -23,6 +23,7 @@ export async function POST(
 
     const formData = await request.formData();
     const file = formData.get("file") as File;
+    const docNumber = formData.get("docNumber") as string || quoteId;
     if (!file) return NextResponse.json({ error: "لا يوجد ملف PDF" }, { status: 400 });
 
     const timestamp = Date.now();
@@ -40,17 +41,17 @@ export async function POST(
     }
 
     // Insert a short token into the pdf_tokens table
-    const token = shortToken();
+    const token = docNumber ? `Quote-No-${docNumber}` : shortToken();
     const { error: dbErr } = await supabase
       .from("pdf_tokens")
-      .insert({ token, bucket, storage_path: storagePath });
+      .upsert({ token, bucket, storage_path: storagePath }, { onConflict: "token" });
 
     if (dbErr) {
       return NextResponse.json({ error: dbErr.message }, { status: 500 });
     }
 
     const origin = (process.env.NEXT_PUBLIC_BASE_URL || request.nextUrl.origin).replace(/\/$/, "");
-    return NextResponse.json({ url: `${origin}/api/pdf/${token}` });
+    return NextResponse.json({ url: `${origin}/pdf/${token}` });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || "خطأ في رفع الملف" }, { status: 500 });
   }

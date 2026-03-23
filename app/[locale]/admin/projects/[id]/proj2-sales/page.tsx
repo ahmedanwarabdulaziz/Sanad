@@ -308,6 +308,7 @@ export default function SalesPage() {
 
       const fd = new FormData();
       fd.append("file", file);
+      fd.append("docNumber", s.code);
       const res = await fetch(`/api/erp-auth/projects/${projectId}/proj2-sales/${s.id}/pdf-link`, { method: "POST", body: fd });
       const { url, error: uploadErr } = await res.json();
       if (uploadErr) throw new Error(uploadErr);

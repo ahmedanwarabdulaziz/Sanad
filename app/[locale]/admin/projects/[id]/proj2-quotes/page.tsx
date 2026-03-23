@@ -245,6 +245,7 @@ export default function QuotesPage() {
       // Upload to Supabase Storage via API route → get public URL
       const fd = new FormData();
       fd.append("file", file);
+      fd.append("docNumber", q.code);
       const res = await fetch(`/api/erp-auth/projects/${projectId}/proj2-quotes/${q.id}/pdf-link`, {
         method: "POST", body: fd,
       });

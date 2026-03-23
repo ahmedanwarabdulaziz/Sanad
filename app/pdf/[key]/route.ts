@@ -8,9 +8,9 @@ const supabase = createClient(
 );
 
 /**
- * Public PDF proxy — GET /api/pdf/[key]
- * [key] is a short 8-char random token stored in the pdf_tokens table.
- * URL example: https://sanadproprojects.com/api/pdf/xk9mpqr2
+ * Public PDF proxy — GET /pdf/[key]
+ * [key] is a friendly token stored in the pdf_tokens table (e.g. Quote-No-123).
+ * URL example: https://sanadproprojects.com/pdf/Quote-No-921
  */
 export async function GET(
   _request: NextRequest,
