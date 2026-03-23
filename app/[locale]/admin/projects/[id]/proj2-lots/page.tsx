@@ -64,7 +64,7 @@ export default function LotsPage() {
   const [items, setItems]             = useState<any[]>([]);
   const [vaults, setVaults]           = useState<any[]>([]);
   const [suppliers, setSuppliers]     = useState<any[]>([]);
-  const [lotSalesTotal, setLotSalesTotal]       = useState(0);
+  const [lotSalesData, setLotSalesData] = useState<any[]>([]);
   const [allConversions, setAllConversions]     = useState<any[]>([]);
   const [globalConvValue, setGlobalConvValue]   = useState(0);
   const [convListOpen, setConvListOpen]         = useState(false);
@@ -78,6 +78,11 @@ export default function LotsPage() {
   const [histPeriod, setHistPeriod]     = useState<"month"|"year"|"all">("month");
   const [histDateFrom, setHistDateFrom] = useState("");
   const [histDateTo, setHistDateTo]     = useState("");
+
+  const [lotPeriod, setLotPeriod]     = useState<"month"|"year"|"all">("month");
+  const [lotDateFrom, setLotDateFrom] = useState("");
+  const [lotDateTo, setLotDateTo]     = useState("");
+  const [lotSearch, setLotSearch]     = useState("");
 
   const [loading, setLoading]         = useState(true);
   const [error, setError]     = useState<string | null>(null);
@@ -127,7 +132,7 @@ export default function LotsPage() {
     ]);
     const [ld, itemsData, vd, sd] = await Promise.all([lr.json(), ir.json(), vr.json(), sr.json()]);
     setLots(ld.lots || []);
-    setLotSalesTotal(ld.lot_sales_total || 0);
+    setLotSalesData(ld.lot_sales || []);
     setAllConversions(ld.all_conversions || []);
     setGlobalConvValue(ld.global_converted_value || 0);
     setVaults(vd.vaults || []);
@@ -248,10 +253,56 @@ export default function LotsPage() {
     if (!r.ok) { const d = await r.json(); setError(d.error); } else { setSuccess("تم الحذف"); setDelOpen(false); fetchAll(); }
   };
 
-  const totalCost      = lots.reduce((s, l) => s + Number(l.total_cost), 0);
-  const totalConverted = lots.reduce((s, l) => s + Number(l.converted_value), 0) + globalConvValue;
-  const totalExpenses  = lots.reduce((s, l) => s + Number(l.total_expenses), 0);
-  const totalRemaining = totalCost - totalConverted;
+  const parseLotDate = (d: string) => { if (!d) return null; const dt = new Date(d); return isNaN(dt.getTime()) ? null : dt; };
+  
+  const inPeriod = (dStr: string) => {
+    const d = parseLotDate(dStr);
+    if (!d) return true;
+    const now = new Date();
+    if (lotDateFrom) { const f = new Date(lotDateFrom); if (d < f) return false; }
+    if (lotDateTo)   { const t = new Date(lotDateTo); t.setHours(23,59,59); if (d > t) return false; }
+    if (lotDateFrom || lotDateTo) return true;
+    if (lotPeriod === "month") return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    if (lotPeriod === "year")  return d.getFullYear() === now.getFullYear();
+    return true;
+  };
+
+  const filteredLots = lots.filter(l => {
+    if (lotSearch) {
+      const q = lotSearch.toLowerCase();
+      const match = (l.code || "").toLowerCase().includes(q) ||
+                    (l.description || "").toLowerCase().includes(q) ||
+                    (l.notes || "").toLowerCase().includes(q) ||
+                    (suppliers.find(s => s.id === l.supplier_id)?.name || "").toLowerCase().includes(q);
+      if (!match) return false;
+    }
+    return inPeriod(l.lot_date);
+  });
+
+  let computedTotalCost = 0;
+  let computedTotalConverted = 0;
+  let computedTotalExpenses = 0;
+  let computedLotSalesTotal = 0;
+
+  if (lotSearch) {
+    // If searching specific text/LOT-Code, banners show totals ONLY for those exact matched Lots
+    computedTotalCost = filteredLots.reduce((s, l) => s + Number(l.total_cost), 0);
+    computedTotalConverted = filteredLots.reduce((s, l) => s + Number(l.converted_value), 0);
+    computedTotalExpenses = filteredLots.reduce((s, l) => s + Number(l.total_expenses), 0);
+    computedLotSalesTotal = 0; // Direct global lot-sales can't map to a text string search
+  } else {
+    // If observing Period Activity (e.g. Current Month), banners capture ALL activity that occurred IN that period
+    computedTotalCost = lots.filter(l => inPeriod(l.lot_date)).reduce((s, l) => s + Number(l.total_cost), 0);
+    computedTotalConverted = allConversions.filter(c => inPeriod(c.conversion_date)).reduce((s, c) => s + (Number(c.quantity) * Number(c.unit_price)), 0);
+    computedLotSalesTotal = lotSalesData.filter(s => inPeriod(s.sale?.sale_date)).reduce((sum, s) => sum + (Number(s.quantity) * Number(s.unit_price)), 0);
+    
+    // Extract unique expenses across all lots
+    const allExpMap = new Map();
+    lots.forEach(l => { (l.expenses || []).forEach((e: any) => allExpMap.set(e.id, e)); });
+    computedTotalExpenses = Array.from(allExpMap.values()).filter((e: any) => inPeriod(e.expense_date)).reduce((s, e: any) => s + Number(e.amount), 0);
+  }
+
+  const computedRemaining = Math.max(0, computedTotalCost - computedTotalConverted);
 
   return (
     <>
@@ -277,15 +328,15 @@ export default function LotsPage() {
       {loading ? <div style={{ textAlign: "center", padding: "60px 0" }}><CircularProgress sx={{ color: "#8b5cf6" }} /></div> : (
         <>
           {/* Summary banners */}
-          {lots.length > 0 && (
+          {(lots.length > 0 || filteredLots.length > 0) && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "10px", marginBottom: "24px" }}>
               {[
-                { label: "إجمالي اللوتات",       value: totalCost,                       color: "#a78bfa", icon: "📦",  click: null },
-                { label: "محوَّل للمخزن",         value: totalConverted,                  color: "#34d399", icon: "✅",  click: () => setConvListOpen(true) },
-                { label: "مبيعات مباشرة",         value: lotSalesTotal,                   color: "#60a5fa", icon: "🏷️", click: null },
-                { label: "المبيعات + التحويلات", value: lotSalesTotal + totalConverted,  color: "#c084fc", icon: "📊", click: null },
-                { label: "المصاريف",               value: totalExpenses,                   color: "#f59e0b", icon: "💸",  click: null },
-                { label: "المتبقي بدون تحويل",   value: totalRemaining,                  color: totalRemaining > 0 ? "#f87171" : "#10b981", icon: "⏳", click: null },
+                { label: "إجمالي اللوتات",       value: computedTotalCost,               color: "#a78bfa", icon: "📦",  click: null },
+                { label: "محوَّل للمخزن",         value: computedTotalConverted,          color: "#34d399", icon: "✅",  click: () => { setHistPeriod(lotPeriod); setHistDateFrom(lotDateFrom); setHistDateTo(lotDateTo); setConvListFilter(""); setConvListOpen(true); } },
+                { label: "مبيعات مباشرة",         value: computedLotSalesTotal,           color: "#60a5fa", icon: "🏷️", click: null },
+                { label: "المبيعات + التحويلات", value: computedLotSalesTotal + computedTotalConverted, color: "#c084fc", icon: "📊", click: null },
+                { label: "المصاريف",               value: computedTotalExpenses,           color: "#f59e0b", icon: "💸",  click: null },
+                { label: "المتبقي بدون تحويل",   value: computedRemaining,               color: computedRemaining > 0 ? "#f87171" : "#10b981", icon: "⏳", click: null },
               ].map(s => (
                 <div key={s.label} onClick={s.click || undefined}
                   style={{ padding: "14px 16px", borderRadius: "14px", background: "rgba(30,41,59,0.5)", border: `1px solid ${s.color}22`, direction: "rtl", cursor: s.click ? "pointer" : "default", transition: "border-color 0.2s" }}
@@ -298,15 +349,48 @@ export default function LotsPage() {
             </div>
           )}
 
+          {/* Filters */}
+          {(lots.length > 0 || lotSearch || lotDateFrom || lotDateTo || lotPeriod !== "month") && (
+            <div style={{ display: "flex", gap: "10px", marginBottom: "16px", flexWrap: "wrap", alignItems: "center", direction: "rtl" }}>
+              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center", direction: "rtl" }}>
+                {(["month", "year", "all"] as const).map(p => (
+                  <button key={p} onClick={() => { setLotPeriod(p); setLotDateFrom(""); setLotDateTo(""); }}
+                    style={{ padding: "5px 16px", borderRadius: "20px", fontSize: "12px", fontFamily: "var(--font-cairo)", cursor: "pointer", border: "none", fontWeight: 600, transition: "all 0.15s",
+                      background: lotPeriod === p && !lotDateFrom && !lotDateTo ? "linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)" : "rgba(30,41,59,0.8)",
+                      color: lotPeriod === p && !lotDateFrom && !lotDateTo ? "#fff" : "#94a3b8",
+                      outline: lotPeriod === p && !lotDateFrom && !lotDateTo ? "none" : "1px solid rgba(148,163,184,0.15)" }}>
+                    {p === "month" ? "الشهر الحالي" : p === "year" ? "السنة الحالية" : "الكل"}
+                  </button>
+                ))}
+                <div style={{ display: "flex", gap: "4px", alignItems: "center", background: (lotDateFrom || lotDateTo) ? "rgba(139,92,246,0.1)" : "rgba(30,41,59,0.6)", borderRadius: "10px", padding: "4px 8px", outline: (lotDateFrom || lotDateTo) ? "1px solid rgba(139,92,246,0.35)" : "1px solid rgba(148,163,184,0.12)" }}>
+                  <span style={{ fontSize: "10px", color: "#64748b", fontFamily: "var(--font-cairo)" }}>من</span>
+                  <input type="date" value={lotDateFrom} onChange={e => setLotDateFrom(e.target.value)}
+                    style={{ background: "transparent", border: "none", outline: "none", color: "#e2e8f0", fontSize: "11px", fontFamily: "monospace", width: "110px", cursor: "pointer", colorScheme: "dark" }} />
+                  <span style={{ fontSize: "10px", color: "#64748b", fontFamily: "var(--font-cairo)" }}>إلى</span>
+                  <input type="date" value={lotDateTo} onChange={e => setLotDateTo(e.target.value)}
+                    style={{ background: "transparent", border: "none", outline: "none", color: "#e2e8f0", fontSize: "11px", fontFamily: "monospace", width: "110px", cursor: "pointer", colorScheme: "dark" }} />
+                  {(lotDateFrom || lotDateTo) && (
+                    <button onClick={() => { setLotDateFrom(""); setLotDateTo(""); }}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "#f87171", fontSize: "13px", lineHeight: 1, padding: "0 2px" }}>✕</button>
+                  )}
+                </div>
+                <span style={{ fontSize: "10px", color: "#475569", fontFamily: "var(--font-cairo)" }}>{filteredLots.length} لوت</span>
+              </div>
+              <TextField placeholder="بحث بكود اللوت، الوصف، أو المورد..." value={lotSearch} onChange={e => setLotSearch(e.target.value)} size="small" 
+                inputProps={{ dir: "rtl", style: { textAlign: "right", fontFamily: "var(--font-cairo)", fontSize: "13px" } }}
+                sx={{ ...fieldSx, flex: "1 1 200px" }} />
+            </div>
+          )}
+
           {/* Lots list */}
-          {lots.length === 0 ? (
+          {filteredLots.length === 0 ? (
             <div style={{ textAlign: "center", padding: "60px 24px", borderRadius: "20px", background: "rgba(30,41,59,0.4)", border: "1px solid rgba(148,163,184,0.08)" }}>
               <p style={{ fontSize: "48px", margin: "0 0 12px" }}>📦</p>
-              <p style={{ color: "#94a3b8", fontFamily: "var(--font-cairo)", fontSize: "16px" }}>لا توجد لوتات بعد</p>
+              <p style={{ color: "#94a3b8", fontFamily: "var(--font-cairo)", fontSize: "16px" }}>{lots.length === 0 ? "لا توجد لوتات بعد" : "لا توجد نتائج مطابقة للبحث"}</p>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {lots.map(lot => {
+              {filteredLots.map(lot => {
                 const converted  = Number(lot.converted_value);
                 const cost       = Number(lot.total_cost);
                 const expenses   = Number(lot.total_expenses);

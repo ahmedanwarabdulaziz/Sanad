@@ -78,7 +78,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   await supabase.from("proj2_sale_items").insert(
-    items.map((i: any) => ({ sale_id: sale.id, item_id: i.item_id || null, quantity: Number(i.quantity), unit_price: Number(i.unit_price) }))
+    items.map((i: any) => ({
+      sale_id: sale.id,
+      item_id: i.item_id || null,
+      quantity: Number(i.quantity),
+      unit_price: Number(i.unit_price),
+      custom_name: i.custom_name || null,
+      display_mode: i.display_mode || 'item_only'
+    }))
   );
 
   return NextResponse.json({ sale });

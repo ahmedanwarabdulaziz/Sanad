@@ -86,6 +86,8 @@ export default function Proj2GalleryPage() {
 
   /* ── Filter state ── */
   const [activeFilters, setActiveFilters] = useState<Record<string, string[]>>({});
+  const hasActiveFilters = Object.values(activeFilters).flat().length > 0;
+
   const toggleFilter = (groupId: string, tagId: string, allowMultiple: boolean) => {
     setActiveFilters(prev => {
       const current = prev[groupId] || [];
@@ -94,14 +96,14 @@ export default function Proj2GalleryPage() {
     });
   };
 
-  const filteredImages = images.filter(img => {
+  const filteredImages = hasActiveFilters ? images.filter(img => {
     const imgTagIds = img.gallery_image_tags.map(t => t.gallery_tags.id);
     for (const [, tagIds] of Object.entries(activeFilters)) {
       if (tagIds.length === 0) continue;
       if (!tagIds.some(tid => imgTagIds.includes(tid))) return false;
     }
     return true;
-  });
+  }) : [];
 
   /* ── Upload dialog ── */
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -380,8 +382,13 @@ export default function Proj2GalleryPage() {
               {/* Tag filter chips */}
               {groups.length > 0 && (
                 <div style={{ marginBottom: "20px", display: "flex", flexDirection: "column", gap: "10px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#94a3b8", fontSize: "13px", fontFamily: "var(--font-cairo)" }}>
-                    <FilterListOutlined sx={{ fontSize: 16 }} /> تصفية حسب
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", color: "#94a3b8", fontSize: "13px", fontFamily: "var(--font-cairo)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <FilterListOutlined sx={{ fontSize: 16 }} /> تصفية حسب
+                    </div>
+                    {hasActiveFilters && (
+                      <Button size="small" onClick={() => setActiveFilters({})} sx={{ minWidth: 0, p: "2px 8px", fontSize: "11px", fontFamily: "var(--font-cairo)", color: "#f87171", background: "rgba(239,68,68,0.1)", borderRadius: "6px", textTransform: "none", border: "1px solid rgba(239,68,68,0.2)" }}>مسح الكل</Button>
+                    )}
                   </div>
                   {groups.map(g => (
                     <div key={g.id} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -418,7 +425,7 @@ export default function Proj2GalleryPage() {
                 <div style={{ textAlign: "center", padding: "60px 24px", borderRadius: "20px", background: "rgba(30,41,59,0.4)", border: "1px solid rgba(148,163,184,0.08)" }}>
                   <p style={{ fontSize: "48px", margin: "0 0 12px" }}>🖼️</p>
                   <p style={{ color: "#94a3b8", fontFamily: "var(--font-cairo)", fontSize: "16px", margin: 0 }}>
-                    {images.length === 0 ? "لا توجد صور بعد، ارفع أول صورة!" : "لا توجد صور تطابق الفلتر المحدد"}
+                    {images.length === 0 ? "لا توجد صور بعد، ارفع أول صورة!" : (!hasActiveFilters ? "يرجى تحديد تاج واحد على الأقل لعرض الصور" : "لا توجد صور تطابق الفلتر المحدد")}
                   </p>
                 </div>
               ) : (

@@ -47,8 +47,18 @@ const DateField = ({ label, value, onChange }: { label: string; value: string; o
   );
 };
 
-type SI = { item_id: string; quantity: string; unit_price: string };
-const emptyI = (): SI => ({ item_id: "", quantity: "", unit_price: "" });
+type SI = { item_id: string; quantity: string; unit_price: string; custom_name?: string; display_mode?: "item_only" | "custom_only" | "both" };
+const emptyI = (): SI => ({ item_id: "", quantity: "", unit_price: "", custom_name: "", display_mode: "item_only" });
+
+const getItemDisplayName = (it: any) => {
+  const realName = it.item?.name ? `${it.item.name} ${it.item?.unit ? `(${it.item.unit})` : ""}` : "—";
+  const customName = it.custom_name || "";
+  const mode = it.display_mode || "item_only";
+  
+  if (mode === "custom_only" && customName) return customName;
+  if (mode === "both" && customName) return `${realName} - ${customName}`;
+  return realName;
+};
 const emptyF = () => ({ customer_id: "", customer_name: "", customer_phone: "", sale_date: fmtD(new Date().toISOString().split("T")[0]), notes: "" });
 
 export default function SalesPage() {
@@ -138,13 +148,13 @@ export default function SalesPage() {
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const itTotal = (its: SI[]) => its.reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.unit_price) || 0), 0);
-  const mapItems = (its: SI[]) => its.filter(i => i.item_id && Number(i.quantity) > 0 && Number(i.unit_price) > 0).map(i => ({ item_id: i.item_id, quantity: Number(i.quantity), unit_price: Number(i.unit_price) }));
+  const mapItems = (its: SI[]) => its.filter(i => i.item_id && Number(i.quantity) > 0 && Number(i.unit_price) > 0).map(i => ({ item_id: i.item_id, quantity: Number(i.quantity), unit_price: Number(i.unit_price), custom_name: i.custom_name, display_mode: i.display_mode || "item_only" }));
   const patch = async (url: string, body: any) => fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
   // Filter helpers
   const parseSaleDate = (d: string) => { if (!d) return null; const dt = new Date(d); return isNaN(dt.getTime()) ? null : dt; };
-  const filteredSales = sales.filter(s => {
-    const d = parseSaleDate(s.sale_date);
+  const inPeriod = (dStr: string) => {
+    const d = parseSaleDate(dStr);
     if (!d) return true;
     const now = new Date();
     if (dateFrom) { const f = new Date(dateFrom); if (d < f) return false; }
@@ -153,12 +163,16 @@ export default function SalesPage() {
     if (period === "month") return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
     if (period === "year")  return d.getFullYear() === now.getFullYear();
     return true;
-  });
+  };
+
+  const filteredSales = sales.filter(s => inPeriod(s.sale_date));
 
   // Unpaid totals
-  const unpaidSales = sales.filter(s => Number(s.total_amount) > Number(s.paid_amount || 0));
+  const unpaidSales = filteredSales.filter(s => Number(s.total_amount) > Number(s.paid_amount || 0));
   const totalUnpaidRec = unpaidSales.reduce((sum, s) => sum + Number(s.total_amount) - Number(s.paid_amount || 0), 0);
-  const unpaidExpList = expenses.filter(e => e.expense_type === "sale" && Number(e.amount) > Number(e.paid_amount || 0));
+  
+  const filteredExpList = expenses.filter(e => e.expense_type === "sale" && inPeriod(e.expense_date));
+  const unpaidExpList = filteredExpList.filter(e => Number(e.amount) > Number(e.paid_amount || 0));
   const totalUnpaidExp = unpaidExpList.reduce((sum, e) => sum + Number(e.amount) - Number(e.paid_amount || 0), 0);
 
   const todayFmt = () => fmtD(new Date().toISOString().split("T")[0]);
@@ -271,7 +285,7 @@ export default function SalesPage() {
   };
 
   const handleWhatsApp = async (s: any) => {
-    const phone = s.customer_phone || s.customer?.phones?.[0] || "";
+    const phone = s.customer?.phones?.[0] || s.customer_phone || "";
     let cleanPhone = phone.replace(/\D/g, "");
     if (cleanPhone.startsWith("0")) cleanPhone = "2" + cleanPhone;
     const customerName = s.customer?.name || s.customer_name || "عميلنا العزيز";
@@ -348,15 +362,29 @@ export default function SalesPage() {
         <IconButton size="small" onClick={() => set([...its, emptyI()])} sx={{ color: "#10b981" }}><AddCircleOutline sx={{ fontSize: 18 }} /></IconButton>
       </div>
       {its.map((it, i) => (
-        <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto", gap: "8px", marginBottom: "8px", alignItems: "center" }}>
-          <Autocomplete options={items} getOptionLabel={(o: any) => o.name || ""} value={items.find((o: any) => o.id === it.item_id) || null}
-            onChange={(_, val) => set(its.map((x, j) => j === i ? { ...x, item_id: val?.id || "" } : x))}
-            isOptionEqualToValue={(a, b) => a.id === b.id} noOptionsText={<span style={{ fontFamily: "var(--font-cairo)" }}>لا يوجد</span>}
-            slotProps={{ paper: acPaperSx }} renderOption={(props, o) => ro(props, <>{o.name} <span style={{ color: "#64748b", fontSize: "12px", marginRight: "4px" }}>({o.unit})</span> <span style={{ color: "#10b981", fontSize: "11px", background: "rgba(16,185,129,0.1)", padding: "2px 8px", borderRadius: "8px", marginRight: "auto", fontWeight: 700 }}>متوفر: {fmt(o.stock_quantity || 0)}</span></>)}
-            renderInput={p => <TextField {...p} placeholder="الصنف" size="small" sx={fieldSx} inputProps={{ ...p.inputProps, style: { textAlign: "right", fontFamily: "var(--font-cairo)", fontSize: "13px" } }} />} />
-          <TextField placeholder="كمية" size="small" type="number" value={it.quantity} onChange={e => set(its.map((x, j) => j === i ? { ...x, quantity: e.target.value } : x))} sx={{ ...fieldSx, width: 80, "& .MuiInputBase-input": { textAlign: "center" } }} />
-          <TextField placeholder="سعر" size="small" type="number" value={it.unit_price} onChange={e => set(its.map((x, j) => j === i ? { ...x, unit_price: e.target.value } : x))} sx={{ ...fieldSx, width: 90, "& .MuiInputBase-input": { textAlign: "center" } }} />
-          <IconButton size="small" onClick={() => set(its.filter((_, j) => j !== i))} sx={{ color: "#f87171" }}><RemoveCircleOutline sx={{ fontSize: 18 }} /></IconButton>
+        <div key={i} style={{ marginBottom: "16px", padding: "12px", background: "rgba(15,23,42,0.6)", borderRadius: "12px", border: "1px solid rgba(148,163,184,0.1)" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "10px", alignItems: "center" }}>
+            <div style={{ flex: "2 1 200px" }}>
+              <Autocomplete options={items} getOptionLabel={(o: any) => o.name || ""} value={items.find((o: any) => o.id === it.item_id) || null}
+                onChange={(_, val) => set(its.map((x, j) => j === i ? { ...x, item_id: val?.id || "" } : x))}
+                isOptionEqualToValue={(a, b) => a.id === b.id} noOptionsText={<span style={{ fontFamily: "var(--font-cairo)" }}>لا يوجد</span>}
+                slotProps={{ paper: acPaperSx }} renderOption={(props, o) => ro(props, <>{o.name} <span style={{ color: "#64748b", fontSize: "12px", marginRight: "4px" }}>({o.unit})</span> <span style={{ color: "#10b981", fontSize: "11px", background: "rgba(16,185,129,0.1)", padding: "2px 8px", borderRadius: "8px", marginRight: "auto", fontWeight: 700 }}>متوفر: {fmt(o.stock_quantity || 0)}</span></>)}
+                renderInput={p => <TextField {...p} placeholder="الصنف" size="small" sx={{ ...fieldSx, width: "100%" }} inputProps={{ ...p.inputProps, style: { textAlign: "right", fontFamily: "var(--font-cairo)", fontSize: "13px" } }} />} />
+            </div>
+            <div style={{ flex: "1 1 180px", display: "flex", gap: "8px", alignItems: "center" }}>
+              <TextField placeholder="كمية" size="small" type="number" inputProps={{ inputMode: "decimal" }} value={it.quantity} onChange={e => set(its.map((x, j) => j === i ? { ...x, quantity: e.target.value } : x))} sx={{ ...fieldSx, flex: 1, minWidth: 0, "& .MuiInputBase-input": { textAlign: "center" } }} />
+              <TextField placeholder="سعر" size="small" type="number" inputProps={{ inputMode: "decimal" }} value={it.unit_price} onChange={e => set(its.map((x, j) => j === i ? { ...x, unit_price: e.target.value } : x))} sx={{ ...fieldSx, flex: 1, minWidth: 0, "& .MuiInputBase-input": { textAlign: "center" } }} />
+              <IconButton size="small" onClick={() => set(its.filter((_, j) => j !== i))} sx={{ color: "#f87171" }}><RemoveCircleOutline sx={{ fontSize: 18 }} /></IconButton>
+            </div>
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
+             <Select size="small" value={it.display_mode || "item_only"} onChange={e => set(its.map((x, j) => j === i ? { ...x, display_mode: e.target.value as any } : x))} sx={{ ...fieldSx, flex: "1 1 140px", color: "#e2e8f0" }}>
+               <MenuItem style={{ fontFamily: "var(--font-cairo)" }} value="item_only">الصنف فقط</MenuItem>
+               <MenuItem style={{ fontFamily: "var(--font-cairo)" }} value="custom_only">الوصف المخصص فقط</MenuItem>
+               <MenuItem style={{ fontFamily: "var(--font-cairo)" }} value="both">الصنف + الوصف</MenuItem>
+             </Select>
+             <TextField size="small" placeholder="وصف مخصص يظهر في الفاتورة..." value={it.custom_name || ""} onChange={e => set(its.map((x, j) => j === i ? { ...x, custom_name: e.target.value } : x))} sx={{ ...fieldSx, flex: "2 1 200px" }} />
+          </div>
         </div>
       ))}
       <p style={{ margin: "8px 0 0", fontSize: "14px", fontWeight: 700, color: "#f1f5f9", fontFamily: "var(--font-cairo)", textAlign: "left" }}>الإجمالي: {fmt(itTotal(its))} جنيه</p>
@@ -372,7 +400,7 @@ export default function SalesPage() {
         slotProps={{ paper: acPaperSx }} renderOption={(props, c) => ro(props, c.name)}
         onInputChange={(_, val) => set({ ...f, customer_name: val })}
         renderInput={p => <TextField {...p} label="العميل" fullWidth sx={fieldSx} inputProps={{ ...p.inputProps, style: { textAlign: "right", fontFamily: "var(--font-cairo)" } }} />} />
-      <TextField label="رقم الهاتف" value={f.customer_phone} onChange={e => set({ ...f, customer_phone: e.target.value })} fullWidth sx={fieldSx} inputProps={{ style: { direction: "ltr" } }} />
+      {f.customer_phone && <p style={{ margin: "0 4px", fontSize: "13px", color: "#64748b", direction: "ltr", textAlign: "right" }}>📞 {f.customer_phone}</p>}
       <DateField label="تاريخ الفاتورة" value={f.sale_date} onChange={v => set({ ...f, sale_date: v })} />
     </>
   );
@@ -455,7 +483,7 @@ export default function SalesPage() {
                     <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                       <span style={{ fontSize: "13px", fontWeight: 700, color: "#34d399", fontFamily: "monospace", background: "rgba(52,211,153,0.1)", padding: "3px 8px", borderRadius: "8px" }}>{sale.code}</span>
                       <span style={{ fontSize: "14px", fontWeight: 600, color: "#f1f5f9", fontFamily: "var(--font-cairo)" }}>{sale.customer?.name || sale.customer_name || "—"}</span>
-                      {sale.customer_phone && <span style={{ fontSize: "12px", color: "#64748b", direction: "ltr" }}>{sale.customer_phone}</span>}
+                      {sale.customer_phone && <span style={{ fontSize: "12px", color: "#64748b", direction: "ltr", fontFamily: "var(--font-cairo)" }}>{sale.customer_phone}</span>}
                       <Chip label={ds.label} size="small" sx={{ background: `${ds.color}22`, color: ds.color, fontFamily: "var(--font-cairo)", fontSize: "11px", height: "20px" }} />
                       <Chip label={ps.label} size="small" sx={{ background: `${ps.color}22`, color: ps.color, fontFamily: "var(--font-cairo)", fontSize: "11px", height: "20px" }} />
                     </div>
@@ -480,7 +508,7 @@ export default function SalesPage() {
                           <IconButton size="small" title="سداد المصاريف" onClick={() => { setPayExpSale(sale); setPayExpMax(expRemaining); setPayExpForm({ vault_id: "", amount: String(expRemaining), notes: "", payment_date: fmtD(new Date().toISOString().split("T")[0]) }); setPayExpOpen(true); }} sx={{ color: "#c084fc", "&:hover": { background: "rgba(192,132,252,0.1)" } }}><AccountBalanceWalletOutlined sx={{ fontSize: 16 }} /></IconButton>
                         ) : null;
                       })()}
-                      <IconButton size="small" title="تعديل" onClick={() => { setEditTarget(sale); setEditForm({ customer_id: sale.customer_id || "", customer_name: sale.customer_name || "", customer_phone: sale.customer_phone || "", sale_date: fmtD(sale.sale_date || ""), notes: sale.notes || "" }); setEditItems((sale.items || []).map((i: any) => ({ item_id: i.item_id || "", quantity: String(i.quantity), unit_price: String(i.unit_price) }))); setEditOpen(true); }} sx={{ color: "#60a5fa", "&:hover": { background: "rgba(59,130,246,0.1)" } }}><EditOutlined sx={{ fontSize: 16 }} /></IconButton>
+                      <IconButton size="small" title="تعديل" onClick={() => { setEditTarget(sale); setEditForm({ customer_id: sale.customer_id || "", customer_name: sale.customer_name || "", customer_phone: sale.customer_phone || "", sale_date: fmtD(sale.sale_date || ""), notes: sale.notes || "" }); setEditItems((sale.items || []).map((i: any) => ({ item_id: i.item_id || "", quantity: String(i.quantity), unit_price: String(i.unit_price), custom_name: i.custom_name || "", display_mode: i.display_mode || "item_only" }))); setEditOpen(true); }} sx={{ color: "#60a5fa", "&:hover": { background: "rgba(59,130,246,0.1)" } }}><EditOutlined sx={{ fontSize: 16 }} /></IconButton>
                       <IconButton size="small" onClick={() => { setDeleteTarget(sale); setDeleteOpen(true); }} sx={{ color: "#64748b", "&:hover": { color: "#f87171", background: "rgba(248,113,113,0.1)" } }}><DeleteOutline sx={{ fontSize: 16 }} /></IconButton>
                     </div>
                   </div>
@@ -570,7 +598,7 @@ export default function SalesPage() {
                           {vaults.map(v => <MenuItem key={v.id} value={v.id} sx={{ fontFamily: "var(--font-cairo)" }}>{v.name}</MenuItem>)}
                         </Select>
                       </FormControl>
-                      <TextField size="small" label="المبلغ" type="number" value={recInlineForm.amount} onChange={e => setRecInlineForm(p => ({ ...p, amount: e.target.value }))} sx={{ width: 110, ...fieldSx, "& .MuiInputBase-input": { textAlign: "left" } }} />
+                      <TextField size="small" label="المبلغ" type="number" inputProps={{ inputMode: "decimal" }} value={recInlineForm.amount} onChange={e => setRecInlineForm(p => ({ ...p, amount: e.target.value }))} sx={{ width: 110, ...fieldSx, "& .MuiInputBase-input": { textAlign: "left" } }} />
                       <TextField size="small" label="ملاحظات" value={recInlineForm.notes} onChange={e => setRecInlineForm(p => ({ ...p, notes: e.target.value }))} sx={{ flex: 1, minWidth: 100, ...fieldSx }} />
                       <Button size="small" variant="contained" disabled={recBulkSaving || !recInlineForm.vault_id || !recInlineForm.amount} onClick={() => handleInlinePayRec(s.id)}
                         sx={{ borderRadius: "8px", fontFamily: "var(--font-cairo)", fontWeight: 600, textTransform: "none", background: "linear-gradient(135deg,#10b981,#059669)" }}>
@@ -624,7 +652,7 @@ export default function SalesPage() {
                           {vaults.map(v => <MenuItem key={v.id} value={v.id} sx={{ fontFamily: "var(--font-cairo)" }}>{v.name}</MenuItem>)}
                         </Select>
                       </FormControl>
-                      <TextField size="small" label="المبلغ" type="number" value={uExpInlineForm.amount} onChange={ev => setUExpInlineForm(p => ({ ...p, amount: ev.target.value }))} sx={{ width: 110, ...fieldSx, "& .MuiInputBase-input": { textAlign: "left" } }} />
+                      <TextField size="small" label="المبلغ" type="number" inputProps={{ inputMode: "decimal" }} value={uExpInlineForm.amount} onChange={ev => setUExpInlineForm(p => ({ ...p, amount: ev.target.value }))} sx={{ width: 110, ...fieldSx, "& .MuiInputBase-input": { textAlign: "left" } }} />
                       <TextField size="small" label="ملاحظات" value={uExpInlineForm.notes} onChange={ev => setUExpInlineForm(p => ({ ...p, notes: ev.target.value }))} sx={{ flex: 1, minWidth: 100, ...fieldSx }} />
                       <Button size="small" variant="contained" disabled={uExpBulkSaving || !uExpInlineForm.vault_id || !uExpInlineForm.amount} onClick={() => handleInlinePayExp(e.id)}
                         sx={{ borderRadius: "8px", fontFamily: "var(--font-cairo)", fontWeight: 600, textTransform: "none", background: "linear-gradient(135deg,#c084fc,#a855f7)" }}>
@@ -669,7 +697,7 @@ export default function SalesPage() {
                   const rowTotal = (Number(it.quantity) || 0) * (Number(it.unit_price) || 0);
                   return (
                     <div key={i} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", borderRadius: "10px", background: "rgba(15,23,42,0.5)", border: "1px solid rgba(148,163,184,0.07)", direction: "rtl" }}>
-                      <span style={{ fontSize: "13px", fontWeight: 600, color: "#f1f5f9", fontFamily: "var(--font-cairo)", flex: 1 }}>{it.item?.name || "—"} {it.item?.unit ? `(${it.item.unit})` : ""}</span>
+                      <span style={{ fontSize: "13px", fontWeight: 600, color: "#f1f5f9", fontFamily: "var(--font-cairo)", flex: 1 }}>{getItemDisplayName(it)}</span>
                       <span style={{ fontSize: "12px", color: "#94a3b8", fontFamily: "var(--font-cairo)", whiteSpace: "nowrap" }}>× {fmt(Number(it.quantity))}</span>
                       <span style={{ fontSize: "12px", color: "#64748b", fontFamily: "var(--font-cairo)", whiteSpace: "nowrap" }}>@ {fmt(Number(it.unit_price))}</span>
                       <span style={{ fontSize: "14px", fontWeight: 700, color: "#34d399", fontFamily: "var(--font-cairo)", whiteSpace: "nowrap" }}>{fmt(rowTotal)} ج.م</span>
@@ -748,7 +776,7 @@ export default function SalesPage() {
             {" · "}محصَّل: <strong style={{ color: "#10b981" }}>{fmt(Number(paySale?.paid_amount))} جنيه</strong>
             {" · "}متبقي: <strong style={{ color: "#f87171" }}>{fmt(Number(paySale?.total_amount) - Number(paySale?.paid_amount))} جنيه</strong>
           </p>
-          <TextField label="المبلغ *" type="number" value={payForm.amount} onChange={e => setPayForm({ ...payForm, amount: e.target.value })} fullWidth sx={{ ...fieldSx, "& .MuiInputBase-input": { textAlign: "left", direction: "ltr" } }} />
+          <TextField label="المبلغ *" type="number" inputProps={{ inputMode: "decimal" }} value={payForm.amount} onChange={e => setPayForm({ ...payForm, amount: e.target.value })} fullWidth sx={{ ...fieldSx, "& .MuiInputBase-input": { textAlign: "left", direction: "ltr" } }} />
           <Autocomplete options={vaults} getOptionLabel={(v: any) => `${v.name} — ${fmt(Number(v.balance))} جنيه`}
             value={vaults.find(v => v.id === payForm.vault_id) || null} onChange={(_, val) => setPayForm({ ...payForm, vault_id: val?.id || "" })}
             isOptionEqualToValue={(a, b) => a.id === b.id} noOptionsText={<span style={{ fontFamily: "var(--font-cairo)", color: "#64748b" }}>لا توجد خزن</span>}
@@ -771,7 +799,7 @@ export default function SalesPage() {
         <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2.5, pt: "8px !important" }}>
           <p style={{ margin: 0, fontSize: "13px", color: "#64748b", fontFamily: "var(--font-cairo)" }}>🧾 {sales.find(s => s.id === expSaleId)?.code}</p>
           <TextField label="البيان *" value={expForm.description} onChange={e => setExpForm({ ...expForm, description: e.target.value })} fullWidth sx={fieldSx} />
-          <TextField label="المبلغ الإجمالي *" type="number" value={expForm.amount} onChange={e => setExpForm({ ...expForm, amount: e.target.value })} fullWidth sx={{ ...fieldSx, "& .MuiInputBase-input": { textAlign: "left", direction: "ltr" } }} />
+          <TextField label="المبلغ الإجمالي *" type="number" inputProps={{ inputMode: "decimal" }} value={expForm.amount} onChange={e => setExpForm({ ...expForm, amount: e.target.value })} fullWidth sx={{ ...fieldSx, "& .MuiInputBase-input": { textAlign: "left", direction: "ltr" } }} />
           <div style={{ direction: "rtl", display: "flex", gap: "12px", alignItems: "center" }}>
             <span style={{ fontSize: "14px", color: "#94a3b8", fontFamily: "var(--font-cairo)" }}>حالة السداد:</span>
             {[{ v: "immediate", l: "دفع فوري" }, { v: "advance", l: "عربون" }, { v: "future", l: "دفع مستقبلي" }].map(opt => (
@@ -780,7 +808,7 @@ export default function SalesPage() {
             ))}
           </div>
           {expForm.payment_status === "advance" && (
-            <TextField label="مبلغ العربون *" type="number" value={expForm.advance_amount} onChange={e => setExpForm({ ...expForm, advance_amount: e.target.value })} fullWidth sx={{ ...fieldSx, "& .MuiInputBase-input": { textAlign: "left", direction: "ltr" } }} />
+            <TextField label="مبلغ العربون *" type="number" inputProps={{ inputMode: "decimal" }} value={expForm.advance_amount} onChange={e => setExpForm({ ...expForm, advance_amount: e.target.value })} fullWidth sx={{ ...fieldSx, "& .MuiInputBase-input": { textAlign: "left", direction: "ltr" } }} />
           )}
           {expForm.payment_status !== "future" && (
             <Autocomplete options={vaults} getOptionLabel={(v: any) => `${v.name} — ${fmt(Number(v.balance))} جنيه`}
@@ -815,7 +843,7 @@ export default function SalesPage() {
           <p style={{ margin: 0, fontFamily: "var(--font-cairo)", fontSize: "14px", color: "#94a3b8" }}>
             متبقي المصاريف: <strong style={{ color: "#c084fc" }}>{fmt(payExpMax)} جنيه</strong>
           </p>
-          <TextField label="المبلغ *" type="number" value={payExpForm.amount} onChange={e => setPayExpForm({ ...payExpForm, amount: e.target.value })} fullWidth sx={{ ...fieldSx, "& .MuiInputBase-input": { textAlign: "left", direction: "ltr" } }} />
+          <TextField label="المبلغ *" type="number" inputProps={{ inputMode: "decimal" }} value={payExpForm.amount} onChange={e => setPayExpForm({ ...payExpForm, amount: e.target.value })} fullWidth sx={{ ...fieldSx, "& .MuiInputBase-input": { textAlign: "left", direction: "ltr" } }} />
           <Autocomplete options={vaults} getOptionLabel={(v: any) => `${v.name} — ${fmt(Number(v.balance))} جنيه`}
             value={vaults.find(v => v.id === payExpForm.vault_id) || null} onChange={(_, val) => setPayExpForm({ ...payExpForm, vault_id: val?.id || "" })}
             isOptionEqualToValue={(a, b) => a.id === b.id} noOptionsText={<span style={{ fontFamily: "var(--font-cairo)", color: "#64748b" }}>لا توجد خزن</span>}
@@ -875,7 +903,7 @@ export default function SalesPage() {
               <tbody>
                 {(shareQuote.items || []).map((it: any, i: number) => (
                   <tr key={i} style={{ background: i % 2 === 0 ? "#fff" : "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-                    <td style={{ padding: "10px 12px", fontWeight: 600, color: "#1e293b", border: "1px solid #e2e8f0" }}>{it.item?.name || "—"} {it.item?.unit ? `(${it.item.unit})` : ""}</td>
+                    <td style={{ padding: "10px 12px", fontWeight: 600, color: "#1e293b", border: "1px solid #e2e8f0" }}>{getItemDisplayName(it)}</td>
                     <td style={{ padding: "10px 12px", textAlign: "center", direction: "ltr", border: "1px solid #e2e8f0" }}>{fmt(Number(it.quantity))}</td>
                     <td style={{ padding: "10px 12px", textAlign: "center", direction: "ltr", border: "1px solid #e2e8f0" }}>{fmt(Number(it.unit_price))}</td>
                     <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 700, direction: "ltr", border: "1px solid #e2e8f0" }}>{fmt((Number(it.quantity) || 0) * (Number(it.unit_price) || 0))}</td>
@@ -959,7 +987,7 @@ export default function SalesPage() {
                 const rowTotal = (Number(it.quantity) || 0) * (Number(it.unit_price) || 0);
                 return (
                   <tr key={i} style={{ borderBottom: "1px solid #e2e8f0", background: i % 2 === 0 ? "#fff" : "#f8fafc" }}>
-                    <td style={{ padding: "10px 12px", fontWeight: 600, color: "#1e293b", border: "1px solid #e2e8f0", borderTop: "none" }}>{it.item?.name || "—"} {it.item?.unit ? `(${it.item.unit})` : ""}</td>
+                    <td style={{ padding: "10px 12px", fontWeight: 600, color: "#1e293b", border: "1px solid #e2e8f0", borderTop: "none" }}>{getItemDisplayName(it)}</td>
                     <td style={{ padding: "10px 12px", textAlign: "center", color: "#475569", direction: "ltr", border: "1px solid #e2e8f0", borderTop: "none" }}>{fmt(Number(it.quantity))}</td>
                     <td style={{ padding: "10px 12px", textAlign: "center", color: "#475569", direction: "ltr", border: "1px solid #e2e8f0", borderTop: "none" }}>{fmt(Number(it.unit_price))}</td>
                     <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 700, color: "#0f172a", direction: "ltr", border: "1px solid #e2e8f0", borderTop: "none" }}>{fmt(rowTotal)}</td>

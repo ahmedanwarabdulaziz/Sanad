@@ -23,8 +23,11 @@ const tajawal = Tajawal({
 });
 
 export const metadata: Metadata = {
-  title: "Sanad Investment",
+  title: "Sanad for projects",
   description: "Empowering Your Future",
+  icons: {
+    icon: "/images/short logo.png",
+  },
 };
 
 export default async function RootLayout({

@@ -18,7 +18,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     await supabase.from("proj2_sales").update({ customer_id: customer_id || null, customer_name, customer_phone, sale_date, notes, total_amount }).eq("id", saleId);
     await supabase.from("proj2_sale_items").delete().eq("sale_id", saleId);
     await supabase.from("proj2_sale_items").insert(
-      (items || []).map((i: any) => ({ sale_id: saleId, item_id: i.item_id || null, quantity: Number(i.quantity), unit_price: Number(i.unit_price) }))
+      (items || []).map((i: any) => ({
+        sale_id: saleId,
+        item_id: i.item_id || null,
+        quantity: Number(i.quantity),
+        unit_price: Number(i.unit_price),
+        custom_name: i.custom_name || null,
+        display_mode: i.display_mode || 'item_only'
+      }))
     );
     return NextResponse.json({ success: true });
   }

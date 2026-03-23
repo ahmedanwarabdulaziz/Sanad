@@ -119,6 +119,7 @@ export default function ProjectLayout({
       >
         <ProjectSidebar projectId={projectId} projectName={project.name} projectSlug={project.slug} />
         <main
+          className="proj-main"
           style={{
             flex: 1,
             padding: "clamp(16px, 3vw, 32px)",

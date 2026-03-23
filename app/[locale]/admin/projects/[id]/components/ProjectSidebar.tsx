@@ -281,6 +281,8 @@ export default function ProjectSidebar({ projectId, projectName, projectSlug }: 
           .proj-sidebar { transform: translateX(100%); }
           .proj-sidebar-open { transform: translateX(0) !important; }
           .proj-sidebar-spacer { display: none !important; }
+          .proj-main h1 { padding-right: 54px !important; }
+          .proj-main h1 + p { padding-right: 54px !important; }
         }
       `}</style>
     </>

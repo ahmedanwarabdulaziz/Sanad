@@ -246,7 +246,7 @@ export default function Proj2ExpensesPage() {
     return true;
   });
 
-  const unpaidExpenses = expenses.filter(e => Number(e.amount) > Number(e.paid_amount || 0));
+  const unpaidExpenses = filteredExpenses.filter(e => Number(e.amount) > Number(e.paid_amount || 0));
 
   const handleBulkPayExp = async () => {
     if (!expBulkForm.vault_id) return;
@@ -274,8 +274,8 @@ export default function Proj2ExpensesPage() {
     setExpBulkSaving(false); setExpInlineId(null); setSuccess("تم تسجيل الدفعة"); fetchAll();
   };
 
-  const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount), 0);
-  const totalPaid     = expenses.reduce((s, e) => s + Number(e.paid_amount), 0);
+  const totalExpenses = filteredExpenses.reduce((s, e) => s + Number(e.amount), 0);
+  const totalPaid     = filteredExpenses.reduce((s, e) => s + Number(e.paid_amount), 0);
   const totalUnpaid   = totalExpenses - totalPaid;
 
 

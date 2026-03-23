@@ -60,13 +60,15 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     .maybeSingle();
 
   let lot_sales_total = 0;
+  let saleRows: any[] = [];
   if (lotItemRow?.id) {
-    const { data: saleRows } = await supabase
+    const { data } = await supabase
       .from("proj2_sale_items")
-      .select("quantity, unit_price, sale:proj2_sales!inner(project_id)")
+      .select("quantity, unit_price, sale:proj2_sales!inner(project_id, sale_date)")
       .eq("item_id", lotItemRow.id)
       .eq("sale.project_id", id);
-    lot_sales_total = (saleRows || []).reduce((s: number, r: any) => s + Number(r.quantity) * Number(r.unit_price), 0);
+    saleRows = data || [];
+    lot_sales_total = saleRows.reduce((s: number, r: any) => s + Number(r.quantity) * Number(r.unit_price), 0);
   }
 
   // Attach to each lot
@@ -79,7 +81,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     return { ...lot, conversions: lotConversions, converted_value, expenses: lotExpenses, total_expenses, po };
   });
 
-  return NextResponse.json({ lots: enriched, lot_sales_total, all_conversions: allConversions, global_converted_value });
+  return NextResponse.json({ lots: enriched, lot_sales_total, lot_sales: saleRows || [], all_conversions: allConversions, global_converted_value });
 }
 
 // POST: create a new lot (+ linked purchase order)

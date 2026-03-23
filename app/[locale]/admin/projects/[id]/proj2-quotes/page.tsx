@@ -68,6 +68,10 @@ export default function QuotesPage() {
   const [quotes, setQuotes] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [items, setItems] = useState<any[]>([]);
+  const [period, setPeriod] = useState<"month"|"year"|"all">("month");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -108,6 +112,29 @@ export default function QuotesPage() {
   const post = async (url: string, body: any) => fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const patch = async (url: string, body: any) => fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const mapItems = (its: QI[]) => its.filter(i => i.item_id && Number(i.quantity) > 0 && Number(i.unit_price) > 0).map(i => ({ item_id: i.item_id, quantity: Number(i.quantity), unit_price: Number(i.unit_price), custom_name: i.custom_name, display_mode: i.display_mode || "item_only" }));
+
+  const parseDate = (d: string) => { if (!d) return null; const dt = new Date(d); return isNaN(dt.getTime()) ? null : dt; };
+  const inPeriod = (dStr: string) => {
+    const d = parseDate(dStr);
+    if (!d) return true;
+    const now = new Date();
+    if (dateFrom) { const f = new Date(dateFrom); if (d < f) return false; }
+    if (dateTo)   { const t = new Date(dateTo); t.setHours(23,59,59); if (d > t) return false; }
+    if (dateFrom || dateTo) return true;
+    if (period === "month") return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    if (period === "year")  return d.getFullYear() === now.getFullYear();
+    return true;
+  };
+  const filteredQuotes = quotes.filter(q => {
+    if (searchQuery) {
+      const sq = searchQuery.toLowerCase();
+      const match = (q.code || "").toLowerCase().includes(sq) ||
+                    (q.customer?.name || q.customer_name || "").toLowerCase().includes(sq) ||
+                    (q.notes || "").toLowerCase().includes(sq);
+      if (!match) return false;
+    }
+    return inPeriod(q.quote_date);
+  });
 
   const handleAdd = async () => {
     setSaving(true);
@@ -165,23 +192,27 @@ export default function QuotesPage() {
       </div>
       {its.map((it, i) => (
         <div key={i} style={{ marginBottom: "16px", padding: "12px", background: "rgba(15,23,42,0.6)", borderRadius: "12px", border: "1px solid rgba(148,163,184,0.1)" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto", gap: "8px", marginBottom: "10px", alignItems: "center" }}>
-            <Autocomplete options={items} getOptionLabel={(o: any) => o.name || ""} value={items.find((o: any) => o.id === it.item_id) || null}
-              onChange={(_, val) => set(its.map((x, j) => j === i ? { ...x, item_id: val?.id || "" } : x))}
-              isOptionEqualToValue={(a, b) => a.id === b.id} noOptionsText={<span style={{ fontFamily: "var(--font-cairo)" }}>لا يوجد</span>}
-              slotProps={{ paper: acPaperSx }} renderOption={(props, o) => ro(props, <>{o.name} <span style={{ color: "#64748b", fontSize: "12px", marginRight: "4px" }}>({o.unit})</span> <span style={{ color: "#10b981", fontSize: "11px", background: "rgba(16,185,129,0.1)", padding: "2px 8px", borderRadius: "8px", marginRight: "auto", fontWeight: 700 }}>متوفر: {fmt(o.stock_quantity || 0)}</span></>)}
-              renderInput={p => <TextField {...p} placeholder="الصنف" size="small" sx={fieldSx} inputProps={{ ...p.inputProps, style: { textAlign: "right", fontFamily: "var(--font-cairo)", fontSize: "13px" } }} />} />
-            <TextField placeholder="كمية" size="small" type="number" value={it.quantity} onChange={e => set(its.map((x, j) => j === i ? { ...x, quantity: e.target.value } : x))} sx={{ ...fieldSx, width: 80, "& .MuiInputBase-input": { textAlign: "center" } }} />
-            <TextField placeholder="سعر" size="small" type="number" value={it.unit_price} onChange={e => set(its.map((x, j) => j === i ? { ...x, unit_price: e.target.value } : x))} sx={{ ...fieldSx, width: 90, "& .MuiInputBase-input": { textAlign: "center" } }} />
-            <IconButton size="small" onClick={() => set(its.filter((_, j) => j !== i))} sx={{ color: "#f87171" }}><RemoveCircleOutline sx={{ fontSize: 18 }} /></IconButton>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "10px", alignItems: "center" }}>
+            <div style={{ flex: "2 1 200px" }}>
+              <Autocomplete options={items} getOptionLabel={(o: any) => o.name || ""} value={items.find((o: any) => o.id === it.item_id) || null}
+                onChange={(_, val) => set(its.map((x, j) => j === i ? { ...x, item_id: val?.id || "" } : x))}
+                isOptionEqualToValue={(a, b) => a.id === b.id} noOptionsText={<span style={{ fontFamily: "var(--font-cairo)" }}>لا يوجد</span>}
+                slotProps={{ paper: acPaperSx }} renderOption={(props, o) => ro(props, <>{o.name} <span style={{ color: "#64748b", fontSize: "12px", marginRight: "4px" }}>({o.unit})</span> <span style={{ color: "#10b981", fontSize: "11px", background: "rgba(16,185,129,0.1)", padding: "2px 8px", borderRadius: "8px", marginRight: "auto", fontWeight: 700 }}>متوفر: {fmt(o.stock_quantity || 0)}</span></>)}
+                renderInput={p => <TextField {...p} placeholder="الصنف" size="small" sx={{ ...fieldSx, width: "100%" }} inputProps={{ ...p.inputProps, style: { textAlign: "right", fontFamily: "var(--font-cairo)", fontSize: "13px" } }} />} />
+            </div>
+            <div style={{ flex: "1 1 180px", display: "flex", gap: "8px", alignItems: "center" }}>
+              <TextField placeholder="كمية" size="small" type="number" inputProps={{ inputMode: "decimal" }} value={it.quantity} onChange={e => set(its.map((x, j) => j === i ? { ...x, quantity: e.target.value } : x))} sx={{ ...fieldSx, flex: 1, minWidth: 0, "& .MuiInputBase-input": { textAlign: "center" } }} />
+              <TextField placeholder="سعر" size="small" type="number" inputProps={{ inputMode: "decimal" }} value={it.unit_price} onChange={e => set(its.map((x, j) => j === i ? { ...x, unit_price: e.target.value } : x))} sx={{ ...fieldSx, flex: 1, minWidth: 0, "& .MuiInputBase-input": { textAlign: "center" } }} />
+              <IconButton size="small" onClick={() => set(its.filter((_, j) => j !== i))} sx={{ color: "#f87171" }}><RemoveCircleOutline sx={{ fontSize: 18 }} /></IconButton>
+            </div>
           </div>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
-             <Select size="small" value={it.display_mode || "item_only"} onChange={e => set(its.map((x, j) => j === i ? { ...x, display_mode: e.target.value as any } : x))} sx={{ ...fieldSx, minWidth: 160, color: "#e2e8f0" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
+             <Select size="small" value={it.display_mode || "item_only"} onChange={e => set(its.map((x, j) => j === i ? { ...x, display_mode: e.target.value as any } : x))} sx={{ ...fieldSx, flex: "1 1 140px", color: "#e2e8f0" }}>
                <MenuItem style={{ fontFamily: "var(--font-cairo)" }} value="item_only">الصنف فقط</MenuItem>
                <MenuItem style={{ fontFamily: "var(--font-cairo)" }} value="custom_only">الوصف المخصص فقط</MenuItem>
                <MenuItem style={{ fontFamily: "var(--font-cairo)" }} value="both">الصنف + الوصف</MenuItem>
              </Select>
-             <TextField size="small" placeholder="وصف مخصص يظهر في عرض السعر..." value={it.custom_name || ""} onChange={e => set(its.map((x, j) => j === i ? { ...x, custom_name: e.target.value } : x))} sx={{ ...fieldSx, flex: 1, minWidth: "200px" }} />
+             <TextField size="small" placeholder="وصف مخصص يظهر في عرض السعر..." value={it.custom_name || ""} onChange={e => set(its.map((x, j) => j === i ? { ...x, custom_name: e.target.value } : x))} sx={{ ...fieldSx, flex: "2 1 200px" }} />
           </div>
         </div>
       ))}
@@ -319,55 +350,93 @@ export default function QuotesPage() {
       {error && <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2, borderRadius: "12px", backgroundColor: "rgba(239,68,68,0.1)", color: "#fca5a5", fontFamily: "var(--font-cairo)", direction: "rtl" }}>{error}</Alert>}
       {success && <Alert severity="success" onClose={() => setSuccess(null)} sx={{ mb: 2, borderRadius: "12px", backgroundColor: "rgba(34,197,94,0.1)", color: "#86efac", fontFamily: "var(--font-cairo)", direction: "rtl" }}>{success}</Alert>}
       {loading ? <div style={{ textAlign: "center", padding: "60px 0" }}><CircularProgress sx={{ color: "#6366f1" }} /></div>
-        : quotes.length === 0
-          ? <div style={{ textAlign: "center", padding: "60px 24px", borderRadius: "20px", background: "rgba(30,41,59,0.4)", border: "1px solid rgba(148,163,184,0.08)" }}>
-              <p style={{ fontSize: "48px", margin: "0 0 12px" }}>📋</p>
-              <p style={{ color: "#94a3b8", fontFamily: "var(--font-cairo)", fontSize: "16px" }}>لا توجد عروض أسعار بعد</p>
-            </div>
-          : <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {quotes.map(q => {
-              const st = STATUS[q.status] || STATUS.draft;
-              return (
-                <div key={q.id} style={{ padding: "18px", borderRadius: "16px", background: "rgba(30,41,59,0.5)", border: "1px solid rgba(148,163,184,0.08)", direction: "rtl" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                      <span style={{ fontSize: "13px", fontWeight: 700, color: "#a78bfa", fontFamily: "monospace", background: "rgba(167,139,250,0.1)", padding: "3px 8px", borderRadius: "8px" }}>{q.code}</span>
-                      <span style={{ fontSize: "14px", fontWeight: 600, color: "#f1f5f9", fontFamily: "var(--font-cairo)" }}>{q.customer?.name || q.customer_name || "—"}</span>
-                      {q.customer_phone && <span style={{ fontSize: "12px", color: "#64748b", direction: "ltr" }}>{q.customer_phone}</span>}
-                      <Chip label={st.label} size="small" sx={{ background: `${st.color}22`, color: st.color, fontFamily: "var(--font-cairo)", fontSize: "11px", height: "20px" }} />
-                    </div>
-                    <div style={{ display: "flex", gap: "4px" }}>
-                      <IconButton size="small" title="إرسال عبر واتساب" onClick={() => handleWhatsApp(q)} disabled={sharing === q.id} sx={{ color: "#22c55e", "&:hover": { background: "rgba(34,197,94,0.1)" } }}>
-                        {sharing === q.id ? <CircularProgress size={14} sx={{ color: "#22c55e" }} /> : <WhatsApp sx={{ fontSize: 16 }} />}
-                      </IconButton>
-                      <IconButton size="small" title="إرسال عبر الإيميل" onClick={() => handleEmail(q)} sx={{ color: "#eab308", "&:hover": { background: "rgba(234,179,8,0.1)" } }}><EmailOutlined sx={{ fontSize: 16 }} /></IconButton>
-                      {q.status !== "converted" && q.status !== "cancelled" && (
-                        <>
-                          {q.status === "draft" && <IconButton size="small" title="إرسال" onClick={() => handleStatus(q, "sent")} sx={{ color: "#60a5fa", "&:hover": { background: "rgba(59,130,246,0.1)" } }}><SendOutlined sx={{ fontSize: 16 }} /></IconButton>}
-                          <IconButton size="small" title="تحويل لفاتورة بيع" onClick={() => handleConvert(q)} sx={{ color: "#10b981", "&:hover": { background: "rgba(16,185,129,0.1)" } }}><SwapHorizOutlined sx={{ fontSize: 16 }} /></IconButton>
-                          <IconButton size="small" title="طباعة / PDF" onClick={() => { setPrintQuote(q); setTimeout(() => window.print(), 500); }} sx={{ color: "#a855f7", "&:hover": { background: "rgba(168,85,247,0.1)" } }}><PrintOutlined sx={{ fontSize: 16 }} /></IconButton>
-                          <IconButton size="small" title="تعديل" onClick={() => { setEditTarget(q); setEditForm({ customer_id: q.customer_id || "", customer_name: q.customer_name || "", customer_phone: q.customer_phone || "", quote_date: fmtD(q.quote_date || ""), valid_until: fmtD(q.valid_until || ""), notes: q.notes || "" }); setEditItems((q.items || []).map((i: any) => ({ item_id: i.item_id || "", quantity: String(i.quantity), unit_price: String(i.unit_price), custom_name: i.custom_name || "", display_mode: i.display_mode || "item_only" }))); setEditOpen(true); }} sx={{ color: "#60a5fa", "&:hover": { background: "rgba(59,130,246,0.1)" } }}><EditOutlined sx={{ fontSize: 16 }} /></IconButton>
-                        </>
-                      )}
-                      <IconButton size="small" onClick={() => { setDeleteTarget(q); setDeleteOpen(true); }} sx={{ color: "#64748b", "&:hover": { color: "#f87171", background: "rgba(248,113,113,0.1)" } }}><DeleteOutline sx={{ fontSize: 16 }} /></IconButton>
-                    </div>
+        : (
+          <>
+            {/* Filters */}
+            {(quotes.length > 0 || searchQuery || dateFrom || dateTo || period !== "month") && (
+              <div style={{ display: "flex", gap: "10px", marginBottom: "16px", flexWrap: "wrap", alignItems: "center", direction: "rtl" }}>
+                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center", direction: "rtl" }}>
+                  {(["month", "year", "all"] as const).map(p => (
+                    <button key={p} onClick={() => { setPeriod(p); setDateFrom(""); setDateTo(""); }}
+                      style={{ padding: "5px 16px", borderRadius: "20px", fontSize: "12px", fontFamily: "var(--font-cairo)", cursor: "pointer", border: "none", fontWeight: 600, transition: "all 0.15s",
+                        background: period === p && !dateFrom && !dateTo ? "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)" : "rgba(30,41,59,0.8)",
+                        color: period === p && !dateFrom && !dateTo ? "#fff" : "#94a3b8",
+                        outline: period === p && !dateFrom && !dateTo ? "none" : "1px solid rgba(148,163,184,0.15)" }}>
+                      {p === "month" ? "الشهر الحالي" : p === "year" ? "السنة الحالية" : "الكل"}
+                    </button>
+                  ))}
+                  <div style={{ display: "flex", gap: "4px", alignItems: "center", background: (dateFrom || dateTo) ? "rgba(99,102,241,0.1)" : "rgba(30,41,59,0.6)", borderRadius: "10px", padding: "4px 8px", outline: (dateFrom || dateTo) ? "1px solid rgba(99,102,241,0.35)" : "1px solid rgba(148,163,184,0.12)" }}>
+                    <span style={{ fontSize: "10px", color: "#64748b", fontFamily: "var(--font-cairo)" }}>من</span>
+                    <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                      style={{ background: "transparent", border: "none", outline: "none", color: "#e2e8f0", fontSize: "11px", fontFamily: "monospace", width: "110px", cursor: "pointer", colorScheme: "dark" }} />
+                    <span style={{ fontSize: "10px", color: "#64748b", fontFamily: "var(--font-cairo)" }}>إلى</span>
+                    <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+                      style={{ background: "transparent", border: "none", outline: "none", color: "#e2e8f0", fontSize: "11px", fontFamily: "monospace", width: "110px", cursor: "pointer", colorScheme: "dark" }} />
+                    {(dateFrom || dateTo) && (
+                      <button onClick={() => { setDateFrom(""); setDateTo(""); }}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "#f87171", fontSize: "13px", lineHeight: 1, padding: "0 2px" }}>✕</button>
+                    )}
                   </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "10px" }}>
-                    {(q.items || []).map((it: any, i: number) => (
-                      <span key={i} style={{ fontSize: "12px", color: "#94a3b8", fontFamily: "var(--font-cairo)", background: "rgba(15,23,42,0.4)", padding: "4px 10px", borderRadius: "8px" }}>
-                        {getItemDisplayName(it)} × {it.quantity} @ {fmt(it.unit_price)} جنيه
-                      </span>
-                    ))}
-                  </div>
-                  <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" }}>
-                    <span style={{ fontSize: "13px", fontFamily: "var(--font-cairo)", color: "#64748b" }}>الإجمالي: <strong style={{ color: "#f1f5f9" }}>{fmt(q.total_amount)} جنيه</strong></span>
-                    <span style={{ fontSize: "11px", color: "#475569", direction: "ltr" }}>{fmtD(q.quote_date)}</span>
-                    {q.valid_until && <span style={{ fontSize: "11px", color: "#f59e0b", fontFamily: "var(--font-cairo)" }}>صالح حتى: {fmtD(q.valid_until)}</span>}
-                  </div>
+                  <span style={{ fontSize: "10px", color: "#475569", fontFamily: "var(--font-cairo)" }}>{filteredQuotes.length} عرض</span>
                 </div>
-              );
-            })}
-          </div>
+                <TextField placeholder="بحث برقم العرض، اسم العميل..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} size="small" 
+                  inputProps={{ dir: "rtl", style: { textAlign: "right", fontFamily: "var(--font-cairo)", fontSize: "13px" } }}
+                  sx={{ ...fieldSx, flex: "1 1 200px" }} />
+              </div>
+            )}
+
+            {filteredQuotes.length === 0
+              ? <div style={{ textAlign: "center", padding: "60px 24px", borderRadius: "20px", background: "rgba(30,41,59,0.4)", border: "1px solid rgba(148,163,184,0.08)" }}>
+                  <p style={{ fontSize: "48px", margin: "0 0 12px" }}>📋</p>
+                  <p style={{ color: "#94a3b8", fontFamily: "var(--font-cairo)", fontSize: "16px" }}>{quotes.length === 0 ? "لا توجد عروض أسعار بعد" : "لا توجد نتائج مطابقة للبحث"}</p>
+                </div>
+              : <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {filteredQuotes.map(q => {
+                  const st = STATUS[q.status] || STATUS.draft;
+                  return (
+                    <div key={q.id} style={{ padding: "18px", borderRadius: "16px", background: "rgba(30,41,59,0.5)", border: "1px solid rgba(148,163,184,0.08)", direction: "rtl" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                          <span style={{ fontSize: "13px", fontWeight: 700, color: "#a78bfa", fontFamily: "monospace", background: "rgba(167,139,250,0.1)", padding: "3px 8px", borderRadius: "8px" }}>{q.code}</span>
+                          <span style={{ fontSize: "14px", fontWeight: 600, color: "#f1f5f9", fontFamily: "var(--font-cairo)" }}>{q.customer?.name || q.customer_name || "—"}</span>
+                          {q.customer_phone && <span style={{ fontSize: "12px", color: "#64748b", direction: "ltr" }}>{q.customer_phone}</span>}
+                          <Chip label={st.label} size="small" sx={{ background: `${st.color}22`, color: st.color, fontFamily: "var(--font-cairo)", fontSize: "11px", height: "20px" }} />
+                        </div>
+                        <div style={{ display: "flex", gap: "4px" }}>
+                          <IconButton size="small" title="إرسال عبر واتساب" onClick={() => handleWhatsApp(q)} disabled={sharing === q.id} sx={{ color: "#22c55e", "&:hover": { background: "rgba(34,197,94,0.1)" } }}>
+                            {sharing === q.id ? <CircularProgress size={14} sx={{ color: "#22c55e" }} /> : <WhatsApp sx={{ fontSize: 16 }} />}
+                          </IconButton>
+                          <IconButton size="small" title="إرسال عبر الإيميل" onClick={() => handleEmail(q)} sx={{ color: "#eab308", "&:hover": { background: "rgba(234,179,8,0.1)" } }}><EmailOutlined sx={{ fontSize: 16 }} /></IconButton>
+                          {q.status !== "converted" && q.status !== "cancelled" && (
+                            <>
+                              {q.status === "draft" && <IconButton size="small" title="إرسال" onClick={() => handleStatus(q, "sent")} sx={{ color: "#60a5fa", "&:hover": { background: "rgba(59,130,246,0.1)" } }}><SendOutlined sx={{ fontSize: 16 }} /></IconButton>}
+                              <IconButton size="small" title="تحويل لفاتورة بيع" onClick={() => handleConvert(q)} sx={{ color: "#10b981", "&:hover": { background: "rgba(16,185,129,0.1)" } }}><SwapHorizOutlined sx={{ fontSize: 16 }} /></IconButton>
+                              <IconButton size="small" title="طباعة / PDF" onClick={() => { setPrintQuote(q); setTimeout(() => window.print(), 500); }} sx={{ color: "#a855f7", "&:hover": { background: "rgba(168,85,247,0.1)" } }}><PrintOutlined sx={{ fontSize: 16 }} /></IconButton>
+                              <IconButton size="small" title="تعديل" onClick={() => { setEditTarget(q); setEditForm({ customer_id: q.customer_id || "", customer_name: q.customer_name || "", customer_phone: q.customer_phone || "", quote_date: fmtD(q.quote_date || ""), valid_until: fmtD(q.valid_until || ""), notes: q.notes || "" }); setEditItems((q.items || []).map((i: any) => ({ item_id: i.item_id || "", quantity: String(i.quantity), unit_price: String(i.unit_price), custom_name: i.custom_name || "", display_mode: i.display_mode || "item_only" }))); setEditOpen(true); }} sx={{ color: "#60a5fa", "&:hover": { background: "rgba(59,130,246,0.1)" } }}><EditOutlined sx={{ fontSize: 16 }} /></IconButton>
+                            </>
+                          )}
+                          <IconButton size="small" onClick={() => { setDeleteTarget(q); setDeleteOpen(true); }} sx={{ color: "#64748b", "&:hover": { color: "#f87171", background: "rgba(248,113,113,0.1)" } }}><DeleteOutline sx={{ fontSize: 16 }} /></IconButton>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "10px" }}>
+                        {(q.items || []).map((it: any, i: number) => (
+                          <span key={i} style={{ fontSize: "12px", color: "#94a3b8", fontFamily: "var(--font-cairo)", background: "rgba(15,23,42,0.4)", padding: "4px 10px", borderRadius: "8px" }}>
+                            {getItemDisplayName(it)} × {it.quantity} @ {fmt(it.unit_price)} جنيه
+                          </span>
+                        ))}
+                      </div>
+                      <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" }}>
+                        <span style={{ fontSize: "13px", fontFamily: "var(--font-cairo)", color: "#64748b" }}>الإجمالي: <strong style={{ color: "#f1f5f9" }}>{fmt(q.total_amount)} جنيه</strong></span>
+                        <span style={{ fontSize: "11px", color: "#475569", direction: "ltr" }}>{fmtD(q.quote_date)}</span>
+                        {q.valid_until && <span style={{ fontSize: "11px", color: "#f59e0b", fontFamily: "var(--font-cairo)" }}>صالح حتى: {fmtD(q.valid_until)}</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            }
+          </>
+        )
       }
 
       {/* Add Dialog */}
@@ -422,7 +491,7 @@ export default function QuotesPage() {
             value={custForm.phone}
             onChange={e => setCustForm({ ...custForm, phone: e.target.value.replace(/\D/g, "").slice(0, 11) })}
             fullWidth sx={fieldSx}
-            inputProps={{ style: { direction: "ltr", letterSpacing: "1px" }, maxLength: 11 }}
+            inputProps={{ style: { direction: "ltr", letterSpacing: "1px" }, maxLength: 11, inputMode: "numeric" }}
             error={!!custForm.phone && !/^01[0125]\d{8}$/.test(custForm.phone)}
             helperText={custForm.phone && !/^01[0125]\d{8}$/.test(custForm.phone) ? "رقم غير صحيح — يجب أن يبدأ بـ 010 أو 011 أو 012 أو 015 ويتكون من 11 رقم" : ""}
             FormHelperTextProps={{ style: { fontFamily: "var(--font-cairo)", textAlign: "right", direction: "rtl" } }}

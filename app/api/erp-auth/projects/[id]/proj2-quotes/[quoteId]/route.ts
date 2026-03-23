@@ -67,7 +67,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
     await supabase.from("proj2_sale_items").insert(
-      (quote.items || []).map((i: any) => ({ sale_id: sale.id, item_id: i.item_id, quantity: i.quantity, unit_price: i.unit_price }))
+      (quote.items || []).map((i: any) => ({
+        sale_id: sale.id,
+        item_id: i.item_id,
+        quantity: i.quantity,
+        unit_price: i.unit_price,
+        custom_name: i.custom_name || null,
+        display_mode: i.display_mode || 'item_only'
+      }))
     );
 
     await supabase.from("proj2_price_quotes").update({ status: "converted" }).eq("id", quoteId);
