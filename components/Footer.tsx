@@ -48,7 +48,7 @@ export default function Footer() {
                                 <PhoneIcon sx={{ color: "#C29B40" }} />
                                 <Box>
                                     <Typography variant="body2" dir="ltr" sx={{ opacity: 0.9, display: 'block' }}>01100994488</Typography>
-                                    <Typography variant="body2" dir="ltr" sx={{ opacity: 0.9, display: 'block' }}>01000001432</Typography>
+                                    <Typography variant="body2" dir="ltr" sx={{ opacity: 0.9, display: 'block' }}>01111101753</Typography>
                                 </Box>
                             </Box>
                             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
@@ -66,12 +66,6 @@ export default function Footer() {
                             {t("addresses")}
                         </Typography>
                         <Stack spacing={2}>
-                            <Box sx={{ display: 'flex', gap: 1.5 }}>
-                                <LocationOnIcon sx={{ color: "#C29B40", mt: 0.5, fontSize: 20 }} />
-                                <Typography variant="body2" sx={{ opacity: 0.8, lineHeight: 1.6 }}>
-                                    {t("locations.assiut")}
-                                </Typography>
-                            </Box>
                             <Box sx={{ display: 'flex', gap: 1.5 }}>
                                 <LocationOnIcon sx={{ color: "#C29B40", mt: 0.5, fontSize: 20 }} />
                                 <Typography variant="body2" sx={{ opacity: 0.8, lineHeight: 1.6 }}>
