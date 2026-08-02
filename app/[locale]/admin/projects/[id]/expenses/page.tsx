@@ -10,7 +10,7 @@ import {
 import {
   AddOutlined, EditOutlined, DeleteOutline,
   AttachFileOutlined, CloudUploadOutlined, AddCircleOutline, RemoveCircleOutline,
-  EventOutlined,
+  EventOutlined, SearchOutlined, FilterListOutlined,
 } from "@mui/icons-material";
 
 interface Stage { id: string; stage_name: string; }
@@ -99,6 +99,12 @@ export default function ExpensesPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteExpense, setDeleteExpense] = useState<Expense | null>(null);
   const [deleteSaving, setDeleteSaving] = useState(false);
+
+  // Filters
+  const [search, setSearch] = useState("");
+  const [filterStage, setFilterStage] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const hasFilters = search || filterStage || filterStatus;
 
   const fetchAll = useCallback(async () => {
     try {
@@ -215,8 +221,15 @@ export default function ExpensesPage() {
     } catch { setError("فشل"); } finally { setDeleteSaving(false); }
   };
 
-  const totalCompany = expenses.reduce((s, e) => s + Number(e.company_amount), 0);
-  const totalPaid = expenses.reduce((s, e) => s + Number(e.paid_amount), 0);
+  const filteredExpenses = expenses.filter(exp => {
+    if (search && !exp.expense_name.includes(search) && !exp.stage?.stage_name.includes(search)) return false;
+    if (filterStage && exp.stage_id !== filterStage) return false;
+    if (filterStatus && exp.payment_status !== filterStatus) return false;
+    return true;
+  });
+
+  const totalCompany = filteredExpenses.reduce((s, e) => s + Number(e.company_amount), 0);
+  const totalPaid = filteredExpenses.reduce((s, e) => s + Number(e.paid_amount), 0);
   const totalPending = totalCompany - totalPaid;
 
   // Validation — treasury account is always required
@@ -261,13 +274,59 @@ export default function ExpensesPage() {
       {error && <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2, borderRadius: "12px", backgroundColor: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#fca5a5", fontFamily: "var(--font-cairo)", direction: "rtl" }}>{error}</Alert>}
       {success && <Alert severity="success" onClose={() => setSuccess(null)} sx={{ mb: 2, borderRadius: "12px", backgroundColor: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", color: "#86efac", fontFamily: "var(--font-cairo)", direction: "rtl" }}>{success}</Alert>}
 
+      {/* Filters */}
+      <div style={{ marginBottom: "16px", display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+        {/* Search */}
+        <div style={{ position: "relative", flex: "1 1 200px", minWidth: "160px" }}>
+          <SearchOutlined sx={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#64748b", fontSize: 18, pointerEvents: "none" }} />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="بحث عن مصروف..."
+            style={{ width: "100%", boxSizing: "border-box", padding: "10px 40px 10px 14px", background: "rgba(15,23,42,0.5)", border: "1px solid rgba(148,163,184,0.15)", borderRadius: "12px", color: "#e2e8f0", fontFamily: "var(--font-cairo)", fontSize: "13px", outline: "none", direction: "rtl" }}
+          />
+        </div>
+        {/* Stage filter */}
+        <select
+          value={filterStage}
+          onChange={e => setFilterStage(e.target.value)}
+          style={{ flex: "1 1 160px", minWidth: "140px", padding: "10px 12px", background: "rgba(15,23,42,0.5)", border: "1px solid rgba(148,163,184,0.15)", borderRadius: "12px", color: filterStage ? "#e2e8f0" : "#64748b", fontFamily: "var(--font-cairo)", fontSize: "13px", outline: "none", cursor: "pointer", direction: "rtl" }}
+        >
+          <option value="">كل المراحل</option>
+          {stages.map(s => <option key={s.id} value={s.id}>{s.stage_name}</option>)}
+        </select>
+        {/* Status chips */}
+        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+          {Object.entries(PAYMENT_LABELS).map(([val, { label, color }]) => (
+            <button key={val} onClick={() => setFilterStatus(filterStatus === val ? "" : val)}
+              style={{ padding: "6px 14px", borderRadius: "20px", border: `1px solid ${filterStatus === val ? color : "rgba(148,163,184,0.2)"}`, background: filterStatus === val ? `${color}22` : "transparent", color: filterStatus === val ? color : "#94a3b8", fontFamily: "var(--font-cairo)", fontSize: "12px", fontWeight: 600, cursor: "pointer", transition: "all 0.15s" }}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {/* Clear filters */}
+        {hasFilters && (
+          <button onClick={() => { setSearch(""); setFilterStage(""); setFilterStatus(""); }}
+            style={{ padding: "6px 14px", borderRadius: "20px", border: "1px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.08)", color: "#f87171", fontFamily: "var(--font-cairo)", fontSize: "12px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
+            <FilterListOutlined sx={{ fontSize: 14 }} /> مسح الفلاتر
+          </button>
+        )}
+      </div>
+
+      {/* Filtered count hint */}
+      {hasFilters && (
+        <p style={{ fontSize: "12px", color: "#64748b", fontFamily: "var(--font-cairo)", margin: "0 0 12px", direction: "rtl" }}>
+          يعرض {filteredExpenses.length} من أصل {expenses.length} مصروف
+        </p>
+      )}
+
       {/* Table */}
       {loading ? (
         <div style={{ textAlign: "center", padding: "60px 0" }}><CircularProgress sx={{ color: "#3b82f6" }} /></div>
-      ) : expenses.length === 0 ? (
+      ) : filteredExpenses.length === 0 ? (
         <div style={{ textAlign: "center", padding: "60px 24px", borderRadius: "20px", background: "rgba(30,41,59,0.4)", border: "1px solid rgba(148,163,184,0.08)" }}>
-          <p style={{ fontSize: "48px", margin: "0 0 12px" }}>📋</p>
-          <p style={{ color: "#94a3b8", fontFamily: "var(--font-cairo)", fontSize: "16px" }}>لا توجد مصروفات بعد</p>
+          <p style={{ fontSize: "48px", margin: "0 0 12px" }}>🔍</p>
+          <p style={{ color: "#94a3b8", fontFamily: "var(--font-cairo)", fontSize: "16px" }}>{hasFilters ? "لا توجد نتائج للفلتر الحالي" : "لا توجد مصروفات بعد"}</p>
         </div>
       ) : (
         <div style={{ borderRadius: "16px", overflow: "hidden", border: "1px solid rgba(148,163,184,0.08)" }}>
@@ -277,7 +336,7 @@ export default function ExpensesPage() {
             <span style={{ textAlign: "center" }}>الحالة</span><span style={{ textAlign: "center" }}>التاريخ</span>
             <span style={{ textAlign: "center" }}>إجراء</span>
           </div>
-          {expenses.map((exp, i) => (
+          {filteredExpenses.map((exp, i) => (
             <div key={exp.id} style={{
               display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1fr 80px", gap: "6px",
               padding: "12px 16px", alignItems: "center",
