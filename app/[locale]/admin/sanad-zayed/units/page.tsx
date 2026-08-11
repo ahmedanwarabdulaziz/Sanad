@@ -25,7 +25,7 @@ interface Unit {
   id: string; stage_id: string; building_code: string; floor: string; unit_code: string;
   licensed_area: number; notes: string; sort_order: number; stage?: { name: string }; allocations?: UnitAllocation[];
 }
-interface Contract { id: string; investor?: { name: string }; unit_quantity: number; stage_id: string; }
+interface Contract { id: string; investor?: { name: string }; unit_quantity: number; stage_id: string; contract_date: string; }
 
 export default function UnitsPage() {
   const searchParams = useSearchParams();
@@ -259,9 +259,35 @@ export default function UnitsPage() {
 
   // Contracts under this stage that still have unallocated sqm remaining
   const contractsWithRemaining = useMemo(() => {
+    // An investor can legitimately hold several contracts of the same area (each
+    // destined for its own physical unit later) — number them per-investor, ordered
+    // by contract date, so identical-looking contracts stay distinguishable in the
+    // assign dropdown instead of appearing as indistinguishable duplicates.
+    const seqByInvestor = new Map<string, number>();
+    const sorted = [...contracts].sort((a, b) => a.contract_date.localeCompare(b.contract_date));
+    const seqByContractId = new Map<string, number>();
+    for (const c of sorted) {
+      const key = c.investor?.name ?? c.id;
+      const next = (seqByInvestor.get(key) ?? 0) + 1;
+      seqByInvestor.set(key, next);
+      seqByContractId.set(c.id, next);
+    }
+
+    const countByInvestor = new Map<string, number>();
+    for (const c of contracts) {
+      const key = c.investor?.name ?? c.id;
+      countByInvestor.set(key, (countByInvestor.get(key) ?? 0) + 1);
+    }
+
     return contracts.map(c => {
       const allocated = units.flatMap(u => u.allocations ?? []).filter(a => a.contract_id === c.id).reduce((sum, a) => sum + Number(a.allocated_sqm), 0);
-      return { ...c, remaining: Number(c.unit_quantity) - allocated };
+      const key = c.investor?.name ?? c.id;
+      return {
+        ...c,
+        remaining: Number(c.unit_quantity) - allocated,
+        seq: seqByContractId.get(c.id) ?? 1,
+        hasSiblings: (countByInvestor.get(key) ?? 1) > 1,
+      };
     });
   }, [contracts, units]);
 
@@ -368,7 +394,7 @@ export default function UnitsPage() {
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {contractsWithRemaining.filter(c => c.remaining > 0.01).map(c => (
               <span key={c.id} style={{ fontSize: 12, background: "rgba(217,119,6,0.1)", color: "#d97706", borderRadius: 8, padding: "5px 10px", fontWeight: 700 }}>
-                {c.investor?.name ?? "—"} — متبقي {c.remaining.toLocaleString("ar-EG-u-nu-latn")} م²
+                {c.investor?.name ?? "—"}{c.hasSiblings && ` (عقد ${c.seq} — ${new Date(c.contract_date).toLocaleDateString("ar-EG-u-nu-latn")})`} — متبقي {c.remaining.toLocaleString("ar-EG-u-nu-latn")} م²
               </span>
             ))}
           </div>
@@ -459,8 +485,10 @@ export default function UnitsPage() {
             <FormControl fullWidth sx={inputSx}>
               <InputLabel>العقد *</InputLabel>
               <Select value={assignForm.contract_id} label="العقد *" onChange={e => setAssignForm({ ...assignForm, contract_id: e.target.value })}>
-                {contractsWithRemaining.map(c => (
-                  <MenuItem key={c.id} value={c.id}>{c.investor?.name ?? "—"} — متبقي {c.remaining.toLocaleString("ar-EG-u-nu-latn")} م²</MenuItem>
+                {contractsWithRemaining.filter(c => c.remaining > 0.01).map(c => (
+                  <MenuItem key={c.id} value={c.id}>
+                    {c.investor?.name ?? "—"}{c.hasSiblings && ` (عقد ${c.seq} — ${new Date(c.contract_date).toLocaleDateString("ar-EG-u-nu-latn")})`} — متبقي {c.remaining.toLocaleString("ar-EG-u-nu-latn")} م²
+                  </MenuItem>
                 ))}
               </Select>
             </FormControl>

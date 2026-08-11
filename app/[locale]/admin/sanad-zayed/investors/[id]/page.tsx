@@ -572,7 +572,14 @@ export default function InvestorDetailPage() {
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 24 }}>
         <div style={{ background: "#fff", borderRadius: 16, padding: "20px", border: "1px solid rgba(0,0,0,0.05)", flex: 1, minWidth: 200 }}>
           <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 6 }}>إجمالي المدفوع</div>
-          <div style={{ fontSize: 22, fontWeight: 900, color: "#16a34a" }}>{(ledger?.total_deposits ?? 0).toLocaleString()}</div>
+          <div style={{ fontSize: 22, fontWeight: 900, color: "#16a34a" }}>
+            {((ledger?.total_deposits ?? 0) - (ledger?.total_withdrawals ?? 0)).toLocaleString()}
+          </div>
+          {(ledger?.total_withdrawals ?? 0) > 0 && (
+            <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>
+              مدفوع {(ledger?.total_deposits ?? 0).toLocaleString()} — مسترد/مخصوم {(ledger?.total_withdrawals ?? 0).toLocaleString()}
+            </div>
+          )}
         </div>
         <div style={{ background: "#fff", borderRadius: 16, padding: "20px", border: "1px solid rgba(0,0,0,0.05)", flex: 1, minWidth: 200 }}>
           <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 6 }}>إجمالي قيمة العقود النشطة</div>
@@ -769,7 +776,9 @@ export default function InvestorDetailPage() {
                     <InputLabel>العقد السابق *</InputLabel>
                     <Select value={form.linkedContractId} label="العقد السابق *" onChange={e => onLinkedContractChange(e.target.value)}>
                       {priorStageContractsFor(form.stage_id).map(c => (
-                        <MenuItem key={c.id} value={c.id}>{c.stage?.name ?? "—"} — {Number(c.unit_price_at_contract).toLocaleString("ar-EG-u-nu-latn")} /م²</MenuItem>
+                        <MenuItem key={c.id} value={c.id}>
+                          {c.stage?.name ?? "—"} — {Number(c.unit_quantity).toLocaleString("ar-EG-u-nu-latn")} م² بسعر {Number(c.unit_price_at_contract).toLocaleString("ar-EG-u-nu-latn")} /م² ({new Date(c.contract_date).toLocaleDateString("ar-EG-u-nu-latn")})
+                        </MenuItem>
                       ))}
                     </Select>
                   </FormControl>

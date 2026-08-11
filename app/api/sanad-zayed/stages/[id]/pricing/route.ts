@@ -172,7 +172,11 @@ export async function GET(
       below_cost_warning: investorPrice < priceActualPlusExpected,
 
       // Money breakdown by area bucket, at both investor price and cost price.
-      total_area_value_investor: area * investorPrice,
+      // total_area_value_investor is NOT area * investorPrice: each sold contract
+      // locked its own per-meter price (varies investor to investor), so the total
+      // must be the real sum of sold contract values plus the remaining (unsold)
+      // area projected at today's price — matching sold + remaining exactly.
+      total_area_value_investor: soldValueInvestor + remainingArea * investorPrice,
       total_area_value_cost: area * priceActualPlusExpected,
       sold_area_value_investor: soldValueInvestor,
       sold_area_value_cost: soldArea * priceActualPlusExpected,
