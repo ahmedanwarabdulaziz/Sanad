@@ -19,8 +19,7 @@ export default function AdminLayout({
       dir="rtl"
       style={{
         minHeight: "100vh",
-        background:
-          "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)",
+        backgroundColor: "#d1d0c6",
       }}
     >
       {children}

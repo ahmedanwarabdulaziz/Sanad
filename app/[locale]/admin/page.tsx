@@ -47,8 +47,8 @@ export default function AdminLoginPage() {
         return;
       }
 
-      // Successful login – redirect to ERP dashboard
-      router.push("/admin/dashboard");
+      // Successful login – redirect to ERP users list
+      router.push("/admin/projects");
     } catch {
       setError("حدث خطأ غير متوقع. حاول مرة أخرى.");
     } finally {
@@ -108,12 +108,11 @@ export default function AdminLoginPage() {
           maxWidth: "440px",
           padding: "clamp(28px, 5vw, 48px) clamp(20px, 4vw, 40px)",
           borderRadius: "clamp(16px, 3vw, 24px)",
-          background: "rgba(30, 41, 59, 0.6)",
+          background: "#154278",
           backdropFilter: "blur(24px)",
           WebkitBackdropFilter: "blur(24px)",
-          border: "1px solid rgba(148, 163, 184, 0.12)",
-          boxShadow:
-            "0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(148, 163, 184, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.05)",
+          border: "1px solid rgba(255, 255, 255, 0.1)",
+          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
         }}
       >
         {/* Logo / Branding */}
@@ -124,23 +123,22 @@ export default function AdminLoginPage() {
               height: "72px",
               margin: "0 auto 20px",
               borderRadius: "20px",
-              background:
-                "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)",
+              background: "#d1d0c6",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 8px 32px rgba(59, 130, 246, 0.3)",
+              boxShadow: "0 8px 32px rgba(209, 208, 198, 0.3)",
             }}
           >
             <LockOutlined
-              style={{ fontSize: "32px", color: "#ffffff" }}
+              style={{ fontSize: "32px", color: "#154278" }}
             />
           </div>
           <h1
             style={{
               fontSize: "28px",
               fontWeight: 700,
-              color: "#f1f5f9",
+              color: "#ffffff",
               margin: "0 0 8px 0",
               fontFamily: "var(--font-cairo), Cairo, sans-serif",
               letterSpacing: "-0.02em",
@@ -151,7 +149,7 @@ export default function AdminLoginPage() {
           <p
             style={{
               fontSize: "15px",
-              color: "#94a3b8",
+              color: "rgba(255, 255, 255, 0.8)",
               margin: 0,
               fontFamily: "var(--font-cairo), Cairo, sans-serif",
             }}
@@ -196,34 +194,34 @@ export default function AdminLoginPage() {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <EmailOutlined sx={{ color: "#64748b", fontSize: 20 }} />
+                  <EmailOutlined sx={{ color: "rgba(255,255,255,0.7)", fontSize: 20 }} />
                 </InputAdornment>
               ),
             }}
             sx={{
               "& .MuiOutlinedInput-root": {
                 borderRadius: "14px",
-                backgroundColor: "rgba(15, 23, 42, 0.5)",
-                color: "#e2e8f0",
+                backgroundColor: "rgba(255, 255, 255, 0.1)",
+                color: "#ffffff",
                 fontFamily: "var(--font-cairo), Cairo, sans-serif",
                 transition: "all 0.2s ease",
                 "& fieldset": {
-                  borderColor: "rgba(148, 163, 184, 0.15)",
+                  borderColor: "rgba(255, 255, 255, 0.3)",
                   transition: "all 0.2s ease",
                 },
                 "&:hover fieldset": {
-                  borderColor: "rgba(59, 130, 246, 0.4)",
+                  borderColor: "#d1d0c6",
                 },
                 "&.Mui-focused fieldset": {
-                  borderColor: "#3b82f6",
-                  boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.15)",
+                  borderColor: "#d1d0c6",
+                  boxShadow: "0 0 0 3px rgba(209, 208, 198, 0.3)",
                 },
               },
               "& .MuiInputLabel-root": {
-                color: "#94a3b8",
+                color: "rgba(255, 255, 255, 0.7)",
                 fontFamily: "var(--font-cairo), Cairo, sans-serif",
                 "&.Mui-focused": {
-                  color: "#60a5fa",
+                  color: "#d1d0c6",
                 },
               },
               "& .MuiInputBase-input": {
@@ -244,7 +242,7 @@ export default function AdminLoginPage() {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <LockOutlined sx={{ color: "#64748b", fontSize: 20 }} />
+                  <LockOutlined sx={{ color: "rgba(255,255,255,0.7)", fontSize: 20 }} />
                 </InputAdornment>
               ),
               endAdornment: (
@@ -252,7 +250,7 @@ export default function AdminLoginPage() {
                   <IconButton
                     onClick={() => setShowPassword(!showPassword)}
                     edge="end"
-                    sx={{ color: "#64748b" }}
+                    sx={{ color: "rgba(255,255,255,0.7)" }}
                     aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
                   >
                     {showPassword ? (
@@ -267,27 +265,27 @@ export default function AdminLoginPage() {
             sx={{
               "& .MuiOutlinedInput-root": {
                 borderRadius: "14px",
-                backgroundColor: "rgba(15, 23, 42, 0.5)",
-                color: "#e2e8f0",
+                backgroundColor: "rgba(255, 255, 255, 0.1)",
+                color: "#ffffff",
                 fontFamily: "var(--font-cairo), Cairo, sans-serif",
                 transition: "all 0.2s ease",
                 "& fieldset": {
-                  borderColor: "rgba(148, 163, 184, 0.15)",
+                  borderColor: "rgba(255, 255, 255, 0.3)",
                   transition: "all 0.2s ease",
                 },
                 "&:hover fieldset": {
-                  borderColor: "rgba(59, 130, 246, 0.4)",
+                  borderColor: "#d1d0c6",
                 },
                 "&.Mui-focused fieldset": {
-                  borderColor: "#3b82f6",
-                  boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.15)",
+                  borderColor: "#d1d0c6",
+                  boxShadow: "0 0 0 3px rgba(209, 208, 198, 0.3)",
                 },
               },
               "& .MuiInputLabel-root": {
-                color: "#94a3b8",
+                color: "rgba(255, 255, 255, 0.7)",
                 fontFamily: "var(--font-cairo), Cairo, sans-serif",
                 "&.Mui-focused": {
-                  color: "#60a5fa",
+                  color: "#d1d0c6",
                 },
               },
               "& .MuiInputBase-input": {
@@ -310,26 +308,26 @@ export default function AdminLoginPage() {
               fontWeight: 600,
               fontFamily: "var(--font-cairo), Cairo, sans-serif",
               textTransform: "none",
-              background: "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)",
-              boxShadow: "0 8px 32px rgba(59, 130, 246, 0.25)",
+              color: "#154278",
+              background: "#d1d0c6",
+              boxShadow: "0 8px 32px rgba(209, 208, 198, 0.25)",
               transition: "all 0.3s ease",
               "&:hover": {
-                background:
-                  "linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)",
-                boxShadow: "0 12px 40px rgba(59, 130, 246, 0.35)",
+                background: "#e5e5e0",
+                boxShadow: "0 12px 40px rgba(209, 208, 198, 0.35)",
                 transform: "translateY(-1px)",
               },
               "&:active": {
                 transform: "translateY(0)",
               },
               "&.Mui-disabled": {
-                background: "rgba(59, 130, 246, 0.3)",
-                color: "rgba(255,255,255,0.5)",
+                background: "rgba(209, 208, 198, 0.5)",
+                color: "rgba(21, 66, 120, 0.5)",
               },
             }}
           >
             {loading ? (
-              <CircularProgress size={24} sx={{ color: "#fff" }} />
+              <CircularProgress size={24} sx={{ color: "#154278" }} />
             ) : (
               "تسجيل الدخول"
             )}
@@ -342,7 +340,7 @@ export default function AdminLoginPage() {
             textAlign: "center",
             marginTop: "32px",
             fontSize: "13px",
-            color: "#475569",
+            color: "rgba(255,255,255,0.6)",
             fontFamily: "var(--font-cairo), Cairo, sans-serif",
           }}
         >

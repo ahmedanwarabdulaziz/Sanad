@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import AdminAuthenticatedLayout from "../components/AdminAuthenticatedLayout";
-import UserAccessDialog from "../components/UserAccessDialog";
+
 import {
   Button,
   TextField,
@@ -19,6 +20,13 @@ import {
   Alert,
   Chip,
   InputAdornment,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
 } from "@mui/material";
 import {
   AddOutlined,
@@ -29,7 +37,6 @@ import {
   LockOutlined,
   VisibilityOff,
   Visibility,
-  SecurityOutlined,
 } from "@mui/icons-material";
 
 interface ErpUser {
@@ -51,21 +58,21 @@ const ROLE_LABELS: Record<string, { label: string; color: string }> = {
 
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
-    borderRadius: "12px",
-    backgroundColor: "rgba(15, 23, 42, 0.5)",
-    color: "#e2e8f0",
+    borderRadius: "8px",
+    backgroundColor: "#e8e8e3",
+    color: "#111827",
     fontFamily: "var(--font-cairo), Cairo, sans-serif",
-    "& fieldset": { borderColor: "rgba(148, 163, 184, 0.15)" },
-    "&:hover fieldset": { borderColor: "rgba(59, 130, 246, 0.4)" },
-    "&.Mui-focused fieldset": { borderColor: "#3b82f6" },
+    "& fieldset": { borderColor: "#d1d0c6" },
+    "&:hover fieldset": { borderColor: "#154278" },
+    "&.Mui-focused fieldset": { borderColor: "#154278" },
   },
   "& .MuiInputLabel-root": {
-    color: "#94a3b8",
+    color: "#4b5563",
     fontFamily: "var(--font-cairo), Cairo, sans-serif",
-    "&.Mui-focused": { color: "#60a5fa" },
+    "&.Mui-focused": { color: "#154278" },
   },
   "& .MuiInputBase-input": { textAlign: "right" },
-  "& .MuiSelect-icon": { color: "#64748b" },
+  "& .MuiSelect-icon": { color: "#4b5563" },
 };
 
 export default function UsersPage() {
@@ -96,9 +103,6 @@ export default function UsersPage() {
   const [deleteUser, setDeleteUser] = useState<ErpUser | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  // Access dialog
-  const [accessOpen, setAccessOpen] = useState(false);
-  const [accessUser, setAccessUser] = useState<ErpUser | null>(null);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -215,18 +219,19 @@ export default function UsersPage() {
 
   const dialogSx = {
     "& .MuiDialog-paper": {
-      background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
-      border: "1px solid rgba(148, 163, 184, 0.12)",
-      borderRadius: "20px",
-      color: "#e2e8f0",
+      background: "#e8e8e3",
+      border: "1px solid #d1d0c6",
+      borderRadius: "12px",
+      color: "#111827",
       direction: "rtl" as const,
       minWidth: "min(400px, 90vw)",
+      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
     },
   };
 
   return (
     <AdminAuthenticatedLayout>
-      <div>
+      <div style={{ maxWidth: "1600px", margin: "0 auto", width: "100%" }}>
         {/* Header */}
         <div
           style={{
@@ -235,15 +240,19 @@ export default function UsersPage() {
             alignItems: "center",
             marginBottom: "24px",
             flexWrap: "wrap",
-            gap: "12px",
+            gap: "16px",
+            background: "#e8e8e3",
+            padding: "24px 32px",
+            borderRadius: "8px",
+            border: "1px solid #d1d0c6",
           }}
         >
           <div>
             <h1
               style={{
-                fontSize: "clamp(22px, 4vw, 28px)",
+                fontSize: "24px",
                 fontWeight: 700,
-                color: "#f1f5f9",
+                color: "#111827",
                 margin: "0 0 4px 0",
                 fontFamily: "var(--font-cairo), Cairo, sans-serif",
               }}
@@ -253,12 +262,12 @@ export default function UsersPage() {
             <p
               style={{
                 fontSize: "14px",
-                color: "#64748b",
+                color: "#4b5563",
                 margin: 0,
                 fontFamily: "var(--font-cairo), Cairo, sans-serif",
               }}
             >
-              إضافة وتعديل وإدارة مستخدمي النظام
+              سجل مستخدمي النظام والصلاحيات
             </p>
           </div>
           <Button
@@ -266,18 +275,19 @@ export default function UsersPage() {
             startIcon={<AddOutlined />}
             onClick={() => setAddOpen(true)}
             sx={{
-              borderRadius: "12px",
+              borderRadius: "6px",
               px: 3,
-              py: 1.2,
+              py: 1,
               fontFamily: "var(--font-cairo), Cairo, sans-serif",
               fontWeight: 600,
               fontSize: "14px",
               textTransform: "none",
-              background:
-                "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)",
+              color: "#ffffff",
+              background: "#154278",
+              boxShadow: "none",
               "&:hover": {
-                background:
-                  "linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)",
+                background: "#0d2b4f",
+                boxShadow: "none",
               },
             }}
           >
@@ -335,209 +345,143 @@ export default function UsersPage() {
             style={{
               textAlign: "center",
               padding: "60px 24px",
-              borderRadius: "16px",
-              background: "rgba(30, 41, 59, 0.4)",
-              border: "1px solid rgba(148, 163, 184, 0.08)",
+              borderRadius: "8px",
+              background: "#e8e8e3",
+              border: "1px solid #d1d0c6",
             }}
           >
             <PersonOutline
-              sx={{ fontSize: 48, color: "#475569", mb: 2 }}
+              sx={{ fontSize: 48, color: "#9ca3af", mb: 2 }}
             />
             <p
               style={{
-                color: "#94a3b8",
+                color: "#4b5563",
                 fontFamily: "var(--font-cairo)",
                 fontSize: "16px",
               }}
             >
-              لا يوجد مستخدمين حتى الآن
+              لا يوجد سجلات مستخدمين حتى الآن
             </p>
           </div>
         ) : (
-          <div
-            style={{
-              display: "grid",
-              gap: "12px",
-            }}
-          >
-            {users.map((user) => (
-              <div
-                key={user.id}
-                style={{
-                  padding: "clamp(16px, 3vw, 24px)",
-                  borderRadius: "16px",
-                  background: "rgba(30, 41, 59, 0.6)",
-                  backdropFilter: "blur(12px)",
-                  border: "1px solid rgba(148, 163, 184, 0.08)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "16px",
-                  flexWrap: "wrap",
-                  opacity: user.is_active ? 1 : 0.5,
-                  transition: "all 0.2s ease",
-                }}
-              >
-                {/* Avatar */}
-                <div
-                  style={{
-                    width: "48px",
-                    height: "48px",
-                    borderRadius: "14px",
-                    background: `linear-gradient(135deg, ${ROLE_LABELS[user.role]?.color || "#64748b"}33, ${ROLE_LABELS[user.role]?.color || "#64748b"}11)`,
-                    border: `1px solid ${ROLE_LABELS[user.role]?.color || "#64748b"}33`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <PersonOutline
+          <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #d1d0c6", borderRadius: "8px" }}>
+            <Table sx={{ minWidth: 650 }} aria-label="users table">
+              <TableHead sx={{ background: "#154278" }}>
+                <TableRow>
+                  <TableCell sx={{ color: "#ffffff", fontFamily: "var(--font-cairo)", fontWeight: 700, fontSize: "14px" }}>المستخدم</TableCell>
+                  <TableCell sx={{ color: "#ffffff", fontFamily: "var(--font-cairo)", fontWeight: 700, fontSize: "14px" }}>البريد الإلكتروني</TableCell>
+                  <TableCell sx={{ color: "#ffffff", fontFamily: "var(--font-cairo)", fontWeight: 700, fontSize: "14px" }}>الصلاحية</TableCell>
+                  <TableCell sx={{ color: "#ffffff", fontFamily: "var(--font-cairo)", fontWeight: 700, fontSize: "14px" }}>الحالة</TableCell>
+                  <TableCell sx={{ color: "#ffffff", fontFamily: "var(--font-cairo)", fontWeight: 700, fontSize: "14px", textAlign: "left" }}>الإجراءات</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {users.map((user) => (
+                  <TableRow
+                    key={user.id}
                     sx={{
-                      color: ROLE_LABELS[user.role]?.color || "#64748b",
-                      fontSize: 24,
-                    }}
-                  />
-                </div>
-
-                {/* Info */}
-                <div style={{ flex: 1, minWidth: "150px" }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      flexWrap: "wrap",
+                      '&:last-child td, &:last-child th': { border: 0 },
+                      backgroundColor: "#e8e8e3",
+                      opacity: user.is_active ? 1 : 0.6,
+                      "&:hover": {
+                        backgroundColor: "#d1d0c6",
+                      }
                     }}
                   >
-                    <span
-                      style={{
-                        fontSize: "16px",
-                        fontWeight: 600,
-                        color: "#e2e8f0",
-                        fontFamily: "var(--font-cairo)",
-                      }}
-                    >
-                      {user.name}
-                    </span>
-                    <Chip
-                      label={ROLE_LABELS[user.role]?.label || user.role}
-                      size="small"
-                      sx={{
-                        backgroundColor: `${ROLE_LABELS[user.role]?.color || "#64748b"}22`,
-                        color: ROLE_LABELS[user.role]?.color || "#64748b",
-                        border: `1px solid ${ROLE_LABELS[user.role]?.color || "#64748b"}33`,
-                        fontFamily: "var(--font-cairo)",
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        height: "24px",
-                      }}
-                    />
-                    {!user.is_active && (
+                    <TableCell component="th" scope="row" sx={{ fontFamily: "var(--font-cairo)", color: "#111827", fontWeight: 600 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <div
+                          style={{
+                            width: "36px",
+                            height: "36px",
+                            borderRadius: "8px",
+                            background: `linear-gradient(135deg, ${ROLE_LABELS[user.role]?.color || "#64748b"}22, ${ROLE_LABELS[user.role]?.color || "#64748b"}05)`,
+                            border: `1px solid ${ROLE_LABELS[user.role]?.color || "#64748b"}44`,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <PersonOutline sx={{ color: ROLE_LABELS[user.role]?.color || "#64748b", fontSize: 20 }} />
+                        </div>
+                        {user.name}
+                      </div>
+                    </TableCell>
+                    <TableCell sx={{ fontFamily: "var(--font-cairo)", color: "#4b5563" }}>{user.email}</TableCell>
+                    <TableCell>
                       <Chip
-                        label="معطل"
+                        label={ROLE_LABELS[user.role]?.label || user.role}
                         size="small"
                         sx={{
-                          backgroundColor: "rgba(239, 68, 68, 0.15)",
-                          color: "#f87171",
-                          border: "1px solid rgba(239, 68, 68, 0.3)",
+                          backgroundColor: `${ROLE_LABELS[user.role]?.color || "#64748b"}15`,
+                          color: ROLE_LABELS[user.role]?.color || "#64748b",
+                          border: `1px solid ${ROLE_LABELS[user.role]?.color || "#64748b"}33`,
                           fontFamily: "var(--font-cairo)",
-                          fontSize: "11px",
-                          height: "24px",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          borderRadius: "4px",
                         }}
                       />
-                    )}
-                  </div>
-                  <p
-                    style={{
-                      fontSize: "13px",
-                      color: "#64748b",
-                      margin: "4px 0 0",
-                      fontFamily: "var(--font-cairo)",
-                    }}
-                  >
-                    {user.email}
-                  </p>
-                </div>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={user.is_active ? "نشط" : "معطل"}
+                        size="small"
+                        sx={{
+                          backgroundColor: user.is_active ? "rgba(74, 222, 128, 0.1)" : "rgba(239, 68, 68, 0.1)",
+                          color: user.is_active ? "#16a34a" : "#dc2626",
+                          border: `1px solid ${user.is_active ? "rgba(74, 222, 128, 0.2)" : "rgba(239, 68, 68, 0.2)"}`,
+                          fontFamily: "var(--font-cairo)",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          borderRadius: "4px",
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell sx={{ textAlign: "left" }}>
+                      <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end" }}>
+                        <Button
+                          onClick={() => handleToggleActive(user)}
+                          variant="text"
+                          size="small"
+                          sx={{
+                            color: user.is_active ? "#ef4444" : "#10b981",
+                            fontFamily: "var(--font-cairo)",
+                            fontWeight: 600,
+                            minWidth: "auto",
+                            padding: "4px 8px",
+                            borderRadius: "4px",
+                          }}
+                        >
+                          {user.is_active ? "تعطيل" : "تفعيل"}
+                        </Button>
 
-                {/* Actions */}
-                <div
-                  style={{ display: "flex", gap: "4px", flexShrink: 0 }}
-                >
-                  <IconButton
-                    onClick={() =>
-                      handleToggleActive(user)
-                    }
-                    size="small"
-                    title={user.is_active ? "تعطيل" : "تفعيل"}
-                    sx={{
-                      color: user.is_active ? "#4ade80" : "#f87171",
-                      "&:hover": {
-                        background: user.is_active
-                          ? "rgba(74, 222, 128, 0.1)"
-                          : "rgba(248, 113, 113, 0.1)",
-                      },
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "8px",
-                        height: "8px",
-                        borderRadius: "50%",
-                        background: user.is_active
-                          ? "#4ade80"
-                          : "#f87171",
-                      }}
-                    />
-                  </IconButton>
-                  <IconButton
-                    onClick={() => {
-                      setAccessUser(user);
-                      setAccessOpen(true);
-                    }}
-                    size="small"
-                    title="الصلاحيات"
-                    sx={{
-                      color: "#94a3b8",
-                      "&:hover": {
-                        color: "#f59e0b",
-                        background: "rgba(245, 158, 11, 0.1)",
-                      },
-                    }}
-                  >
-                    <SecurityOutlined sx={{ fontSize: 18 }} />
-                  </IconButton>
-                  <IconButton
-                    onClick={() => openEdit(user)}
-                    size="small"
-                    sx={{
-                      color: "#94a3b8",
-                      "&:hover": {
-                        color: "#60a5fa",
-                        background: "rgba(96, 165, 250, 0.1)",
-                      },
-                    }}
-                  >
-                    <EditOutlined sx={{ fontSize: 18 }} />
-                  </IconButton>
-                  {user.role !== "super_admin" && (
-                    <IconButton
-                      onClick={() => openDelete(user)}
-                      size="small"
-                      sx={{
-                        color: "#94a3b8",
-                        "&:hover": {
-                          color: "#f87171",
-                          background: "rgba(248, 113, 113, 0.1)",
-                        },
-                      }}
-                    >
-                      <DeleteOutline sx={{ fontSize: 18 }} />
-                    </IconButton>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+                        <IconButton
+                          onClick={() => openEdit(user)}
+                          size="small"
+                          title="تعديل"
+                          sx={{ color: "#6b7280", "&:hover": { color: "#154278", background: "rgba(21, 66, 120, 0.1)" } }}
+                        >
+                          <EditOutlined sx={{ fontSize: 18 }} />
+                        </IconButton>
+                        {user.role !== "super_admin" && (
+                          <IconButton
+                            onClick={() => openDelete(user)}
+                            size="small"
+                            title="حذف"
+                            sx={{ color: "#6b7280", "&:hover": { color: "#ef4444", background: "rgba(239, 68, 68, 0.1)" } }}
+                          >
+                            <DeleteOutline sx={{ fontSize: 18 }} />
+                          </IconButton>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         )}
 
         {/* ── Add User Dialog ── */}
@@ -638,15 +582,15 @@ export default function UsersPage() {
                 MenuProps={{
                   PaperProps: {
                     sx: {
-                      background: "#1e293b",
-                      border: "1px solid rgba(148,163,184,0.12)",
+                      background: "#154278",
+                      border: "1px solid rgba(255,255,255,0.12)",
                       borderRadius: "12px",
                       "& .MuiMenuItem-root": {
                         fontFamily: "var(--font-cairo)",
-                        color: "#e2e8f0",
-                        "&:hover": { background: "rgba(59,130,246,0.1)" },
+                        color: "#ffffff",
+                        "&:hover": { background: "rgba(209,208,198,0.1)" },
                         "&.Mui-selected": {
-                          background: "rgba(59,130,246,0.15)",
+                          background: "rgba(209,208,198,0.15)",
                         },
                       },
                     },
@@ -684,20 +628,19 @@ export default function UsersPage() {
                 fontFamily: "var(--font-cairo)",
                 fontWeight: 600,
                 textTransform: "none",
-                background:
-                  "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)",
+                color: "#154278",
+                background: "#d1d0c6",
                 "&:hover": {
-                  background:
-                    "linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)",
+                  background: "#e5e5e0",
                 },
                 "&.Mui-disabled": {
-                  background: "rgba(59, 130, 246, 0.3)",
-                  color: "rgba(255,255,255,0.4)",
+                  background: "rgba(209, 208, 198, 0.3)",
+                  color: "rgba(21, 66, 120, 0.4)",
                 },
               }}
             >
               {addLoading ? (
-                <CircularProgress size={20} sx={{ color: "#fff" }} />
+                <CircularProgress size={20} sx={{ color: "#154278" }} />
               ) : (
                 "إضافة"
               )}
@@ -748,15 +691,15 @@ export default function UsersPage() {
                 MenuProps={{
                   PaperProps: {
                     sx: {
-                      background: "#1e293b",
-                      border: "1px solid rgba(148,163,184,0.12)",
+                      background: "#154278",
+                      border: "1px solid rgba(255,255,255,0.12)",
                       borderRadius: "12px",
                       "& .MuiMenuItem-root": {
                         fontFamily: "var(--font-cairo)",
-                        color: "#e2e8f0",
-                        "&:hover": { background: "rgba(59,130,246,0.1)" },
+                        color: "#ffffff",
+                        "&:hover": { background: "rgba(209,208,198,0.1)" },
                         "&.Mui-selected": {
-                          background: "rgba(59,130,246,0.15)",
+                          background: "rgba(209,208,198,0.15)",
                         },
                       },
                     },
@@ -790,16 +733,15 @@ export default function UsersPage() {
                 fontFamily: "var(--font-cairo)",
                 fontWeight: 600,
                 textTransform: "none",
-                background:
-                  "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)",
+                color: "#154278",
+                background: "#d1d0c6",
                 "&:hover": {
-                  background:
-                    "linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)",
+                  background: "#e5e5e0",
                 },
               }}
             >
               {editLoading ? (
-                <CircularProgress size={20} sx={{ color: "#fff" }} />
+                <CircularProgress size={20} sx={{ color: "#154278" }} />
               ) : (
                 "حفظ"
               )}
@@ -872,18 +814,7 @@ export default function UsersPage() {
           </DialogActions>
         </Dialog>
 
-        {/* ── Access Management Dialog ── */}
-        {accessUser && (
-          <UserAccessDialog
-            open={accessOpen}
-            onClose={() => setAccessOpen(false)}
-            userId={accessUser.id}
-            userName={accessUser.name}
-            onSaved={() => {
-              setSuccess("تم تحديث الصلاحيات بنجاح");
-            }}
-          />
-        )}
+
       </div>
     </AdminAuthenticatedLayout>
   );

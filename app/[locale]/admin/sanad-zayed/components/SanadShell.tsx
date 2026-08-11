@@ -4,18 +4,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CircularProgress } from "@mui/material";
 import { createClient } from "@/lib/supabase/client";
-import AdminSidebar from "./AdminSidebar";
+import SanadTopNav from "./SanadTopNav";
+import SanadSidebar from "./SanadSidebar";
 
 /**
- * Wrapper layout for authenticated admin pages (dashboard, users, etc.)
- * Provides sidebar navigation + content area, and redirects to login if
- * there's no active session.
+ * Authenticated shell for all Sanad Zayed pages.
+ * Handles auth check, top nav (with project switcher), and sidebar.
  */
-export default function AdminAuthenticatedLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function SanadShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [checking, setChecking] = useState(true);
 
@@ -30,9 +26,7 @@ export default function AdminAuthenticatedLayout({
       }
       setChecking(false);
     });
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [router]);
 
   if (checking) {
@@ -43,6 +37,7 @@ export default function AdminAuthenticatedLayout({
           alignItems: "center",
           justifyContent: "center",
           minHeight: "100vh",
+          background: "#f8f7f3",
         }}
       >
         <CircularProgress sx={{ color: "#154278" }} />
@@ -51,17 +46,24 @@ export default function AdminAuthenticatedLayout({
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
-      <AdminSidebar />
-      <div
-        style={{
-          flex: 1,
-          minHeight: "100vh",
-          padding: "clamp(16px, 3vw, 32px)",
-          overflowX: "hidden",
-        }}
-      >
-        {children}
+    <div style={{ minHeight: "100vh", background: "#f8f7f3" }} dir="rtl">
+      {/* Fixed top bar */}
+      <SanadTopNav />
+
+      {/* Body: sidebar + content */}
+      <div style={{ display: "flex", paddingTop: 64 }}>
+        <SanadSidebar />
+        <main
+          style={{
+            flex: 1,
+            minHeight: "calc(100vh - 64px)",
+            padding: "clamp(16px, 3vw, 32px)",
+            overflowX: "hidden",
+            fontFamily: "var(--font-cairo), Cairo, sans-serif",
+          }}
+        >
+          {children}
+        </main>
       </div>
     </div>
   );

@@ -1,281 +1,282 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import AdminAuthenticatedLayout from "../components/AdminAuthenticatedLayout";
 import { useRouter } from "next/navigation";
-import { CircularProgress, Chip, Button } from "@mui/material";
-import { AddOutlined, LocationOnOutlined } from "@mui/icons-material";
+import { motion } from "framer-motion";
+import AdminAuthenticatedLayout from "../components/AdminAuthenticatedLayout";
+import { ArrowBackIosNewOutlined } from "@mui/icons-material";
 
-interface Project {
-  id: string;
-  name: string;
-  slug: string;
-  description: string;
-  location: string;
-  status: string;
-  project_stages: { count: number }[];
-}
+const PROJECTS = [
+  {
+    id: "sanad-zayed",
+    name: "سند زايد",
+    description: "نظام إدارة الاستثمار العقاري — مستثمرون، مراحل، خزينة، مصروفات",
+    type: "عقاري",
+    status: "ACTIVE" as const,
+    href: "/admin/sanad-zayed",
+    icon: "🏗️",
+    gradient: "linear-gradient(135deg, #154278 0%, #1e6abf 100%)",
+    stats: ["المستثمرون", "المراحل", "العقود"],
+  },
+];
 
-const STATUS_MAP: Record<string, { label: string; color: string }> = {
-  PLANNING: { label: "تخطيط", color: "#f59e0b" },
-  ACTIVE: { label: "نشط", color: "#10b981" },
-  COMPLETED: { label: "مكتمل", color: "#6366f1" },
+const STATUS_CONFIG = {
+  ACTIVE:    { label: "نشط",    dot: "#22c55e", bg: "rgba(34,197,94,0.12)",    text: "#16a34a" },
+  PLANNING:  { label: "تخطيط", dot: "#f59e0b", bg: "rgba(245,158,11,0.12)",   text: "#d97706" },
+  COMPLETED: { label: "مكتمل", dot: "#64748b", bg: "rgba(100,116,139,0.12)",  text: "#64748b" },
 };
 
-export default function ProjectsPage() {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function ProjectsLauncherPage() {
   const router = useRouter();
-
-  const fetchProjects = useCallback(async () => {
-    try {
-      const res = await fetch("/api/erp-auth/projects");
-      const data = await res.json();
-      if (data.projects) setProjects(data.projects);
-    } catch {
-      /* ignore */
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
 
   return (
     <AdminAuthenticatedLayout>
-      <div>
+      <div dir="rtl" style={{ fontFamily: "var(--font-cairo), Cairo, sans-serif" }}>
         {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          style={{ marginBottom: 36 }}
+        >
+          <h1
+            style={{
+              fontSize: "clamp(24px, 3.5vw, 32px)",
+              fontWeight: 900,
+              color: "#111827",
+              margin: 0,
+            }}
+          >
+            مشاريعك
+          </h1>
+          <p style={{ fontSize: 14, color: "#6b7280", marginTop: 8, margin: "8px 0 0" }}>
+            اختر مشروعاً للدخول إلى نظامه
+          </p>
+        </motion.div>
+
+        {/* Grid */}
         <div
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "24px",
-            flexWrap: "wrap",
-            gap: "12px",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+            gap: 24,
           }}
         >
-          <div>
-            <h1
-              style={{
-                fontSize: "clamp(22px, 4vw, 28px)",
-                fontWeight: 700,
-                color: "#f1f5f9",
-                margin: "0 0 4px 0",
-                fontFamily: "var(--font-cairo)",
-              }}
-            >
-              المشاريع
-            </h1>
-            <p
-              style={{
-                fontSize: "14px",
-                color: "#64748b",
-                margin: 0,
-                fontFamily: "var(--font-cairo)",
-              }}
-            >
-              إدارة وتتبع جميع المشاريع
-            </p>
-          </div>
-          <Button
-            variant="contained"
-            startIcon={<AddOutlined />}
-            onClick={() => router.push("/admin/projects/new")}
-            sx={{
-              borderRadius: "12px",
-              px: 3,
-              py: 1.2,
-              fontFamily: "var(--font-cairo)",
-              fontWeight: 600,
-              fontSize: "14px",
-              textTransform: "none",
-              background: "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)",
-              "&:hover": {
-                background: "linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)",
-              },
-            }}
-          >
-            مشروع جديد
-          </Button>
-        </div>
-
-        {/* Projects Grid */}
-        {loading ? (
-          <div style={{ textAlign: "center", padding: "60px 0" }}>
-            <CircularProgress sx={{ color: "#3b82f6" }} />
-          </div>
-        ) : projects.length === 0 ? (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "80px 24px",
-              borderRadius: "20px",
-              background: "rgba(30, 41, 59, 0.4)",
-              border: "1px solid rgba(148, 163, 184, 0.08)",
-            }}
-          >
-            <p style={{ fontSize: "48px", margin: "0 0 16px" }}>🏗️</p>
-            <p
-              style={{
-                fontSize: "18px",
-                color: "#94a3b8",
-                fontFamily: "var(--font-cairo)",
-              }}
-            >
-              لا توجد مشاريع بعد
-            </p>
-          </div>
-        ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-              gap: "16px",
-            }}
-          >
-            {projects.map((project) => {
-              const stageCount = project.project_stages?.[0]?.count || 0;
-              const status = STATUS_MAP[project.status] || STATUS_MAP.PLANNING;
-              return (
+          {PROJECTS.map((project, i) => {
+            const status = STATUS_CONFIG[project.status];
+            return (
+              <motion.div
+                key={project.id}
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.08, duration: 0.35 }}
+                whileHover={{ y: -6, boxShadow: "0 16px 48px rgba(21,66,120,0.2)" }}
+                style={{
+                  background: "#fff",
+                  borderRadius: 22,
+                  overflow: "hidden",
+                  cursor: "pointer",
+                  boxShadow: "0 2px 14px rgba(0,0,0,0.07)",
+                  transition: "box-shadow 0.25s ease",
+                  border: "1px solid rgba(0,0,0,0.04)",
+                }}
+                onClick={() => router.push(project.href)}
+              >
+                {/* Gradient header */}
                 <div
-                  key={project.id}
-                  onClick={() => router.push(`/admin/projects/${project.id}`)}
                   style={{
-                    padding: "24px",
-                    borderRadius: "20px",
-                    background: "rgba(30, 41, 59, 0.6)",
-                    backdropFilter: "blur(12px)",
-                    border: "1px solid rgba(148, 163, 184, 0.08)",
-                    cursor: "pointer",
-                    transition: "all 0.2s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.borderColor =
-                      "rgba(59, 130, 246, 0.3)";
-                    (e.currentTarget as HTMLDivElement).style.transform =
-                      "translateY(-2px)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.borderColor =
-                      "rgba(148, 163, 184, 0.08)";
-                    (e.currentTarget as HTMLDivElement).style.transform =
-                      "translateY(0)";
+                    background: project.gradient,
+                    padding: "28px 26px 22px",
+                    position: "relative",
+                    overflow: "hidden",
                   }}
                 >
-                  {/* Project header */}
+                  {/* Decorative circle */}
                   <div
                     style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                      marginBottom: "16px",
+                      position: "absolute",
+                      top: -30,
+                      left: -30,
+                      width: 120,
+                      height: 120,
+                      borderRadius: "50%",
+                      background: "rgba(255,255,255,0.06)",
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: "absolute",
+                      bottom: -20,
+                      left: 40,
+                      width: 80,
+                      height: 80,
+                      borderRadius: "50%",
+                      background: "rgba(255,255,255,0.04)",
+                    }}
+                  />
+
+                  {/* Icon */}
+                  <div style={{ fontSize: 40, marginBottom: 12, position: "relative" }}>
+                    {project.icon}
+                  </div>
+
+                  {/* Name */}
+                  <div
+                    style={{
+                      fontSize: 24,
+                      fontWeight: 900,
+                      color: "#fff",
+                      lineHeight: 1.1,
+                      position: "relative",
                     }}
                   >
-                    <div>
-                      <h3
-                        style={{
-                          fontSize: "18px",
-                          fontWeight: 700,
-                          color: "#f1f5f9",
-                          margin: "0 0 6px",
-                          fontFamily: "var(--font-cairo)",
-                        }}
-                      >
-                        {project.name}
-                      </h3>
-                      {project.location && (
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "4px",
-                          }}
-                        >
-                          <LocationOnOutlined
-                            sx={{ fontSize: 14, color: "#64748b" }}
-                          />
-                          <span
-                            style={{
-                              fontSize: "13px",
-                              color: "#64748b",
-                              fontFamily: "var(--font-cairo)",
-                            }}
-                          >
-                            {project.location}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <Chip
-                      label={status.label}
-                      size="small"
-                      sx={{
-                        backgroundColor: `${status.color}22`,
-                        color: status.color,
-                        border: `1px solid ${status.color}33`,
-                        fontFamily: "var(--font-cairo)",
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        height: "26px",
+                    {project.name}
+                  </div>
+
+                  {/* Status badge */}
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      marginTop: 10,
+                      background: status.bg,
+                      borderRadius: 999,
+                      padding: "4px 12px",
+                      border: `1px solid ${status.dot}30`,
+                      position: "relative",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 7,
+                        height: 7,
+                        borderRadius: "50%",
+                        background: status.dot,
+                        boxShadow: `0 0 6px ${status.dot}`,
                       }}
                     />
-                  </div>
-
-                  {/* Description */}
-                  {project.description && (
-                    <p
+                    <span
                       style={{
-                        fontSize: "13px",
-                        color: "#94a3b8",
-                        margin: "0 0 16px",
-                        fontFamily: "var(--font-cairo)",
-                        lineHeight: 1.6,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: status.dot,
                       }}
                     >
-                      {project.description}
-                    </p>
-                  )}
-
-                  {/* Footer stats */}
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "24px",
-                      paddingTop: "16px",
-                      borderTop: "1px solid rgba(148, 163, 184, 0.06)",
-                    }}
-                  >
-                    <div>
-                      <p
-                        style={{
-                          fontSize: "11px",
-                          color: "#64748b",
-                          margin: "0 0 2px",
-                          fontFamily: "var(--font-cairo)",
-                        }}
-                      >
-                        المراحل
-                      </p>
-                      <p
-                        style={{
-                          fontSize: "20px",
-                          fontWeight: 700,
-                          color: "#3b82f6",
-                          margin: 0,
-                        }}
-                      >
-                        {stageCount}
-                      </p>
-                    </div>
+                      {status.label}
+                    </span>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
+
+                {/* Body */}
+                <div style={{ padding: "20px 26px 24px" }}>
+                  {/* Description */}
+                  <p
+                    style={{
+                      fontSize: 13,
+                      color: "#6b7280",
+                      lineHeight: 1.7,
+                      margin: "0 0 16px",
+                    }}
+                  >
+                    {project.description}
+                  </p>
+
+                  {/* Type tag */}
+                  <div
+                    style={{
+                      display: "inline-block",
+                      background: "rgba(21,66,120,0.07)",
+                      color: "#154278",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      borderRadius: 8,
+                      padding: "4px 12px",
+                      marginBottom: 20,
+                    }}
+                  >
+                    {project.type}
+                  </div>
+
+                  {/* CTA */}
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(project.href);
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      background: "linear-gradient(135deg, #154278 0%, #1e6abf 100%)",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 12,
+                      fontSize: 14,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontFamily: "var(--font-cairo), Cairo, sans-serif",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 8,
+                      boxShadow: "0 4px 14px rgba(21,66,120,0.3)",
+                    }}
+                  >
+                    دخول المشروع
+                    <ArrowBackIosNewOutlined sx={{ fontSize: 14 }} />
+                  </motion.button>
+                </div>
+              </motion.div>
+            );
+          })}
+
+          {/* Coming soon placeholder */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: PROJECTS.length * 0.08 + 0.05, duration: 0.35 }}
+            style={{
+              background: "rgba(255,255,255,0.45)",
+              borderRadius: 22,
+              border: "2px dashed rgba(21,66,120,0.15)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 48,
+              minHeight: 300,
+              cursor: "default",
+            }}
+          >
+            <div
+              style={{
+                width: 60,
+                height: 60,
+                borderRadius: 18,
+                background: "rgba(21,66,120,0.06)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 28,
+                marginBottom: 16,
+              }}
+            >
+              +
+            </div>
+            <div
+              style={{
+                fontSize: 15,
+                fontWeight: 700,
+                color: "#9ca3af",
+                marginBottom: 6,
+              }}
+            >
+              مشروع جديد
+            </div>
+            <div style={{ fontSize: 13, color: "#d1d0c6" }}>قريباً...</div>
+          </motion.div>
+        </div>
       </div>
     </AdminAuthenticatedLayout>
   );
