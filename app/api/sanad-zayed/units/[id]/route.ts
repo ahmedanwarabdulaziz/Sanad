@@ -46,6 +46,16 @@ export async function DELETE(
 
   try {
     const { id } = await params;
+
+    const { count, error: allocError } = await supabase
+      .from("sz_unit_allocations")
+      .select("id", { count: "exact", head: true })
+      .eq("unit_id", id);
+    if (allocError) throw allocError;
+    if ((count ?? 0) > 0) {
+      return NextResponse.json({ error: "لا يمكن حذف وحدة مخصصة لمستثمر — احذف التخصيص أولاً" }, { status: 409 });
+    }
+
     const { error } = await supabase.from("sz_units").delete().eq("id", id);
     if (error) throw error;
 

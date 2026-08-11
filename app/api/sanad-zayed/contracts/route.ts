@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from("sz_investor_contracts")
-      .select(`*, investor:investor_id(name), stage:stage_id(name, base_unit_price, pricing_status)`)
+      .select(`*, investor:investor_id(name), stage:stage_id(name, base_unit_price, pricing_status), linked_contract:linked_contract_id(id, unit_price_at_contract, stage:stage_id(name))`)
       .order("contract_date", { ascending: false });
 
     if (investorId) query = query.eq("investor_id", investorId);
@@ -105,6 +105,26 @@ export async function POST(request: NextRequest) {
     const unitPrice = Number(body.unit_price_at_contract);
     const totalContractValue = requestedArea * unitPrice * (1 + managementFeePct / 100);
 
+    // Carry-over pricing: a later-stage contract can link back to an earlier-stage
+    // contract for the same investor/unit (their locked price carries over), or
+    // record a manually-entered prior-stage price for a brand-new investor. Purely
+    // for traceability/display — total_contract_value is still driven by
+    // unit_price_at_contract above, which the UI pre-fills as the suggested sum.
+    let linkedContractId: string | null = null;
+    if (body.linked_contract_id) {
+      const { data: linked, error: linkedError } = await supabase
+        .from("sz_investor_contracts")
+        .select("id")
+        .eq("id", body.linked_contract_id)
+        .eq("investor_id", body.investor_id)
+        .single();
+      if (linkedError || !linked) {
+        return NextResponse.json({ error: "العقد المرتبط غير صالح" }, { status: 422 });
+      }
+      linkedContractId = linked.id;
+    }
+    const priorStagePrice = Number(body.prior_stage_price) || 0;
+
     const { data, error } = await supabase
       .from("sz_investor_contracts")
       .insert({
@@ -117,6 +137,8 @@ export async function POST(request: NextRequest) {
         contract_date: body.contract_date || new Date().toISOString().split("T")[0],
         notes: (body.notes as string)?.trim() ?? "",
         status: "ACTIVE",
+        linked_contract_id: linkedContractId,
+        prior_stage_price: priorStagePrice,
       })
       .select(`*, investor:investor_id(name), stage:stage_id(name)`)
       .single();

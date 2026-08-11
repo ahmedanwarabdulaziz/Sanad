@@ -22,7 +22,7 @@ interface Investor {
 }
 
 interface Stage {
-  id: string; name: string; base_unit_price: number; typical_unit_area: number; status: string; pricing_status: string;
+  id: string; name: string; base_unit_price: number; typical_unit_area: number; status: string; pricing_status: string; sort_order: number;
 }
 
 interface Contract {
@@ -35,6 +35,9 @@ interface Contract {
   contract_date: string;
   status: string;
   notes: string;
+  linked_contract_id: string | null;
+  prior_stage_price: number;
+  linked_contract?: { id: string; unit_price_at_contract: number; stage: { name: string } | null } | null;
 }
 
 interface StagePricing {
@@ -66,7 +69,10 @@ export default function InvestorDetailPage() {
   const [flash, setFlash] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ stage_id: "", unit_quantity: "", unit_price_at_contract: "", contract_date: new Date().toISOString().split("T")[0], notes: "" });
+  const [form, setForm] = useState({
+    stage_id: "", unit_quantity: "", unit_price_at_contract: "", contract_date: new Date().toISOString().split("T")[0], notes: "",
+    carryOverMode: "none" as "none" | "linked" | "manual", linkedContractId: "", priorStagePrice: "",
+  });
 
   const [editContract, setEditContract] = useState<Contract | null>(null);
   const [editForm, setEditForm] = useState({ unit_quantity: "", unit_price_at_contract: "", contract_date: "", notes: "", status: "ACTIVE" });
@@ -274,9 +280,35 @@ export default function InvestorDetailPage() {
   };
 
   const openAddContract = () => {
-    setForm({ stage_id: "", unit_quantity: "", unit_price_at_contract: "", contract_date: new Date().toISOString().split("T")[0], notes: "" });
+    setForm({
+      stage_id: "", unit_quantity: "", unit_price_at_contract: "", contract_date: new Date().toISOString().split("T")[0], notes: "",
+      carryOverMode: "none", linkedContractId: "", priorStagePrice: "",
+    });
     setStagePricing(null);
     setDialogOpen(true);
+  };
+
+  // Carry-over pricing helpers: a unit's price can build up across stages
+  // (e.g. Stage 1 = land, Stage 2 = construction on the same unit). "First"
+  // stage means the lowest sort_order — no earlier stage to carry over from.
+  const stageSortOrder = (stageId: string) => stages.find(s => s.id === stageId)?.sort_order ?? 0;
+  const isFirstStage = (stageId: string) => {
+    if (stages.length === 0) return true;
+    const minSort = Math.min(...stages.map(s => s.sort_order));
+    return stageSortOrder(stageId) <= minSort;
+  };
+  const priorStageContractsFor = (stageId: string) =>
+    contracts.filter(c => c.status === "ACTIVE" && stageSortOrder(c.stage_id) < stageSortOrder(stageId));
+
+  const onLinkedContractChange = (contractId: string) => {
+    const linked = contracts.find(c => c.id === contractId);
+    setForm(f => ({ ...f, linkedContractId: contractId, priorStagePrice: linked ? String(linked.unit_price_at_contract) : f.priorStagePrice }));
+  };
+
+  const applySuggestedPrice = () => {
+    const stage = stages.find(s => s.id === form.stage_id);
+    const suggested = (Number(form.priorStagePrice) || 0) + (stage?.base_unit_price ?? 0);
+    setForm(f => ({ ...f, unit_price_at_contract: String(suggested) }));
   };
 
   const fetchStagePricing = async (stageId: string) => {
@@ -296,6 +328,9 @@ export default function InvestorDetailPage() {
       stage_id: stageId,
       unit_price_at_contract: stage ? String(stage.base_unit_price) : f.unit_price_at_contract,
       unit_quantity: stage && stage.typical_unit_area > 0 ? String(stage.typical_unit_area) : f.unit_quantity,
+      carryOverMode: "none",
+      linkedContractId: "",
+      priorStagePrice: "",
     }));
     fetchStagePricing(stageId);
   };
@@ -317,6 +352,8 @@ export default function InvestorDetailPage() {
           unit_price_at_contract: Number(form.unit_price_at_contract),
           contract_date: form.contract_date,
           notes: form.notes,
+          linked_contract_id: form.carryOverMode === "linked" ? form.linkedContractId || null : null,
+          prior_stage_price: form.carryOverMode !== "none" ? Number(form.priorStagePrice) || 0 : 0,
         }),
       });
       const data = await res.json();
@@ -535,16 +572,16 @@ export default function InvestorDetailPage() {
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 24 }}>
         <div style={{ background: "#fff", borderRadius: 16, padding: "20px", border: "1px solid rgba(0,0,0,0.05)", flex: 1, minWidth: 200 }}>
           <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 6 }}>إجمالي المدفوع</div>
-          <div style={{ fontSize: 22, fontWeight: 900, color: "#16a34a" }}>EGP {(ledger?.total_deposits ?? 0).toLocaleString()}</div>
+          <div style={{ fontSize: 22, fontWeight: 900, color: "#16a34a" }}>{(ledger?.total_deposits ?? 0).toLocaleString()}</div>
         </div>
         <div style={{ background: "#fff", borderRadius: 16, padding: "20px", border: "1px solid rgba(0,0,0,0.05)", flex: 1, minWidth: 200 }}>
           <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 6 }}>إجمالي قيمة العقود النشطة</div>
-          <div style={{ fontSize: 22, fontWeight: 900, color: "#154278" }}>EGP {totalDue.toLocaleString()}</div>
+          <div style={{ fontSize: 22, fontWeight: 900, color: "#154278" }}>{totalDue.toLocaleString()}</div>
         </div>
         <div style={{ background: "#fff", borderRadius: 16, padding: "20px", border: "1px solid rgba(0,0,0,0.05)", flex: 1, minWidth: 200 }}>
           <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 6 }}>الرصيد الحالي</div>
           <div style={{ fontSize: 22, fontWeight: 900, color: (ledger?.balance ?? 0) >= 0 ? "#16a34a" : "#ef4444" }}>
-            EGP {(ledger?.balance ?? 0).toLocaleString()} {ledger && (ledger.balance >= 0 ? "(دائن)" : "(مستحق)")}
+            {(ledger?.balance ?? 0).toLocaleString()} {ledger && (ledger.balance >= 0 ? "(دائن)" : "(مستحق)")}
           </div>
         </div>
       </div>
@@ -556,7 +593,7 @@ export default function InvestorDetailPage() {
             {(ledger!.reconciliations).filter((r: any) => r.status === "PENDING").map((r: any) => (
               <div key={r.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#f9f9f7", borderRadius: 10, padding: "10px 14px" }}>
                 <span style={{ fontSize: 13, color: "#374151" }}>
-                  {r.delta_amount > 0 ? "مبلغ إضافي مستحق" : "رصيد دائن للمستثمر"}: <strong>{Math.abs(Number(r.delta_amount)).toLocaleString("ar-EG-u-nu-latn")} ج.م</strong>
+                  {r.delta_amount > 0 ? "مبلغ إضافي مستحق" : "رصيد دائن للمستثمر"}: <strong>{Math.abs(Number(r.delta_amount)).toLocaleString("ar-EG-u-nu-latn")}</strong>
                 </span>
                 <Button size="small" startIcon={<SyncAltOutlined sx={{ fontSize: 15 }} />} onClick={() => { setSettleReconciliation(r); setSettleAccountId(""); }} sx={{ fontFamily: "var(--font-cairo)", color: "#154278", fontWeight: 700, textTransform: "none" }}>
                   تسوية
@@ -592,7 +629,19 @@ export default function InvestorDetailPage() {
                   return (
                     <Fragment key={c.id}>
                       <tr style={{ borderBottom: "1px solid #f5f4f0", cursor: "pointer" }} onClick={() => toggleExpand(c.id)}>
-                        <td style={{ padding: "14px 18px", fontSize: 14, fontWeight: 700, color: "#111827" }}>{c.stage?.name ?? "—"}</td>
+                        <td style={{ padding: "14px 18px", fontSize: 14, fontWeight: 700, color: "#111827" }}>
+                          {c.stage?.name ?? "—"}
+                          {c.linked_contract && (
+                            <div style={{ fontSize: 11, fontWeight: 500, color: "#9ca3af" }}>
+                              ↳ متابعة لـ {c.linked_contract.stage?.name ?? "—"} ({Number(c.linked_contract.unit_price_at_contract).toLocaleString("ar-EG-u-nu-latn")} /م²)
+                            </div>
+                          )}
+                          {!c.linked_contract && Number(c.prior_stage_price) > 0 && (
+                            <div style={{ fontSize: 11, fontWeight: 500, color: "#9ca3af" }}>
+                              ↳ شامل مرحلة سابقة: {Number(c.prior_stage_price).toLocaleString("ar-EG-u-nu-latn")} /م²
+                            </div>
+                          )}
+                        </td>
                         <td style={{ padding: "14px 18px", fontSize: 13, color: "#374151", direction: "ltr", textAlign: "right" }}>{Number(c.unit_quantity).toLocaleString("ar-EG-u-nu-latn")}</td>
                         <td style={{ padding: "14px 18px", fontSize: 13, color: "#374151", direction: "ltr", textAlign: "right" }}>{Number(c.unit_price_at_contract).toLocaleString("ar-EG-u-nu-latn")}</td>
                         <td style={{ padding: "14px 18px", fontSize: 14, fontWeight: 800, color: "#154278", direction: "ltr", textAlign: "right" }}>{Number(c.total_contract_value).toLocaleString("ar-EG-u-nu-latn")}</td>
@@ -647,7 +696,7 @@ export default function InvestorDetailPage() {
                                       <span style={{ fontSize: 12, color: "#9ca3af" }}>{new Date(inst.due_date).toLocaleDateString("ar-EG-u-nu-latn")}</span>
                                     </div>
                                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                      <span style={{ fontSize: 13, fontWeight: 800, color: "#154278" }}>{Number(inst.amount).toLocaleString("ar-EG-u-nu-latn")} ج.م</span>
+                                      <span style={{ fontSize: 13, fontWeight: 800, color: "#154278" }}>{Number(inst.amount).toLocaleString("ar-EG-u-nu-latn")}</span>
                                       {inst.status === "PAID" ? (
                                         <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#16a34a", fontWeight: 700 }}>
                                           <CheckCircleOutlined sx={{ fontSize: 15 }} /> محصّلة
@@ -685,20 +734,80 @@ export default function InvestorDetailPage() {
             <InputLabel>المرحلة *</InputLabel>
             <Select value={form.stage_id} label="المرحلة *" onChange={e => onStageChange(e.target.value)}>
               {stages.map(s => (
-                <MenuItem key={s.id} value={s.id}>{s.name} — {s.base_unit_price.toLocaleString()} ج.م/م²</MenuItem>
+                <MenuItem key={s.id} value={s.id}>{s.name} — {s.base_unit_price.toLocaleString()} /م²</MenuItem>
               ))}
             </Select>
           </FormControl>
 
+          {form.stage_id && !isFirstStage(form.stage_id) && (
+            <div style={{ background: "#f9f9f7", borderRadius: 10, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>
+                هذه ليست المرحلة الأولى — هل هذا المستثمر منتقل من مرحلة سابقة لنفس الوحدة؟
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <Button
+                  size="small" variant={form.carryOverMode === "linked" ? "contained" : "outlined"}
+                  onClick={() => setForm(f => ({ ...f, carryOverMode: "linked" }))}
+                  sx={{ fontFamily: "var(--font-cairo)", fontWeight: 700, textTransform: "none", flex: 1, ...(form.carryOverMode === "linked" ? { background: "#154278" } : { borderColor: "#d1d5db", color: "#374151" }) }}
+                >
+                  نعم، منتقل من مرحلة سابقة
+                </Button>
+                <Button
+                  size="small" variant={form.carryOverMode === "manual" ? "contained" : "outlined"}
+                  onClick={() => setForm(f => ({ ...f, carryOverMode: "manual", linkedContractId: "" }))}
+                  sx={{ fontFamily: "var(--font-cairo)", fontWeight: 700, textTransform: "none", flex: 1, ...(form.carryOverMode === "manual" ? { background: "#154278" } : { borderColor: "#d1d5db", color: "#374151" }) }}
+                >
+                  لا، مستثمر جديد لهذه المرحلة
+                </Button>
+              </div>
+
+              {form.carryOverMode === "linked" && (
+                priorStageContractsFor(form.stage_id).length === 0 ? (
+                  <div style={{ fontSize: 12, color: "#ef4444" }}>لا يوجد لهذا المستثمر عقود نشطة في مرحلة سابقة</div>
+                ) : (
+                  <FormControl fullWidth size="small" sx={inputSx}>
+                    <InputLabel>العقد السابق *</InputLabel>
+                    <Select value={form.linkedContractId} label="العقد السابق *" onChange={e => onLinkedContractChange(e.target.value)}>
+                      {priorStageContractsFor(form.stage_id).map(c => (
+                        <MenuItem key={c.id} value={c.id}>{c.stage?.name ?? "—"} — {Number(c.unit_price_at_contract).toLocaleString("ar-EG-u-nu-latn")} /م²</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )
+              )}
+
+              {form.carryOverMode === "manual" && (
+                <TextField
+                  size="small" label="سعر المرحلة السابقة المحتسب لهذا المستثمر *" type="text" inputMode="decimal"
+                  value={form.priorStagePrice} onChange={e => setForm({ ...form, priorStagePrice: sanitizeDecimalInput(e.target.value) })}
+                  fullWidth sx={inputSx}
+                />
+              )}
+
+              {form.carryOverMode !== "none" && form.priorStagePrice !== "" && (
+                <div style={{ fontSize: 12, color: "#6b7280", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                  <span>
+                    السعر المقترح: <strong style={{ color: "#154278" }}>
+                      {((Number(form.priorStagePrice) || 0) + (stages.find(s => s.id === form.stage_id)?.base_unit_price ?? 0)).toLocaleString("ar-EG-u-nu-latn")} /م²
+                    </strong> (سابقة + هذه المرحلة)
+                  </span>
+                  <Button size="small" onClick={applySuggestedPrice} sx={{ fontFamily: "var(--font-cairo)", color: "#154278", fontWeight: 700, textTransform: "none" }}>
+                    استخدام هذا السعر
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
           <TextField label="مساحة الوحدة التقديرية لهذا المستثمر (م²) *" type="text" inputMode="decimal" value={form.unit_quantity} onChange={e => setForm({ ...form, unit_quantity: sanitizeDecimalInput(e.target.value) })} fullWidth sx={inputSx}
-            helperText="تُملأ تلقائياً من مساحة الوحدة التقديرية للمرحلة، ويمكن تعديلها لهذا المستثمر تحديداً" />
-          <TextField label="سعر المتر عند التعاقد (ج.م) *" type="text" inputMode="decimal" value={form.unit_price_at_contract} onChange={e => setForm({ ...form, unit_price_at_contract: sanitizeDecimalInput(e.target.value) })} fullWidth sx={inputSx}
+            helperText="تُملأ تلقائياً من مساحة الوحدة التقديرية للمرحلة، ويمكن تعديلها لهذا المستثمر تحديداً — قد تختلف عن مساحة المرحلة السابقة عند استلام المساحات الفعلية المرخصة" />
+          <TextField label="سعر المتر عند التعاقد *" type="text" inputMode="decimal" value={form.unit_price_at_contract} onChange={e => setForm({ ...form, unit_price_at_contract: sanitizeDecimalInput(e.target.value) })} fullWidth sx={inputSx}
             helperText="هذا السعر يُقفل على هذا العقد ولا يتغير مع تحديث سعر المرحلة لاحقاً" />
 
           {stagePricing && (
             <div style={{ background: "#f9f9f7", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#6b7280", display: "flex", flexDirection: "column", gap: 4 }}>
-              <span>سعر المرحلة الحالي للمساهم: <strong style={{ color: "#154278" }}>{stagePricing.investor_price.toLocaleString("ar-EG-u-nu-latn")} ج.م/م²</strong></span>
-              <span>تكلفة المتر الحالية (فعلي + متوقع): <strong style={{ color: "#d97706" }}>{stagePricing.price_actual_plus_expected.toLocaleString("ar-EG-u-nu-latn", { maximumFractionDigits: 0 })} ج.م/م²</strong></span>
+              <span>سعر المرحلة الحالي للمساهم: <strong style={{ color: "#154278" }}>{stagePricing.investor_price.toLocaleString("ar-EG-u-nu-latn")} /م²</strong></span>
+              <span>تكلفة المتر الحالية (فعلي + متوقع): <strong style={{ color: "#d97706" }}>{stagePricing.price_actual_plus_expected.toLocaleString("ar-EG-u-nu-latn", { maximumFractionDigits: 0 })} /م²</strong></span>
               {Number(form.unit_price_at_contract) > 0 && Number(form.unit_price_at_contract) < stagePricing.price_actual_plus_expected && (
                 <span style={{ color: "#ef4444", fontWeight: 700 }}>⚠ السعر المدخل أقل من تكلفة المتر الحالية</span>
               )}
@@ -711,7 +820,7 @@ export default function InvestorDetailPage() {
           {form.unit_quantity && form.unit_price_at_contract && (
             <div style={{ background: "#f9f9f7", borderRadius: 10, padding: "12px 16px", fontSize: 13, color: "#6b7280" }}>
               إجمالي قيمة العقد: <strong style={{ color: "#154278" }}>
-                {(Number(form.unit_quantity) * Number(form.unit_price_at_contract)).toLocaleString("ar-EG-u-nu-latn")} ج.م
+                {(Number(form.unit_quantity) * Number(form.unit_price_at_contract)).toLocaleString("ar-EG-u-nu-latn")}
               </strong>
             </div>
           )}
@@ -737,12 +846,12 @@ export default function InvestorDetailPage() {
           )}
 
           <TextField label="مساحة الوحدة (م²) *" type="text" inputMode="decimal" value={editForm.unit_quantity} onChange={e => setEditForm({ ...editForm, unit_quantity: sanitizeDecimalInput(e.target.value) })} fullWidth sx={inputSx} />
-          <TextField label="سعر المتر عند التعاقد (ج.م) *" type="text" inputMode="decimal" value={editForm.unit_price_at_contract} onChange={e => setEditForm({ ...editForm, unit_price_at_contract: sanitizeDecimalInput(e.target.value) })} fullWidth sx={inputSx} />
+          <TextField label="سعر المتر عند التعاقد *" type="text" inputMode="decimal" value={editForm.unit_price_at_contract} onChange={e => setEditForm({ ...editForm, unit_price_at_contract: sanitizeDecimalInput(e.target.value) })} fullWidth sx={inputSx} />
 
           {stagePricing && (
             <div style={{ background: "#f9f9f7", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#6b7280", display: "flex", flexDirection: "column", gap: 4 }}>
-              <span>سعر المرحلة الحالي للمساهم: <strong style={{ color: "#154278" }}>{stagePricing.investor_price.toLocaleString("ar-EG-u-nu-latn")} ج.م/م²</strong></span>
-              <span>تكلفة المتر الحالية (فعلي + متوقع): <strong style={{ color: "#d97706" }}>{stagePricing.price_actual_plus_expected.toLocaleString("ar-EG-u-nu-latn", { maximumFractionDigits: 0 })} ج.م/م²</strong></span>
+              <span>سعر المرحلة الحالي للمساهم: <strong style={{ color: "#154278" }}>{stagePricing.investor_price.toLocaleString("ar-EG-u-nu-latn")} /م²</strong></span>
+              <span>تكلفة المتر الحالية (فعلي + متوقع): <strong style={{ color: "#d97706" }}>{stagePricing.price_actual_plus_expected.toLocaleString("ar-EG-u-nu-latn", { maximumFractionDigits: 0 })} /م²</strong></span>
               {Number(editForm.unit_price_at_contract) > 0 && Number(editForm.unit_price_at_contract) < stagePricing.price_actual_plus_expected && (
                 <span style={{ color: "#ef4444", fontWeight: 700 }}>⚠ السعر المدخل أقل من تكلفة المتر الحالية</span>
               )}
@@ -765,7 +874,7 @@ export default function InvestorDetailPage() {
           {editForm.unit_quantity && editForm.unit_price_at_contract && (
             <div style={{ background: "#f9f9f7", borderRadius: 10, padding: "12px 16px", fontSize: 13, color: "#6b7280" }}>
               إجمالي قيمة العقد الجديد: <strong style={{ color: "#154278" }}>
-                {(Number(editForm.unit_quantity) * Number(editForm.unit_price_at_contract)).toLocaleString("ar-EG-u-nu-latn")} ج.م
+                {(Number(editForm.unit_quantity) * Number(editForm.unit_price_at_contract)).toLocaleString("ar-EG-u-nu-latn")}
               </strong>
             </div>
           )}
@@ -790,7 +899,7 @@ export default function InvestorDetailPage() {
               <br />
               متبقٍ غير مجدول حتى الآن: <strong style={{ color: "#d97706" }}>
                 {Math.max(0, remainingForContract(scheduleContract) - scheduledPendingForContract(scheduleContract.id)).toLocaleString("ar-EG-u-nu-latn")}
-              </strong> ج.م
+              </strong>
             </div>
           )}
           <TextField label="وصف الدفعة (اختياري)" value={scheduleForm.label} onChange={e => setScheduleForm({ ...scheduleForm, label: e.target.value })} fullWidth sx={inputSx} placeholder="مثال: دفعة أولى من المتبقي" />
@@ -816,7 +925,7 @@ export default function InvestorDetailPage() {
         <DialogContent sx={{ pt: "10px !important", display: "flex", flexDirection: "column", gap: 2.5 }}>
           {payInstallment && (
             <div style={{ background: "#f9f9f7", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#6b7280" }}>
-              {payInstallment.installment.label} — <strong style={{ color: "#154278" }}>{Number(payInstallment.installment.amount).toLocaleString("ar-EG-u-nu-latn")} ج.م</strong>
+              {payInstallment.installment.label} — <strong style={{ color: "#154278" }}>{Number(payInstallment.installment.amount).toLocaleString("ar-EG-u-nu-latn")}</strong>
             </div>
           )}
           <FormControl fullWidth sx={inputSx}>
@@ -868,8 +977,8 @@ export default function InvestorDetailPage() {
           {settleReconciliation && (
             <div style={{ background: "#f9f9f7", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#374151" }}>
               {settleReconciliation.delta_amount > 0
-                ? `سيتم تحصيل ${Number(settleReconciliation.delta_amount).toLocaleString("ar-EG-u-nu-latn")} ج.م من المستثمر`
-                : `سيتم رد ${Math.abs(Number(settleReconciliation.delta_amount)).toLocaleString("ar-EG-u-nu-latn")} ج.م للمستثمر`}
+                ? `سيتم تحصيل ${Number(settleReconciliation.delta_amount).toLocaleString("ar-EG-u-nu-latn")} من المستثمر`
+                : `سيتم رد ${Math.abs(Number(settleReconciliation.delta_amount)).toLocaleString("ar-EG-u-nu-latn")} للمستثمر`}
             </div>
           )}
           <FormControl fullWidth sx={inputSx}>

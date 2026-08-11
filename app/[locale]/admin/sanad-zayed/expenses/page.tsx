@@ -345,11 +345,11 @@ export default function ExpensesPage() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
           <div style={{ background: "#fff", borderRadius: 16, padding: "20px", border: "1px solid rgba(0,0,0,0.05)", flex: 1, minWidth: 200, boxShadow: "0 2px 10px rgba(0,0,0,0.02)" }}>
             <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 6 }}>إجمالي المدفوع فعلياً</div>
-            <div style={{ fontSize: 24, fontWeight: 900, color: "#ef4444" }}>EGP {totalPaid.toLocaleString()}</div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: "#ef4444" }}>{totalPaid.toLocaleString()}</div>
           </div>
           <div style={{ background: "#fff", borderRadius: 16, padding: "20px", border: "1px solid rgba(0,0,0,0.05)", flex: 1, minWidth: 200, boxShadow: "0 2px 10px rgba(0,0,0,0.02)" }}>
             <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 6 }}>إجمالي الالتزام (شامل غير المدفوع)</div>
-            <div style={{ fontSize: 24, fontWeight: 900, color: "#d97706" }}>EGP {totalAllocated.toLocaleString()}</div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: "#d97706" }}>{totalAllocated.toLocaleString()}</div>
           </div>
         </motion.div>
       )}
@@ -401,7 +401,7 @@ export default function ExpensesPage() {
 
                       <td style={{ padding: "14px 18px" }}>
                         <div style={{ fontSize: 14, fontWeight: 800, color: fullyPaid ? "#16a34a" : "#ef4444", direction: "ltr", textAlign: "right", whiteSpace: "nowrap" }}>
-                          EGP {paid.toLocaleString()} <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 500 }}>/ {allocated.toLocaleString()}</span>
+                          {paid.toLocaleString()} <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 500 }}>/ {allocated.toLocaleString()}</span>
                         </div>
                       </td>
 
@@ -503,7 +503,7 @@ export default function ExpensesPage() {
                 <MenuItem key={a.id} value={a.id}>
                   {a.account_name}
                   {a.account_type === "PETTY_CASH" && a.custodian_name ? ` (${a.custodian_name})` : ""}
-                  {" "}— رصيد: EGP {a.current_balance}
+                  {" "}— رصيد: {a.current_balance}
                 </MenuItem>
               ))}
             </Select>
@@ -600,7 +600,7 @@ export default function ExpensesPage() {
           {paymentExpense && (
             <div style={{ background: "#f9f9f7", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#6b7280" }}>
               {paymentExpense.description}<br />
-              المدفوع حتى الآن: <strong>{Number(paymentExpense.actual_paid_amount).toLocaleString()}</strong> / {Number(paymentExpense.allocated_cost).toLocaleString()} ج.م
+              المدفوع حتى الآن: <strong>{Number(paymentExpense.actual_paid_amount).toLocaleString()}</strong> / {Number(paymentExpense.allocated_cost).toLocaleString()}
             </div>
           )}
           <TextField label="مبلغ الدفعة *" type="text" inputMode="decimal" value={paymentForm.amount} onChange={e => setPaymentForm({ ...paymentForm, amount: sanitizeDecimalInput(e.target.value) })} fullWidth sx={inputSx} />
@@ -609,7 +609,7 @@ export default function ExpensesPage() {
             <InputLabel>سحب من (خزينة / عهدة) *</InputLabel>
             <Select value={paymentForm.financial_account_id} label="سحب من (خزينة / عهدة) *" onChange={e => setPaymentForm({ ...paymentForm, financial_account_id: e.target.value })}>
               {accounts.map(a => (
-                <MenuItem key={a.id} value={a.id}>{a.account_name} — رصيد: EGP {a.current_balance}</MenuItem>
+                <MenuItem key={a.id} value={a.id}>{a.account_name} — رصيد: {a.current_balance}</MenuItem>
               ))}
             </Select>
           </FormControl>
@@ -684,7 +684,7 @@ export default function ExpensesPage() {
         <DialogContent sx={{ pt: "10px !important", display: "flex", flexDirection: "column", gap: 2.5 }}>
           {recoveryExpense && (
             <div style={{ background: "#f9f9f7", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#6b7280" }}>
-              {recoveryExpense.description} — {Number(recoveryExpense.allocated_cost).toLocaleString("ar-EG-u-nu-latn")} ج.م
+              {recoveryExpense.description} — {Number(recoveryExpense.allocated_cost).toLocaleString("ar-EG-u-nu-latn")}
             </div>
           )}
           <FormControl fullWidth sx={inputSx}>

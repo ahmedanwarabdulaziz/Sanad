@@ -156,12 +156,12 @@ export default function InvestorItemsPage() {
                   return (
                     <tr key={ex.id} style={{ borderBottom: "1px solid #f5f4f0" }}>
                       <td style={{ padding: "14px 18px", fontSize: 14, fontWeight: 700, color: "#111827", maxWidth: 200 }}>{ex.description}</td>
-                      <td style={{ padding: "14px 18px", fontSize: 13, color: "#6b7280", direction: "ltr", textAlign: "right" }}>{Number(ex.allocated_cost).toLocaleString("ar-EG-u-nu-latn")} ج.م</td>
+                      <td style={{ padding: "14px 18px", fontSize: 13, color: "#6b7280", direction: "ltr", textAlign: "right" }}>{Number(ex.allocated_cost).toLocaleString("ar-EG-u-nu-latn")}</td>
                       <td style={{ padding: "14px 18px", fontSize: 13, color: hasOverride ? "#154278" : "#9ca3af", fontWeight: hasOverride ? 700 : 400 }}>
                         {ex.hide_from_investor ? "—" : (ex.investor_override_description || ex.description)}
                       </td>
                       <td style={{ padding: "14px 18px", fontSize: 13, color: hasOverride ? "#154278" : "#9ca3af", fontWeight: hasOverride ? 700 : 400, direction: "ltr", textAlign: "right" }}>
-                        {ex.hide_from_investor ? "—" : `${Number(ex.investor_override_amount ?? ex.allocated_cost).toLocaleString("ar-EG-u-nu-latn")} ج.م`}
+                        {ex.hide_from_investor ? "—" : `${Number(ex.investor_override_amount ?? ex.allocated_cost).toLocaleString("ar-EG-u-nu-latn")}`}
                       </td>
                       <td style={{ padding: "14px 18px" }}>
                         {ex.hide_from_investor ? (
@@ -199,7 +199,7 @@ export default function InvestorItemsPage() {
         <DialogContent sx={{ pt: "10px !important", display: "flex", flexDirection: "column", gap: 2.5 }}>
           {editExpense && (
             <div style={{ background: "#f9f9f7", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#6b7280" }}>
-              البيان الحقيقي: <strong>{editExpense.description}</strong> — {Number(editExpense.allocated_cost).toLocaleString("ar-EG-u-nu-latn")} ج.م
+              البيان الحقيقي: <strong>{editExpense.description}</strong> — {Number(editExpense.allocated_cost).toLocaleString("ar-EG-u-nu-latn")}
             </div>
           )}
           <TextField label="وصف بديل للمستثمر" value={editForm.investor_override_description} onChange={e => setEditForm({ ...editForm, investor_override_description: e.target.value })} fullWidth sx={inputSx}

@@ -45,8 +45,8 @@ function buildHtml(data: StatementData): string {
     <tr>
       <td style="padding:8px 10px;border-bottom:1px solid #eee;">${c.stage?.name ?? "—"}</td>
       <td style="padding:8px 10px;border-bottom:1px solid #eee;">${fmt(c.unit_quantity)} م²</td>
-      <td style="padding:8px 10px;border-bottom:1px solid #eee;">${fmt(c.unit_price_at_contract)} ج.م</td>
-      <td style="padding:8px 10px;border-bottom:1px solid #eee;font-weight:700;">${fmt(c.total_contract_value)} ج.م</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #eee;">${fmt(c.unit_price_at_contract)}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #eee;font-weight:700;">${fmt(c.total_contract_value)}</td>
       <td style="padding:8px 10px;border-bottom:1px solid #eee;">${fmtDate(c.contract_date)}</td>
     </tr>
   `).join("");
@@ -57,7 +57,7 @@ function buildHtml(data: StatementData): string {
       <td style="padding:8px 10px;border-bottom:1px solid #eee;">${t.transaction_type === "DEPOSIT" ? "دفعة واردة" : "مبلغ صادر"}</td>
       <td style="padding:8px 10px;border-bottom:1px solid #eee;">${t.reason_type ? REASON_LABEL[t.reason_type] ?? t.reason_type : "—"}</td>
       <td style="padding:8px 10px;border-bottom:1px solid #eee;">${t.description || "—"}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid #eee;font-weight:700;color:${t.transaction_type === "DEPOSIT" ? "#16a34a" : "#ef4444"};">${fmt(t.amount)} ج.م</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #eee;font-weight:700;color:${t.transaction_type === "DEPOSIT" ? "#16a34a" : "#ef4444"};">${fmt(t.amount)}</td>
     </tr>
   `).join("");
 
@@ -79,15 +79,15 @@ function buildHtml(data: StatementData): string {
       <div style="display:flex; gap:12px; margin-bottom:24px;">
         <div style="flex:1; background:#f9f9f7; border-radius:10px; padding:14px;">
           <div style="font-size:11px; color:#6b7280;">إجمالي المدفوع</div>
-          <div style="font-size:16px; font-weight:800; color:#16a34a;">${fmt(data.total_deposits)} ج.م</div>
+          <div style="font-size:16px; font-weight:800; color:#16a34a;">${fmt(data.total_deposits)}</div>
         </div>
         <div style="flex:1; background:#f9f9f7; border-radius:10px; padding:14px;">
           <div style="font-size:11px; color:#6b7280;">إجمالي المستحق على العقود</div>
-          <div style="font-size:16px; font-weight:800; color:#d97706;">${fmt(data.total_contract_dues)} ج.م</div>
+          <div style="font-size:16px; font-weight:800; color:#d97706;">${fmt(data.total_contract_dues)}</div>
         </div>
         <div style="flex:1; background:#f9f9f7; border-radius:10px; padding:14px;">
           <div style="font-size:11px; color:#6b7280;">الرصيد الحالي</div>
-          <div style="font-size:16px; font-weight:800; color:${data.balance >= 0 ? "#16a34a" : "#ef4444"};">${fmt(data.balance)} ج.م ${data.balance >= 0 ? "(دائن)" : "(مستحق عليه)"}</div>
+          <div style="font-size:16px; font-weight:800; color:${data.balance >= 0 ? "#16a34a" : "#ef4444"};">${fmt(data.balance)} ${data.balance >= 0 ? "(دائن)" : "(مستحق عليه)"}</div>
         </div>
       </div>
 

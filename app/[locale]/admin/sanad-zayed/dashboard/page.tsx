@@ -57,7 +57,7 @@ const KPI_CARDS = (stats: DashboardStats) => [
     color: "#7c3aed",
     bg: "rgba(124,58,237,0.08)",
     href: "/admin/sanad-zayed/treasury",
-    suffix: "ج.م",
+    suffix: "",
     isAmount: true,
   },
 ];

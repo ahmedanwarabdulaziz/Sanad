@@ -230,7 +230,7 @@ export default function TreasuryPage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16, marginBottom: 24 }}>
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ background: "linear-gradient(135deg, #154278 0%, #1e6abf 100%)", borderRadius: 16, padding: 20, color: "#fff", boxShadow: "0 4px 20px rgba(21,66,120,0.2)" }}>
               <div style={{ fontSize: 13, opacity: 0.9, marginBottom: 8 }}>إجمالي الرصيد المتوفر</div>
-              <div style={{ fontSize: 26, fontWeight: 900 }}>EGP {totalBalance.toLocaleString()}</div>
+              <div style={{ fontSize: 26, fontWeight: 900 }}>{totalBalance.toLocaleString()}</div>
             </motion.div>
             
             {accounts.map(acc => (
@@ -242,7 +242,7 @@ export default function TreasuryPage() {
                 <div style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 2 }}>
                   {acc.account_name} {acc.custodian_name ? `(${acc.custodian_name})` : ""}
                 </div>
-                <div style={{ fontSize: 18, fontWeight: 900, color: "#16a34a", direction: "ltr", textAlign: "right" }}>EGP {Number(acc.current_balance).toLocaleString()}</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: "#16a34a", direction: "ltr", textAlign: "right" }}>{Number(acc.current_balance).toLocaleString()}</div>
               </div>
             ))}
           </div>
@@ -299,7 +299,7 @@ export default function TreasuryPage() {
                             ) : <span style={{ fontSize: 12, color: "#d1d5db" }}>—</span>}
                           </td>
                           <td style={{ padding: "14px 20px", fontSize: 14, fontWeight: 800, color: isTransfer ? "#111827" : isIncoming ? "#16a34a" : "#ef4444", direction: "ltr", textAlign: "right" }}>
-                            {isTransfer ? "" : isIncoming ? "+" : "-"} EGP {Number(tx.amount).toLocaleString()}
+                            {isTransfer ? "" : isIncoming ? "+" : "-"} {Number(tx.amount).toLocaleString()}
                           </td>
                           <td style={{ padding: "14px 20px", fontSize: 13, color: "#374151", fontWeight: 600 }}>
                             {isTransfer ? (

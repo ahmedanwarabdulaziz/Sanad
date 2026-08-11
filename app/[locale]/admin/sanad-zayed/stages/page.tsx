@@ -9,7 +9,7 @@ import {
   MenuItem, Select, FormControl, InputLabel
 } from "@mui/material";
 import {
-  AddOutlined, CloseOutlined, AccountTreeOutlined, WarningAmberOutlined, ChecklistOutlined
+  AddOutlined, CloseOutlined, AccountTreeOutlined, WarningAmberOutlined, ChecklistOutlined, ApartmentOutlined
 } from "@mui/icons-material";
 import { sanitizeDecimalInput } from "@/lib/sanad-zayed/decimalInput";
 
@@ -29,10 +29,30 @@ interface Stage {
 }
 
 interface Pricing {
+  target_sellable_area: number;
+  sold_area: number;
+  remaining_area: number;
   price_actual: number;
+  price_expected_only: number;
   price_actual_plus_expected: number;
   investor_price: number;
+  cost_difference_per_meter: number;
   below_cost_warning: boolean;
+  total_area_value_investor: number;
+  total_area_value_cost: number;
+  sold_area_value_investor: number;
+  sold_area_value_cost: number;
+  remaining_area_value_investor: number;
+  remaining_area_value_cost: number;
+  collected: number;
+  not_collected: number;
+  actual_profit_so_far: number;
+  predicted_total_profit: number;
+  unit_count: number;
+  units_fully_allocated: number;
+  units_partially_allocated: number;
+  units_unallocated: number;
+  units_total_licensed_area: number;
 }
 
 const STATUS_LABEL: Record<string, string> = { PLANNING: "تخطيط", OPEN: "متاحة للبيع", CLOSED: "مغلقة" };
@@ -230,40 +250,122 @@ export default function StagesPage() {
                   </div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 14 }}>
-                  <div>
-                    <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 3 }}>المساحة (مباع / إجمالي المرحلة)</div>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: remaining < 0 ? "#ef4444" : "#111827" }}>
-                      {s.sold_area.toLocaleString("ar-EG-u-nu-latn")} / {s.target_sellable_area.toLocaleString("ar-EG-u-nu-latn")} م²
-                    </div>
+                {s.typical_unit_area > 0 && (
+                  <div style={{ marginBottom: 14 }}>
+                    <span style={{ fontSize: 11, color: "#9ca3af" }}>مساحة الوحدة التقديرية: </span>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: "#111827" }}>{s.typical_unit_area.toLocaleString("ar-EG-u-nu-latn")} م²</span>
                   </div>
-                  {s.typical_unit_area > 0 && (
-                    <div>
-                      <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 3 }}>مساحة الوحدة التقديرية</div>
-                      <div style={{ fontSize: 15, fontWeight: 800, color: "#111827" }}>
-                        {s.typical_unit_area.toLocaleString("ar-EG-u-nu-latn")} م²
+                )}
+
+                {!p ? (
+                  <div style={{ fontSize: 13, color: "#9ca3af", padding: "10px 0" }}>جاري تحميل الملخص المالي...</div>
+                ) : (
+                  <div style={{ display: "grid", gap: 12 }}>
+                    {/* ── Areas & values table ── */}
+                    <div style={{ overflowX: "auto", border: "1px solid #f0ede6", borderRadius: 12 }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560, fontSize: 12.5 }}>
+                        <thead>
+                          <tr style={{ background: "#f8f7f3" }}>
+                            <th style={{ padding: "9px 12px", textAlign: "right", fontWeight: 700, color: "#6b7280" }}>المساحة</th>
+                            <th style={{ padding: "9px 12px", textAlign: "right", fontWeight: 700, color: "#6b7280" }}>م²</th>
+                            <th style={{ padding: "9px 12px", textAlign: "right", fontWeight: 700, color: "#6b7280" }}>القيمة بسعر المستثمر</th>
+                            <th style={{ padding: "9px 12px", textAlign: "right", fontWeight: 700, color: "#6b7280" }}>القيمة بسعر التكلفة</th>
+                            <th style={{ padding: "9px 12px", textAlign: "right", fontWeight: 700, color: "#6b7280" }}>محصّل</th>
+                            <th style={{ padding: "9px 12px", textAlign: "right", fontWeight: 700, color: "#6b7280" }}>متبقي تحصيله</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr style={{ borderTop: "1px solid #f5f4f0" }}>
+                            <td style={{ padding: "9px 12px", fontWeight: 700, color: "#111827" }}>إجمالي المساحة</td>
+                            <td style={{ padding: "9px 12px", fontWeight: 700 }}>{p.target_sellable_area.toLocaleString("ar-EG-u-nu-latn")}</td>
+                            <td style={{ padding: "9px 12px", color: "#154278", fontWeight: 700 }}>{p.total_area_value_investor.toLocaleString("ar-EG-u-nu-latn", { maximumFractionDigits: 0 })}</td>
+                            <td style={{ padding: "9px 12px", color: "#6b7280", fontWeight: 700 }}>{p.total_area_value_cost.toLocaleString("ar-EG-u-nu-latn", { maximumFractionDigits: 0 })}</td>
+                            <td style={{ padding: "9px 12px", color: "#d1d5db" }}>—</td>
+                            <td style={{ padding: "9px 12px", color: "#d1d5db" }}>—</td>
+                          </tr>
+                          <tr style={{ borderTop: "1px solid #f5f4f0", background: "#fafaf8" }}>
+                            <td style={{ padding: "9px 12px", fontWeight: 700, color: "#059669" }}>المساحة المباعة</td>
+                            <td style={{ padding: "9px 12px", fontWeight: 700 }}>{p.sold_area.toLocaleString("ar-EG-u-nu-latn")}</td>
+                            <td style={{ padding: "9px 12px", color: "#154278", fontWeight: 700 }}>{p.sold_area_value_investor.toLocaleString("ar-EG-u-nu-latn", { maximumFractionDigits: 0 })}</td>
+                            <td style={{ padding: "9px 12px", color: "#6b7280", fontWeight: 700 }}>{p.sold_area_value_cost.toLocaleString("ar-EG-u-nu-latn", { maximumFractionDigits: 0 })}</td>
+                            <td style={{ padding: "9px 12px", color: "#059669", fontWeight: 800 }}>{p.collected.toLocaleString("ar-EG-u-nu-latn", { maximumFractionDigits: 0 })}</td>
+                            <td style={{ padding: "9px 12px", color: "#d97706", fontWeight: 800 }}>{p.not_collected.toLocaleString("ar-EG-u-nu-latn", { maximumFractionDigits: 0 })}</td>
+                          </tr>
+                          <tr style={{ borderTop: "1px solid #f5f4f0" }}>
+                            <td style={{ padding: "9px 12px", fontWeight: 700, color: remaining < 0 ? "#ef4444" : "#111827" }}>المساحة المتبقية</td>
+                            <td style={{ padding: "9px 12px", fontWeight: 700, color: remaining < 0 ? "#ef4444" : "#111827" }}>{p.remaining_area.toLocaleString("ar-EG-u-nu-latn")}</td>
+                            <td style={{ padding: "9px 12px", color: "#154278", fontWeight: 700 }}>{p.remaining_area_value_investor.toLocaleString("ar-EG-u-nu-latn", { maximumFractionDigits: 0 })}</td>
+                            <td style={{ padding: "9px 12px", color: "#6b7280", fontWeight: 700 }}>{p.remaining_area_value_cost.toLocaleString("ar-EG-u-nu-latn", { maximumFractionDigits: 0 })}</td>
+                            <td style={{ padding: "9px 12px", color: "#d1d5db" }}>—</td>
+                            <td style={{ padding: "9px 12px", color: "#d1d5db" }}>—</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* ── Cost per meter analysis table ── */}
+                    <div style={{ overflowX: "auto", border: "1px solid #f0ede6", borderRadius: 12 }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 420, fontSize: 12.5 }}>
+                        <tbody>
+                          <tr style={{ background: "#f8f7f3" }}>
+                            <td style={{ padding: "9px 12px", fontWeight: 700, color: "#6b7280" }}>تكلفة المتر الفعلي</td>
+                            <td style={{ padding: "9px 12px", textAlign: "left", fontWeight: 800, color: "#6b7280" }}>{p.price_actual.toLocaleString("ar-EG-u-nu-latn", { maximumFractionDigits: 0 })}</td>
+                          </tr>
+                          <tr style={{ borderTop: "1px solid #f5f4f0" }}>
+                            <td style={{ padding: "9px 12px", fontWeight: 700, color: "#d97706" }}>تكلفة المتر في المصاريف المتوقعة</td>
+                            <td style={{ padding: "9px 12px", textAlign: "left", fontWeight: 800, color: "#d97706" }}>{p.price_expected_only.toLocaleString("ar-EG-u-nu-latn", { maximumFractionDigits: 0 })}</td>
+                          </tr>
+                          <tr style={{ borderTop: "1px solid #f5f4f0", background: "#fafaf8" }}>
+                            <td style={{ padding: "9px 12px", fontWeight: 700, color: "#111827" }}>إجمالي تكلفة المتر (فعلي + متوقع)</td>
+                            <td style={{ padding: "9px 12px", textAlign: "left", fontWeight: 800, color: "#111827" }}>{p.price_actual_plus_expected.toLocaleString("ar-EG-u-nu-latn", { maximumFractionDigits: 0 })}</td>
+                          </tr>
+                          <tr style={{ borderTop: "1px solid #f5f4f0" }}>
+                            <td style={{ padding: "9px 12px", fontWeight: 700, color: "#154278" }}>تكلفة المتر على المستثمر</td>
+                            <td style={{ padding: "9px 12px", textAlign: "left", fontWeight: 800, color: "#154278" }}>{p.investor_price.toLocaleString("ar-EG-u-nu-latn", { maximumFractionDigits: 0 })}</td>
+                          </tr>
+                          <tr style={{ borderTop: "1px solid #f5f4f0" }}>
+                            <td style={{ padding: "9px 12px", fontWeight: 700, color: p.cost_difference_per_meter >= 0 ? "#059669" : "#ef4444" }}>فرق التكلفة (للمتر)</td>
+                            <td style={{ padding: "9px 12px", textAlign: "left", fontWeight: 800, color: p.cost_difference_per_meter >= 0 ? "#059669" : "#ef4444" }}>
+                              {p.cost_difference_per_meter >= 0 ? "+" : ""}{p.cost_difference_per_meter.toLocaleString("ar-EG-u-nu-latn", { maximumFractionDigits: 0 })}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* ── Company profit ── */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+                      <div style={{ background: p.actual_profit_so_far >= 0 ? "rgba(5,150,105,0.08)" : "rgba(239,68,68,0.08)", borderRadius: 12, padding: "14px 16px" }}>
+                        <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 4 }}>الربح الفعلي حتى الآن (محصّل − مصروف فعلي)</div>
+                        <div style={{ fontSize: 18, fontWeight: 900, color: p.actual_profit_so_far >= 0 ? "#059669" : "#ef4444" }}>
+                          {p.actual_profit_so_far >= 0 ? "+" : ""}{p.actual_profit_so_far.toLocaleString("ar-EG-u-nu-latn", { maximumFractionDigits: 0 })}
+                        </div>
+                      </div>
+                      <div style={{ background: p.predicted_total_profit >= 0 ? "rgba(21,66,120,0.08)" : "rgba(239,68,68,0.08)", borderRadius: 12, padding: "14px 16px" }}>
+                        <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 4 }}>الربح المتوقع للمرحلة كاملة (لو بيعت واستُكملت بالأسعار الحالية)</div>
+                        <div style={{ fontSize: 18, fontWeight: 900, color: p.predicted_total_profit >= 0 ? "#154278" : "#ef4444" }}>
+                          {p.predicted_total_profit >= 0 ? "+" : ""}{p.predicted_total_profit.toLocaleString("ar-EG-u-nu-latn", { maximumFractionDigits: 0 })}
+                        </div>
                       </div>
                     </div>
-                  )}
-                  <div>
-                    <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 3 }}>سعر المتر للمساهم</div>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: "#154278" }}>
-                      {s.base_unit_price.toLocaleString("ar-EG-u-nu-latn")} ج.م
+
+                    {/* ── Units (discrete licensed units, separate from raw meters) ── */}
+                    <div style={{ border: "1px solid #f0ede6", borderRadius: 12, padding: "12px 16px" }}>
+                      <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 8 }}>الوحدات المسجلة (منفصلة عن المساحة بالمتر أعلاه)</div>
+                      {p.unit_count === 0 ? (
+                        <div style={{ fontSize: 12.5, color: "#9ca3af" }}>لا توجد وحدات مسجلة بعد لهذه المرحلة</div>
+                      ) : (
+                        <div style={{ display: "flex", gap: 20, flexWrap: "wrap", fontSize: 12.5 }}>
+                          <span style={{ color: "#374151" }}>عدد الوحدات: <strong style={{ color: "#111827" }}>{p.unit_count.toLocaleString("ar-EG-u-nu-latn")}</strong></span>
+                          <span style={{ color: "#374151" }}>مخصصة بالكامل: <strong style={{ color: "#059669" }}>{p.units_fully_allocated.toLocaleString("ar-EG-u-nu-latn")}</strong></span>
+                          <span style={{ color: "#374151" }}>مخصصة جزئياً: <strong style={{ color: "#d97706" }}>{p.units_partially_allocated.toLocaleString("ar-EG-u-nu-latn")}</strong></span>
+                          <span style={{ color: "#374151" }}>متاحة: <strong style={{ color: "#154278" }}>{p.units_unallocated.toLocaleString("ar-EG-u-nu-latn")}</strong></span>
+                          <span style={{ color: "#374151" }}>إجمالي مساحة الوحدات المرخصة: <strong style={{ color: "#111827" }}>{p.units_total_licensed_area.toLocaleString("ar-EG-u-nu-latn")} م²</strong></span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div>
-                    <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 3 }}>تكلفة المتر (فعلي)</div>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: "#6b7280" }}>
-                      {p ? p.price_actual.toLocaleString("ar-EG-u-nu-latn", { maximumFractionDigits: 0 }) : "—"} ج.م
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 3 }}>تكلفة المتر (فعلي + متوقع)</div>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: "#d97706" }}>
-                      {p ? p.price_actual_plus_expected.toLocaleString("ar-EG-u-nu-latn", { maximumFractionDigits: 0 }) : "—"} ج.م
-                    </div>
-                  </div>
-                </div>
+                )}
 
                 {p?.below_cost_warning && (
                   <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 8, background: "rgba(239,68,68,0.08)", color: "#ef4444", fontSize: 12, fontWeight: 700, borderRadius: 8, padding: "8px 12px" }}>
@@ -272,7 +374,18 @@ export default function StagesPage() {
                   </div>
                 )}
 
-                <div style={{ marginTop: 14, display: "flex", justifyContent: "flex-end" }}>
+                <div style={{ marginTop: 14, display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); router.push(`/admin/sanad-zayed/units?stage_id=${s.id}`); }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6, background: "rgba(21,66,120,0.08)", color: "#154278",
+                      border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 700,
+                      fontFamily: "var(--font-cairo)",
+                    }}
+                  >
+                    <ApartmentOutlined sx={{ fontSize: 15 }} />
+                    الوحدات
+                  </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); router.push(`/admin/sanad-zayed/stages/${s.id}`); }}
                     style={{
@@ -330,7 +443,7 @@ export default function StagesPage() {
           <div style={{ display: "flex", gap: 12 }}>
             <TextField label="المساحة القابلة للبيع لهذه المرحلة (م²) *" type="text" inputMode="decimal" value={form.target_sellable_area} onChange={e => setForm({ ...form, target_sellable_area: sanitizeDecimalInput(e.target.value) })} fullWidth sx={inputSx}
               helperText="مساحة الوحدات المخطط بيعها في هذه المرحلة (قد تتجاوز مساحة الأرض بسبب تكرار الأدوار)" />
-            <TextField label="سعر المتر للمساهم (ج.م) *" type="text" inputMode="decimal" value={form.base_unit_price} onChange={e => setForm({ ...form, base_unit_price: sanitizeDecimalInput(e.target.value) })} fullWidth sx={inputSx} />
+            <TextField label="سعر المتر للمساهم *" type="text" inputMode="decimal" value={form.base_unit_price} onChange={e => setForm({ ...form, base_unit_price: sanitizeDecimalInput(e.target.value) })} fullWidth sx={inputSx} />
           </div>
 
           <TextField label="مساحة الوحدة التقديرية للمستثمر (م²)" type="text" inputMode="decimal" value={form.typical_unit_area} onChange={e => setForm({ ...form, typical_unit_area: sanitizeDecimalInput(e.target.value) })} fullWidth sx={inputSx}

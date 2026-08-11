@@ -46,6 +46,9 @@ export default function StageBudgetItemsPage() {
   const [convertForm, setConvertForm] = useState({ actual_amount: "", financial_account_id: "", paid_date: new Date().toISOString().split("T")[0] });
   const [convertSubmitting, setConvertSubmitting] = useState(false);
 
+  const [deleteItem, setDeleteItem] = useState<BudgetItem | null>(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+
   const [templateRows, setTemplateRows] = useState<{ label: string; percentage: string; offset_days: string }[]>([]);
   const [templateSaving, setTemplateSaving] = useState(false);
 
@@ -138,6 +141,24 @@ export default function StageBudgetItemsPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteItem) return;
+    setDeleteSubmitting(true);
+    try {
+      const res = await fetch(`/api/sanad-zayed/stage-budget-items/${deleteItem.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "حدث خطأ");
+
+      showFlash("success", "تم حذف البند");
+      setDeleteItem(null);
+      fetchAll();
+    } catch (err: any) {
+      showFlash("error", err.message);
+    } finally {
+      setDeleteSubmitting(false);
+    }
+  };
+
   const addTemplateRow = () => setTemplateRows(r => [...r, { label: `دفعة ${r.length + 1}`, percentage: "", offset_days: "0" }]);
   const removeTemplateRow = (i: number) => setTemplateRows(r => r.filter((_, idx) => idx !== i));
   const updateTemplateRow = (i: number, patch: Partial<{ label: string; percentage: string; offset_days: string }>) =>
@@ -220,7 +241,7 @@ export default function StageBudgetItemsPage() {
 
       <div style={{ background: "#fff", borderRadius: 16, padding: "20px", border: "1px solid rgba(0,0,0,0.05)", marginBottom: 24, maxWidth: 280 }}>
         <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 6 }}>إجمالي البنود المتوقعة (غير محولة)</div>
-        <div style={{ fontSize: 24, fontWeight: 900, color: "#d97706" }}>EGP {pendingTotal.toLocaleString()}</div>
+        <div style={{ fontSize: 24, fontWeight: 900, color: "#d97706" }}>{pendingTotal.toLocaleString()}</div>
       </div>
 
       {items.length === 0 ? (
@@ -252,7 +273,7 @@ export default function StageBudgetItemsPage() {
                     <td style={{ padding: "14px 18px" }}>
                       {item.status === "CONVERTED" ? (
                         <span style={{ background: "rgba(5,150,105,0.12)", color: "#059669", fontSize: 12, fontWeight: 700, borderRadius: 8, padding: "4px 10px" }}>
-                          محوّل ({Number(item.linked_expense?.actual_paid_amount ?? 0).toLocaleString()} ج.م مدفوع)
+                          محوّل ({Number(item.linked_expense?.actual_paid_amount ?? 0).toLocaleString()} مدفوع)
                         </span>
                       ) : (
                         <span style={{ background: "rgba(217,119,6,0.12)", color: "#d97706", fontSize: 12, fontWeight: 700, borderRadius: 8, padding: "4px 10px" }}>
@@ -260,11 +281,16 @@ export default function StageBudgetItemsPage() {
                         </span>
                       )}
                     </td>
-                    <td style={{ padding: "14px 12px" }}>
+                    <td style={{ padding: "14px 12px", whiteSpace: "nowrap" }}>
                       {item.status === "PENDING" && (
-                        <IconButton size="small" title="تحويل إلى مصروف فعلي" onClick={() => openConvert(item)} sx={{ color: "#9ca3af", "&:hover": { color: "#154278", background: "rgba(21,66,120,0.08)" } }}>
-                          <SyncAltOutlined sx={{ fontSize: 17 }} />
-                        </IconButton>
+                        <>
+                          <IconButton size="small" title="تحويل إلى مصروف فعلي" onClick={() => openConvert(item)} sx={{ color: "#9ca3af", "&:hover": { color: "#154278", background: "rgba(21,66,120,0.08)" } }}>
+                            <SyncAltOutlined sx={{ fontSize: 17 }} />
+                          </IconButton>
+                          <IconButton size="small" title="حذف البند" onClick={() => setDeleteItem(item)} sx={{ color: "#9ca3af", "&:hover": { color: "#ef4444", background: "rgba(239,68,68,0.08)" } }}>
+                            <DeleteOutline sx={{ fontSize: 17 }} />
+                          </IconButton>
+                        </>
                       )}
                     </td>
                   </tr>
@@ -333,7 +359,7 @@ export default function StageBudgetItemsPage() {
         <DialogContent sx={{ pt: "10px !important", display: "flex", flexDirection: "column", gap: 2.5 }}>
           {convertItem && (
             <div style={{ background: "#f9f9f7", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#6b7280" }}>
-              {convertItem.description} — المبلغ المتوقع: {Number(convertItem.amount).toLocaleString()} ج.م
+              {convertItem.description} — المبلغ المتوقع: {Number(convertItem.amount).toLocaleString()}
             </div>
           )}
           <TextField label="المبلغ الفعلي المدفوع *" type="text" inputMode="decimal" value={convertForm.actual_amount} onChange={e => setConvertForm({ ...convertForm, actual_amount: sanitizeDecimalInput(e.target.value) })} fullWidth sx={inputSx}
@@ -343,7 +369,7 @@ export default function StageBudgetItemsPage() {
             <InputLabel>سحب من (خزينة / عهدة) *</InputLabel>
             <Select value={convertForm.financial_account_id} label="سحب من (خزينة / عهدة) *" onChange={e => setConvertForm({ ...convertForm, financial_account_id: e.target.value })}>
               {accounts.map(a => (
-                <MenuItem key={a.id} value={a.id}>{a.account_name} — رصيد: EGP {a.current_balance}</MenuItem>
+                <MenuItem key={a.id} value={a.id}>{a.account_name} — رصيد: {a.current_balance}</MenuItem>
               ))}
             </Select>
           </FormControl>
@@ -351,6 +377,27 @@ export default function StageBudgetItemsPage() {
         <DialogActions sx={{ p: 3, pt: 1 }}>
           <Button onClick={handleConvert} variant="contained" disabled={convertSubmitting} sx={{ fontFamily: "var(--font-cairo)", background: "#154278", borderRadius: "10px", width: "100%", py: 1.2, fontWeight: 700 }}>
             {convertSubmitting ? "جاري التحويل..." : "تحويل ودفع"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── Delete Confirm Dialog ── */}
+      <Dialog open={!!deleteItem} onClose={() => setDeleteItem(null)} PaperProps={{ sx: { borderRadius: "20px", direction: "rtl", maxWidth: 400, width: "100%" } }}>
+        <DialogTitle sx={{ fontFamily: "var(--font-cairo)", fontWeight: 800 }}>
+          حذف البند المتوقع
+          <IconButton onClick={() => setDeleteItem(null)} sx={{ position: "absolute", left: 12, top: 12 }}><CloseOutlined /></IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: "10px !important" }}>
+          <p style={{ fontSize: 14, color: "#374151", margin: 0 }}>
+            هل أنت متأكد من حذف البند &quot;{deleteItem?.description}&quot; بمبلغ {Number(deleteItem?.amount ?? 0).toLocaleString()}؟ لا يمكن التراجع عن هذا الإجراء.
+          </p>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 1, gap: 1 }}>
+          <Button onClick={() => setDeleteItem(null)} sx={{ fontFamily: "var(--font-cairo)", color: "#6b7280", fontWeight: 700, textTransform: "none" }}>
+            إلغاء
+          </Button>
+          <Button onClick={handleDelete} variant="contained" disabled={deleteSubmitting} sx={{ fontFamily: "var(--font-cairo)", background: "#ef4444", "&:hover": { background: "#dc2626" }, borderRadius: "10px", fontWeight: 700, textTransform: "none" }}>
+            {deleteSubmitting ? "جاري الحذف..." : "حذف نهائياً"}
           </Button>
         </DialogActions>
       </Dialog>

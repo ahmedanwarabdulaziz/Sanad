@@ -461,7 +461,7 @@ export default function InvestorsPage() {
             { label: "إجمالي المستثمرين", value: investors.length, color: "#154278", bg: "rgba(21,66,120,0.07)" },
             { label: "نشط", value: activeCount, color: "#16a34a", bg: "rgba(22,163,74,0.07)" },
             { label: "غير نشط", value: investors.length - activeCount, color: "#64748b", bg: "rgba(100,116,139,0.07)" },
-            { label: "إجمالي المدفوعات", value: `EGP ${investors.reduce((sum, inv) => sum + (inv.total_paid || 0), 0).toLocaleString()}`, color: "#10b981", bg: "rgba(16,185,129,0.07)" }
+            { label: "إجمالي المدفوعات", value: `${investors.reduce((sum, inv) => sum + (inv.net_paid ?? inv.total_paid ?? 0), 0).toLocaleString()}`, color: "#10b981", bg: "rgba(16,185,129,0.07)" }
           ].map((s) => (
             <div
               key={s.label}
@@ -598,7 +598,7 @@ export default function InvestorsPage() {
                           {/* Total Paid / Returned / Net */}
                           <td style={{ padding: "14px 18px" }}>
                             <div style={{ fontSize: 15, fontWeight: 800, color: "#16a34a", direction: "ltr", textAlign: "right" }}>
-                              EGP {(inv.net_paid ?? inv.total_paid ?? 0).toLocaleString()}
+                              {(inv.net_paid ?? inv.total_paid ?? 0).toLocaleString()}
                             </div>
                             {(inv.total_returned ?? 0) > 0 && (
                               <div style={{ fontSize: 11, color: "#9ca3af", direction: "ltr", textAlign: "right", marginTop: 2 }}>
@@ -609,7 +609,7 @@ export default function InvestorsPage() {
 
                           {/* Contract value */}
                           <td style={{ padding: "14px 18px", fontSize: 13, color: "#374151", direction: "ltr", textAlign: "right" }}>
-                            {(inv.contract_value ?? 0) > 0 ? `EGP ${(inv.contract_value ?? 0).toLocaleString()}` : <span style={{ color: "#d1d5db" }}>—</span>}
+                            {(inv.contract_value ?? 0) > 0 ? `${(inv.contract_value ?? 0).toLocaleString()}` : <span style={{ color: "#d1d5db" }}>—</span>}
                           </td>
 
                           {/* Remaining */}

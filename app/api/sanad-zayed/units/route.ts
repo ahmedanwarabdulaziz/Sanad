@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from("sz_units")
       .select("*, stage:stage_id(name), allocations:sz_unit_allocations(id, contract_id, allocated_sqm, contract:contract_id(investor_id, investor:investor_id(name)))")
+      .order("sort_order", { ascending: true })
       .order("building_code", { ascending: true });
 
     if (stageId) query = query.eq("stage_id", stageId);
@@ -46,6 +47,15 @@ export async function POST(request: NextRequest) {
     if (!unit_code || !unit_code.trim()) return NextResponse.json({ error: "كود الوحدة مطلوب" }, { status: 422 });
     if (!licensed_area || Number(licensed_area) <= 0) return NextResponse.json({ error: "مساحة الوحدة غير صحيحة" }, { status: 422 });
 
+    const { data: last } = await supabase
+      .from("sz_units")
+      .select("sort_order")
+      .eq("stage_id", stage_id)
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const nextSortOrder = (last?.sort_order ?? -1) + 1;
+
     const { data, error } = await supabase
       .from("sz_units")
       .insert({
@@ -55,6 +65,7 @@ export async function POST(request: NextRequest) {
         unit_code: unit_code.trim(),
         licensed_area: Number(licensed_area),
         notes: notes?.trim() || "",
+        sort_order: nextSortOrder,
       })
       .select()
       .single();
