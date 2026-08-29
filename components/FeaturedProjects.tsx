@@ -17,28 +17,28 @@ export default function FeaturedProjects() {
         {
             id: "al-nasr-interlock",
             key: "alNasrInterlock",
-            image: "/images/interlock-hero.jpg", // Placeholder or existing image
+            image: "/images/01.png",
             icon: <ConstructionIcon sx={{ fontSize: 40 }} />,
             color: "#154278"
         },
         {
             id: "al-nasr-factory",
             key: "alNasrFactory",
-            image: "/images/marble-hero.jpg",
+            image: "/images/02.png",
             icon: <FactoryIcon sx={{ fontSize: 40 }} />,
             color: "#C29B40"
         },
         {
             id: "sanad-farms",
             key: "sanadFarms",
-            image: "/images/farms-hero.jpg",
+            image: "/images/03.png",
             icon: <AgricultureIcon sx={{ fontSize: 40 }} />,
             color: "#2e7d32"
         },
         {
             id: "sanad-zayed",
             key: "sanadZayed",
-            image: "/images/zayed-hero.jpg",
+            image: "/images/Hero zayed.png",
             icon: <ApartmentIcon sx={{ fontSize: 40 }} />,
             color: "#d32f2f"
         }
@@ -88,19 +88,13 @@ export default function FeaturedProjects() {
                                     }}
                                 >
                                     <Box sx={{ position: 'relative' }}>
-                                        <Box
-                                            sx={{
-                                                height: 240,
-                                                bgcolor: project.color,
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                color: 'white',
-                                                opacity: 0.9
-                                            }}
-                                        >
-                                            {project.icon}
-                                        </Box>
+                                        <CardMedia
+                                            component="img"
+                                            height="240"
+                                            image={project.image}
+                                            alt={t(`projects.${project.key}.title`)}
+                                            sx={{ objectFit: 'cover' }}
+                                        />
                                         <Box
                                             className="card-media-overlay"
                                             sx={{

@@ -29,6 +29,9 @@ export default function AdminAuthenticatedLayout({
         return;
       }
       setChecking(false);
+    }).catch(() => {
+      if (!active) return;
+      router.replace("/admin");
     });
     return () => {
       active = false;

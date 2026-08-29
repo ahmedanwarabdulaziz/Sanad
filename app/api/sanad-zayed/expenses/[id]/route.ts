@@ -25,6 +25,46 @@ export async function PATCH(
 
     const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
 
+    if ("description" in body) {
+      const description = body.description?.trim();
+      if (!description) {
+        return NextResponse.json({ error: "وصف المصروف مطلوب" }, { status: 422 });
+      }
+      update.description = description;
+    }
+    if ("category" in body) {
+      update.category = body.category?.trim() || "";
+    }
+    if ("expense_date" in body) {
+      update.expense_date = body.expense_date;
+    }
+    if ("notes" in body) {
+      update.notes = body.notes?.trim() || "";
+    }
+    if ("attachment_url" in body) {
+      update.attachment_url = body.attachment_url || null;
+    }
+    if ("allocated_cost" in body) {
+      const allocatedCost = Number(body.allocated_cost);
+      if (!allocatedCost || allocatedCost <= 0) {
+        return NextResponse.json({ error: "إجمالي الالتزام غير صحيح" }, { status: 422 });
+      }
+
+      const { data: current } = await supabase
+        .from("sz_expenses")
+        .select("actual_paid_amount")
+        .eq("id", id)
+        .single();
+
+      if (current && allocatedCost < Number(current.actual_paid_amount)) {
+        return NextResponse.json(
+          { error: "لا يمكن أن يكون إجمالي الالتزام أقل من المبلغ المدفوع بالفعل" },
+          { status: 422 }
+        );
+      }
+
+      update.allocated_cost = allocatedCost;
+    }
     if ("investor_override_description" in body) {
       update.investor_override_description = body.investor_override_description?.trim() || null;
     }

@@ -25,6 +25,9 @@ export default function SanadShell({ children }: { children: React.ReactNode }) 
         return;
       }
       setChecking(false);
+    }).catch(() => {
+      if (!active) return;
+      router.replace("/admin");
     });
     return () => { active = false; };
   }, [router]);

@@ -17,7 +17,7 @@ export async function GET() {
       supabase.from("sz_investors").select("id", { count: "exact", head: true }).eq("is_active", true),
       supabase.from("sz_stages").select("id", { count: "exact", head: true }),
       supabase.from("sz_investor_contracts").select("total_contract_value").eq("status", "ACTIVE"),
-      supabase.from("sz_expenses").select("actual_paid_amount").eq("status", "APPROVED"),
+      supabase.from("sz_expenses").select("actual_paid_amount").eq("status", "APPROVED").is("recoverable_investor_id", null),
     ]);
 
     const totalInvestors = investors.count ?? 0;

@@ -10,12 +10,12 @@ import {
 import {
   AddOutlined, CloseOutlined, SearchOutlined, ReceiptLongOutlined,
   AttachFileOutlined, DeleteOutline, PaymentsOutlined, VisibilityOffOutlined,
-  AccountTreeOutlined, WarningAmberOutlined, PersonOutline
+  AccountTreeOutlined, WarningAmberOutlined, PersonOutline, EditOutlined
 } from "@mui/icons-material";
 import { sanitizeDecimalInput } from "@/lib/sanad-zayed/decimalInput";
 
 interface Allocation { id?: string; stage_id: string; percentage: number; stage?: { name: string } }
-interface Payment { id: string; amount: number; paid_date: string; financial_account?: { account_name: string } }
+interface Payment { id: string; amount: number; paid_date: string; financial_account_id?: string; financial_account?: { account_name: string } }
 
 interface Expense {
   id: string;
@@ -60,6 +60,11 @@ export default function ExpensesPage() {
   const [paymentExpense, setPaymentExpense] = useState<Expense | null>(null);
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
   const [paymentForm, setPaymentForm] = useState({ amount: "", paid_date: new Date().toISOString().split("T")[0], financial_account_id: "", notes: "" });
+  const [paymentHistory, setPaymentHistory] = useState<Payment[]>([]);
+  const [paymentHistoryLoading, setPaymentHistoryLoading] = useState(false);
+  const [correctingPaymentId, setCorrectingPaymentId] = useState<string | null>(null);
+  const [correctingAccountId, setCorrectingAccountId] = useState("");
+  const [correctingSubmitting, setCorrectingSubmitting] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -83,6 +88,12 @@ export default function ExpensesPage() {
   const [recoveryExpense, setRecoveryExpense] = useState<Expense | null>(null);
   const [recoveryInvestorId, setRecoveryInvestorId] = useState("");
   const [recoverySubmitting, setRecoverySubmitting] = useState(false);
+
+  const [editExpense, setEditExpense] = useState<Expense | null>(null);
+  const [editForm, setEditForm] = useState({ description: "", category: "", allocated_cost: "", expense_date: "", notes: "" });
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
+  const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
 
   const showFlash = (type: "success" | "error", text: string) => {
     setFlash({ type, text });
@@ -124,8 +135,9 @@ export default function ExpensesPage() {
     );
   }, [expenses, search]);
 
-  const totalPaid = expenses.reduce((sum, ex) => sum + Number(ex.actual_paid_amount), 0);
-  const totalAllocated = expenses.reduce((sum, ex) => sum + Number(ex.allocated_cost), 0);
+  const companyExpenses = expenses.filter(ex => !ex.recoverable_investor_id);
+  const totalPaid = companyExpenses.reduce((sum, ex) => sum + Number(ex.actual_paid_amount), 0);
+  const totalAllocated = companyExpenses.reduce((sum, ex) => sum + Number(ex.allocated_cost), 0);
 
   const splitTotal = splits.reduce((sum, s) => sum + (Number(s.percentage) || 0), 0);
 
@@ -194,9 +206,56 @@ export default function ExpensesPage() {
     }
   };
 
-  const openPaymentDialog = (ex: Expense) => {
+  const openPaymentDialog = async (ex: Expense) => {
     setPaymentExpense(ex);
     setPaymentForm({ amount: "", paid_date: new Date().toISOString().split("T")[0], financial_account_id: "", notes: "" });
+    setCorrectingPaymentId(null);
+    setCorrectingAccountId("");
+    setPaymentHistory([]);
+    setPaymentHistoryLoading(true);
+    try {
+      const res = await fetch(`/api/sanad-zayed/expenses/${ex.id}/payments`);
+      const data = await res.json();
+      if (data.payments) setPaymentHistory(data.payments);
+    } catch {
+      /* silent — history is a bonus view, not required to add a new payment */
+    } finally {
+      setPaymentHistoryLoading(false);
+    }
+  };
+
+  const closePaymentDialog = () => {
+    setPaymentExpense(null);
+    setPaymentHistory([]);
+    setCorrectingPaymentId(null);
+    setCorrectingAccountId("");
+  };
+
+  const handleCorrectPaymentAccount = async (paymentId: string) => {
+    if (!paymentExpense || !correctingAccountId) return;
+    setCorrectingSubmitting(true);
+    try {
+      const res = await fetch(`/api/sanad-zayed/expenses/${paymentExpense.id}/payments/${paymentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ financial_account_id: correctingAccountId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "حدث خطأ");
+
+      showFlash("success", "تم تصحيح الخزينة للدفعة");
+      setCorrectingPaymentId(null);
+      setCorrectingAccountId("");
+
+      const histRes = await fetch(`/api/sanad-zayed/expenses/${paymentExpense.id}/payments`);
+      const histData = await histRes.json();
+      if (histData.payments) setPaymentHistory(histData.payments);
+      fetchData();
+    } catch (err: any) {
+      showFlash("error", err.message);
+    } finally {
+      setCorrectingSubmitting(false);
+    }
   };
 
   const handleAddPayment = async () => {
@@ -215,7 +274,7 @@ export default function ExpensesPage() {
       if (!res.ok) throw new Error(data.error || "حدث خطأ");
 
       showFlash("success", "تم تسجيل الدفعة وخصمها من الخزينة");
-      setPaymentExpense(null);
+      closePaymentDialog();
       fetchData();
     } catch (err: any) {
       showFlash("error", err.message);
@@ -292,6 +351,60 @@ export default function ExpensesPage() {
       showFlash("error", err.message);
     } finally {
       setRecoverySubmitting(false);
+    }
+  };
+
+  const openEditDialog = (ex: Expense) => {
+    setEditExpense(ex);
+    setEditForm({
+      description: ex.description,
+      category: ex.category || "",
+      allocated_cost: String(ex.allocated_cost),
+      expense_date: ex.expense_date,
+      notes: ex.notes || "",
+    });
+    setEditSelectedFile(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editExpense) return;
+    if (!editForm.description.trim()) return showFlash("error", "البيان / الوصف مطلوب");
+    if (!editForm.allocated_cost || Number(editForm.allocated_cost) <= 0) return showFlash("error", "إجمالي الالتزام غير صحيح");
+
+    setEditSubmitting(true);
+    try {
+      let attachment_url: string | undefined;
+      if (editSelectedFile) {
+        const formData = new FormData();
+        formData.append("file", editSelectedFile);
+        const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok) throw new Error(uploadData.error || "فشل رفع المرفق");
+        attachment_url = uploadData.url;
+      }
+
+      const res = await fetch(`/api/sanad-zayed/expenses/${editExpense.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description: editForm.description,
+          category: editForm.category,
+          allocated_cost: Number(editForm.allocated_cost),
+          expense_date: editForm.expense_date,
+          notes: editForm.notes,
+          ...(attachment_url ? { attachment_url } : {}),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "حدث خطأ");
+
+      showFlash("success", "تم تحديث المصروف بنجاح");
+      setEditExpense(null);
+      fetchData();
+    } catch (err: any) {
+      showFlash("error", err.message);
+    } finally {
+      setEditSubmitting(false);
     }
   };
 
@@ -451,6 +564,11 @@ export default function ExpensesPage() {
 
                       <td style={{ padding: "14px 12px" }}>
                         <div style={{ display: "flex", gap: 2 }}>
+                          <Tooltip title="تعديل المصروف">
+                            <IconButton size="small" onClick={() => openEditDialog(ex)} sx={{ color: "#9ca3af", "&:hover": { color: "#154278", background: "rgba(21,66,120,0.08)" } }}>
+                              <EditOutlined sx={{ fontSize: 17 }} />
+                            </IconButton>
+                          </Tooltip>
                           <Tooltip title={ex.recoverable_investor ? "معطّل — مرتبط باسترداد من مستثمر" : "توزيع المرحلة"}>
                             <span>
                               <IconButton size="small" disabled={!!ex.recoverable_investor} onClick={() => openAllocationDialog(ex)} sx={{ color: (ex.allocations ?? []).length === 0 ? "#ef4444" : "#9ca3af", "&:hover": { color: "#154278", background: "rgba(21,66,120,0.08)" } }}>
@@ -590,11 +708,71 @@ export default function ExpensesPage() {
         </DialogActions>
       </Dialog>
 
+      {/* ── Edit Expense Dialog ── */}
+      <Dialog open={!!editExpense} onClose={() => setEditExpense(null)} PaperProps={{ sx: { borderRadius: "20px", direction: "rtl", maxWidth: 540, width: "100%" } }}>
+        <DialogTitle sx={{ fontFamily: "var(--font-cairo)", fontWeight: 800 }}>
+          تعديل المصروف
+          <IconButton onClick={() => setEditExpense(null)} sx={{ position: "absolute", left: 12, top: 12 }}><CloseOutlined /></IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: "10px !important", display: "flex", flexDirection: "column", gap: 2.5 }}>
+
+          <TextField label="إجمالي الالتزام (تكلفة المصروف بالكامل) *" type="text" inputMode="decimal" value={editForm.allocated_cost} onChange={e => setEditForm({ ...editForm, allocated_cost: sanitizeDecimalInput(e.target.value) })} fullWidth sx={{ ...inputSx, "& .MuiInputBase-input": { direction: "ltr", textAlign: "right", fontSize: 18, fontWeight: 700, color: "#d97706" } }}
+            helperText={editExpense ? `المدفوع حتى الآن: ${Number(editExpense.actual_paid_amount).toLocaleString()} — لا يمكن تخفيض الالتزام دون هذا المبلغ` : ""} />
+
+          <TextField label="التاريخ" type="date" value={editForm.expense_date} onChange={e => setEditForm({ ...editForm, expense_date: e.target.value })} fullWidth sx={inputSx} InputLabelProps={{ shrink: true }} />
+
+          <TextField label="البيان (فيما تم الصرف؟) *" value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} fullWidth sx={inputSx} />
+
+          <FormControl fullWidth sx={inputSx}>
+            <InputLabel>التصنيف (اختياري)</InputLabel>
+            <Select value={editForm.category} label="التصنيف (اختياري)" onChange={e => setEditForm({ ...editForm, category: e.target.value })}>
+              <MenuItem value="">— بدون تصنيف —</MenuItem>
+              {CATEGORIES.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
+            </Select>
+          </FormControl>
+
+          <TextField label="ملاحظات إضافية (اختياري)" value={editForm.notes} onChange={e => setEditForm({ ...editForm, notes: e.target.value })} fullWidth multiline rows={2} sx={inputSx} />
+
+          {/* Attachment Upload */}
+          <div style={{ background: "#f9f9f7", borderRadius: 10, padding: 16, border: "1.5px dashed #e5e3dc", textAlign: "center" }}>
+            <input type="file" ref={editFileInputRef} style={{ display: "none" }} onChange={e => setEditSelectedFile(e.target.files?.[0] || null)} accept="image/*,.pdf" />
+
+            {editSelectedFile ? (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#154278", fontSize: 13, fontWeight: 700 }}>
+                  <AttachFileOutlined sx={{ fontSize: 16 }} />
+                  {editSelectedFile.name}
+                </div>
+                <IconButton size="small" onClick={() => setEditSelectedFile(null)} sx={{ color: "#ef4444" }}><CloseOutlined fontSize="small" /></IconButton>
+              </div>
+            ) : editExpense?.attachment_url ? (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                <a href={editExpense.attachment_url} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, color: "#154278", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
+                  <AttachFileOutlined sx={{ fontSize: 16 }} />
+                  عرض المرفق الحالي
+                </a>
+                <Button size="small" onClick={() => editFileInputRef.current?.click()} sx={{ fontFamily: "var(--font-cairo)", color: "#6b7280", fontWeight: 700, textTransform: "none" }}>استبدال</Button>
+              </div>
+            ) : (
+              <Button onClick={() => editFileInputRef.current?.click()} sx={{ fontFamily: "var(--font-cairo)", color: "#6b7280", fontWeight: 700 }} startIcon={<AttachFileOutlined />}>
+                إرفاق فاتورة / صورة (PDF أو صورة)
+              </Button>
+            )}
+          </div>
+
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 1 }}>
+          <Button onClick={handleSaveEdit} variant="contained" disabled={editSubmitting} sx={{ fontFamily: "var(--font-cairo)", background: "#154278", borderRadius: "10px", width: "100%", py: 1.2, fontWeight: 700 }}>
+            {editSubmitting ? "جاري الحفظ..." : "حفظ التعديلات"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* ── Add Payment Tranche Dialog ── */}
-      <Dialog open={!!paymentExpense} onClose={() => setPaymentExpense(null)} PaperProps={{ sx: { borderRadius: "20px", direction: "rtl", maxWidth: 420, width: "100%" } }}>
+      <Dialog open={!!paymentExpense} onClose={closePaymentDialog} PaperProps={{ sx: { borderRadius: "20px", direction: "rtl", maxWidth: 420, width: "100%" } }}>
         <DialogTitle sx={{ fontFamily: "var(--font-cairo)", fontWeight: 800 }}>
           إضافة دفعة
-          <IconButton onClick={() => setPaymentExpense(null)} sx={{ position: "absolute", left: 12, top: 12 }}><CloseOutlined /></IconButton>
+          <IconButton onClick={closePaymentDialog} sx={{ position: "absolute", left: 12, top: 12 }}><CloseOutlined /></IconButton>
         </DialogTitle>
         <DialogContent sx={{ pt: "10px !important", display: "flex", flexDirection: "column", gap: 2.5 }}>
           {paymentExpense && (
@@ -603,6 +781,48 @@ export default function ExpensesPage() {
               المدفوع حتى الآن: <strong>{Number(paymentExpense.actual_paid_amount).toLocaleString()}</strong> / {Number(paymentExpense.allocated_cost).toLocaleString()}
             </div>
           )}
+
+          {(paymentHistoryLoading || paymentHistory.length > 0) && (
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 8 }}>الدفعات المسجلة والخزينة المسحوب منها</div>
+              {paymentHistoryLoading ? (
+                <div style={{ fontSize: 12, color: "#9ca3af" }}>جاري التحميل...</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {paymentHistory.map(p => (
+                    <div key={p.id} style={{ background: "#f9f9f7", borderRadius: 10, padding: "8px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                      <div style={{ fontSize: 12, color: "#374151" }}>
+                        <strong style={{ direction: "ltr", display: "inline-block" }}>{Number(p.amount).toLocaleString()}</strong>
+                        {" — "}{new Date(p.paid_date).toLocaleDateString("ar-EG-u-nu-latn")}
+                      </div>
+                      {correctingPaymentId === p.id ? (
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <FormControl size="small" sx={{ minWidth: 150, ...inputSx }}>
+                            <Select value={correctingAccountId} displayEmpty onChange={e => setCorrectingAccountId(e.target.value)}>
+                              <MenuItem value="" disabled>اختر الخزينة الصحيحة</MenuItem>
+                              {accounts.map(a => <MenuItem key={a.id} value={a.id}>{a.account_name}</MenuItem>)}
+                            </Select>
+                          </FormControl>
+                          <Button size="small" disabled={!correctingAccountId || correctingSubmitting} onClick={() => handleCorrectPaymentAccount(p.id)} sx={{ fontFamily: "var(--font-cairo)", fontWeight: 700 }}>حفظ</Button>
+                          <Button size="small" onClick={() => { setCorrectingPaymentId(null); setCorrectingAccountId(""); }} sx={{ color: "#9ca3af" }}>إلغاء</Button>
+                        </div>
+                      ) : (
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <span style={{ fontSize: 12, color: "#154278", fontWeight: 700 }}>{p.financial_account?.account_name ?? "—"}</span>
+                          <Tooltip title="تصحيح الخزينة المسحوب منها">
+                            <IconButton size="small" onClick={() => { setCorrectingPaymentId(p.id); setCorrectingAccountId(p.financial_account_id ?? ""); }} sx={{ color: "#9ca3af", "&:hover": { color: "#154278" } }}>
+                              <EditOutlined sx={{ fontSize: 15 }} />
+                            </IconButton>
+                          </Tooltip>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <TextField label="مبلغ الدفعة *" type="text" inputMode="decimal" value={paymentForm.amount} onChange={e => setPaymentForm({ ...paymentForm, amount: sanitizeDecimalInput(e.target.value) })} fullWidth sx={inputSx} />
           <TextField label="التاريخ" type="date" value={paymentForm.paid_date} onChange={e => setPaymentForm({ ...paymentForm, paid_date: e.target.value })} fullWidth sx={inputSx} InputLabelProps={{ shrink: true }} />
           <FormControl fullWidth sx={inputSx}>

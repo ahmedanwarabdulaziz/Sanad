@@ -12,6 +12,7 @@ import {
   VisibilityOutlined,
   MenuOutlined,
   CloseOutlined,
+  PaymentsOutlined,
 } from "@mui/icons-material";
 import { IconButton } from "@mui/material";
 import { useState } from "react";
@@ -23,6 +24,7 @@ const navItems = [
   { label: "الوحدات",         href: "/admin/sanad-zayed/units",      icon: ApartmentOutlined },
   { label: "الخزينة",          href: "/admin/sanad-zayed/treasury",   icon: AccountBalanceOutlined },
   { label: "المصروفات",        href: "/admin/sanad-zayed/expenses",   icon: ReceiptLongOutlined },
+  { label: "مرتجعات المستثمرين", href: "/admin/sanad-zayed/investor-returns", icon: PaymentsOutlined },
   { label: "البنود الظاهرة للمستثمر", href: "/admin/sanad-zayed/investor-items", icon: VisibilityOutlined },
 ];
 

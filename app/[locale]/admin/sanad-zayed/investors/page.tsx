@@ -457,27 +457,43 @@ export default function InvestorsPage() {
           transition={{ delay: 0.05 }}
           style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}
         >
-          {[
-            { label: "إجمالي المستثمرين", value: investors.length, color: "#154278", bg: "rgba(21,66,120,0.07)" },
-            { label: "نشط", value: activeCount, color: "#16a34a", bg: "rgba(22,163,74,0.07)" },
-            { label: "غير نشط", value: investors.length - activeCount, color: "#64748b", bg: "rgba(100,116,139,0.07)" },
-            { label: "إجمالي المدفوعات", value: `${investors.reduce((sum, inv) => sum + (inv.net_paid ?? inv.total_paid ?? 0), 0).toLocaleString()}`, color: "#10b981", bg: "rgba(16,185,129,0.07)" }
-          ].map((s) => (
-            <div
-              key={s.label}
-              style={{
-                background: "#fff",
-                borderRadius: 12,
-                padding: "12px 20px",
-                border: "1px solid rgba(0,0,0,0.05)",
-                display: "flex", alignItems: "center", gap: 12,
-              }}
-            >
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: s.color }} />
-              <span style={{ fontSize: 13, color: "#6b7280", whiteSpace: "nowrap" }}>{s.label}</span>
-              <span style={{ fontSize: s.label === "إجمالي المدفوعات" ? 16 : 18, fontWeight: 800, color: s.color, direction: "ltr" }}>{s.value}</span>
+          {/* Status metrics */}
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", flex: 1, alignContent: "flex-start" }}>
+            {[
+              { label: "إجمالي المستثمرين", value: investors.length, color: "#154278" },
+              { label: "نشط", value: activeCount, color: "#16a34a" },
+              { label: "غير نشط", value: investors.length - activeCount, color: "#64748b" },
+            ].map((s) => (
+              <div
+                key={s.label}
+                style={{
+                  background: "#fff", borderRadius: 12, padding: "12px 20px", border: "1px solid rgba(0,0,0,0.05)",
+                  display: "flex", alignItems: "center", gap: 12, flexGrow: 1
+                }}
+              >
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: s.color }} />
+                <span style={{ fontSize: 13, color: "#6b7280", whiteSpace: "nowrap" }}>{s.label}</span>
+                <span style={{ fontSize: 18, fontWeight: 800, color: s.color, direction: "ltr" }}>{s.value}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Financial Summary Card */}
+          <div style={{ background: "#fff", borderRadius: 12, padding: "20px", border: "1px solid rgba(0,0,0,0.05)", minWidth: 320, display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 24 }}>
+              <span style={{ fontSize: 14, color: "#6b7280", fontWeight: 700 }}>إجمالي المدفوعات</span>
+              <span style={{ fontSize: 16, fontWeight: 800, color: "#0ea5e9", direction: "ltr" }}>{investors.reduce((sum, inv) => sum + (inv.total_paid ?? 0), 0).toLocaleString()}</span>
             </div>
-          ))}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 24 }}>
+              <span style={{ fontSize: 14, color: "#6b7280", fontWeight: 700 }}>إجمالي المسترد</span>
+              <span style={{ fontSize: 16, fontWeight: 800, color: "#f59e0b", direction: "ltr" }}>{investors.reduce((sum, inv) => sum + (inv.total_returned ?? 0), 0).toLocaleString()}</span>
+            </div>
+            <div style={{ height: 1, background: "#f0ede6", width: "100%" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 24 }}>
+              <span style={{ fontSize: 14, color: "#154278", fontWeight: 900 }}>الصافي بعد الخصم</span>
+              <span style={{ fontSize: 18, fontWeight: 900, color: "#10b981", direction: "ltr" }}>{investors.reduce((sum, inv) => sum + (inv.net_paid ?? inv.total_paid ?? 0), 0).toLocaleString()}</span>
+            </div>
+          </div>
         </motion.div>
       )}
 
