@@ -10,7 +10,7 @@ import {
 import {
   AddOutlined, CloseOutlined, SearchOutlined, ReceiptLongOutlined,
   AttachFileOutlined, DeleteOutline, PaymentsOutlined, VisibilityOffOutlined,
-  AccountTreeOutlined, WarningAmberOutlined, PersonOutline, EditOutlined
+  AccountTreeOutlined, WarningAmberOutlined, EditOutlined
 } from "@mui/icons-material";
 import { sanitizeDecimalInput } from "@/lib/sanad-zayed/decimalInput";
 
@@ -33,14 +33,11 @@ interface Expense {
   investor_override_description?: string | null;
   investor_override_amount?: number | null;
   hide_from_investor?: boolean;
-  recoverable_investor_id?: string | null;
-  recoverable_investor?: { id: string; name: string } | null;
   created_at: string;
 }
 
 interface Account { id: string; account_name: string; custodian_name: string; account_type: string; current_balance: number; }
 interface Stage { id: string; name: string; }
-interface Investor { id: string; name: string; }
 
 const CATEGORIES = ["تراخيص", "عمولات", "مقاولات", "إدارية ونثريات", "أخرى"];
 
@@ -49,7 +46,6 @@ export default function ExpensesPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [stages, setStages] = useState<Stage[]>([]);
-  const [investors, setInvestors] = useState<Investor[]>([]);
 
   const [search, setSearch] = useState("");
   const [flash, setFlash] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -77,17 +73,12 @@ export default function ExpensesPage() {
     expense_date: new Date().toISOString().split("T")[0],
     financial_account_id: "",
     notes: "",
-    recoverable_investor_id: "",
   });
   const [splits, setSplits] = useState<{ stage_id: string; percentage: string }[]>([]);
 
   const [allocationExpense, setAllocationExpense] = useState<Expense | null>(null);
   const [allocationSplits, setAllocationSplits] = useState<{ stage_id: string; percentage: string }[]>([]);
   const [allocationSubmitting, setAllocationSubmitting] = useState(false);
-
-  const [recoveryExpense, setRecoveryExpense] = useState<Expense | null>(null);
-  const [recoveryInvestorId, setRecoveryInvestorId] = useState("");
-  const [recoverySubmitting, setRecoverySubmitting] = useState(false);
 
   const [editExpense, setEditExpense] = useState<Expense | null>(null);
   const [editForm, setEditForm] = useState({ description: "", category: "", allocated_cost: "", expense_date: "", notes: "" });
@@ -102,21 +93,18 @@ export default function ExpensesPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [expRes, accRes, stageRes, invRes] = await Promise.all([
+      const [expRes, accRes, stageRes] = await Promise.all([
         fetch("/api/sanad-zayed/expenses"),
         fetch("/api/sanad-zayed/treasury"),
         fetch("/api/sanad-zayed/stages"),
-        fetch("/api/sanad-zayed/investors"),
       ]);
       const expData = await expRes.json();
       const accData = await accRes.json();
       const stageData = await stageRes.json();
-      const invData = await invRes.json();
 
       if (expData.expenses) setExpenses(expData.expenses);
       if (accData.accounts) setAccounts(accData.accounts);
       if (stageData.stages) setStages(stageData.stages);
-      if (invData.investors) setInvestors(invData.investors);
     } catch {
       showFlash("error", "فشل في تحميل البيانات");
     } finally {
@@ -135,9 +123,8 @@ export default function ExpensesPage() {
     );
   }, [expenses, search]);
 
-  const companyExpenses = expenses.filter(ex => !ex.recoverable_investor_id);
-  const totalPaid = companyExpenses.reduce((sum, ex) => sum + Number(ex.actual_paid_amount), 0);
-  const totalAllocated = companyExpenses.reduce((sum, ex) => sum + Number(ex.allocated_cost), 0);
+  const totalPaid = expenses.reduce((sum, ex) => sum + Number(ex.actual_paid_amount), 0);
+  const totalAllocated = expenses.reduce((sum, ex) => sum + Number(ex.allocated_cost), 0);
 
   const splitTotal = splits.reduce((sum, s) => sum + (Number(s.percentage) || 0), 0);
 
@@ -152,7 +139,6 @@ export default function ExpensesPage() {
     if (Number(form.actual_paid_amount) > 0 && !form.financial_account_id) return showFlash("error", "يجب اختيار الخزينة / العهدة للدفعة");
     if (splits.length > 0 && Math.abs(splitTotal - 100) > 0.01) return showFlash("error", `مجموع نسب توزيع المراحل يجب أن يكون 100% (الحالي ${splitTotal}%)`);
     if (splits.some(s => !s.stage_id)) return showFlash("error", "اختر مرحلة لكل بند توزيع");
-    if (splits.length > 0 && form.recoverable_investor_id) return showFlash("error", "لا يمكن توزيع المصروف على مرحلة وربطه باسترداد من مستثمر في نفس الوقت");
 
     setSubmitting(true);
     try {
@@ -177,7 +163,6 @@ export default function ExpensesPage() {
         notes: form.notes,
         attachment_url: uploadedUrl || null,
         stage_allocations: splits.map(s => ({ stage_id: s.stage_id, percentage: Number(s.percentage) })),
-        recoverable_investor_id: form.recoverable_investor_id || null,
       };
 
       const res = await fetch("/api/sanad-zayed/expenses", {
@@ -193,7 +178,6 @@ export default function ExpensesPage() {
       setForm({
         description: "", category: "", allocated_cost: "", actual_paid_amount: "",
         expense_date: new Date().toISOString().split("T")[0], financial_account_id: "", notes: "",
-        recoverable_investor_id: "",
       });
       setSplits([]);
       setSelectedFile(null);
@@ -325,34 +309,6 @@ export default function ExpensesPage() {
   };
 
   const handleCancelAllocation = () => setAllocationSplits([]);
-
-  const openRecoveryDialog = (ex: Expense) => {
-    setRecoveryExpense(ex);
-    setRecoveryInvestorId(ex.recoverable_investor_id ?? "");
-  };
-
-  const handleSaveRecovery = async () => {
-    if (!recoveryExpense) return;
-
-    setRecoverySubmitting(true);
-    try {
-      const res = await fetch(`/api/sanad-zayed/expenses/${recoveryExpense.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recoverable_investor_id: recoveryInvestorId || null }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "حدث خطأ");
-
-      showFlash("success", recoveryInvestorId ? "تم ربط المصروف بالمستثمر — سيُخصم من رصيده" : "تم إلغاء ربط المصروف بالمستثمر");
-      setRecoveryExpense(null);
-      fetchData();
-    } catch (err: any) {
-      showFlash("error", err.message);
-    } finally {
-      setRecoverySubmitting(false);
-    }
-  };
 
   const openEditDialog = (ex: Expense) => {
     setEditExpense(ex);
@@ -526,12 +482,6 @@ export default function ExpensesPage() {
                           {ex.hide_from_investor && <VisibilityOffOutlined titleAccess="مخفي عن المستثمرين" sx={{ fontSize: 14, color: "#9ca3af" }} />}
                         </div>
                         {ex.notes && <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2, maxWidth: 200, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ex.notes}</div>}
-                        {ex.recoverable_investor && (
-                          <div style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, background: "rgba(217,119,6,0.1)", color: "#d97706", borderRadius: 6, padding: "2px 8px", fontWeight: 700, marginTop: 4 }}>
-                            <PersonOutline sx={{ fontSize: 13 }} />
-                            مسترد من: {ex.recoverable_investor.name}
-                          </div>
-                        )}
                       </td>
 
                       <td style={{ padding: "14px 18px" }}>
@@ -569,19 +519,10 @@ export default function ExpensesPage() {
                               <EditOutlined sx={{ fontSize: 17 }} />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title={ex.recoverable_investor ? "معطّل — مرتبط باسترداد من مستثمر" : "توزيع المرحلة"}>
-                            <span>
-                              <IconButton size="small" disabled={!!ex.recoverable_investor} onClick={() => openAllocationDialog(ex)} sx={{ color: (ex.allocations ?? []).length === 0 ? "#ef4444" : "#9ca3af", "&:hover": { color: "#154278", background: "rgba(21,66,120,0.08)" } }}>
-                                <AccountTreeOutlined sx={{ fontSize: 17 }} />
-                              </IconButton>
-                            </span>
-                          </Tooltip>
-                          <Tooltip title={(ex.allocations ?? []).length > 0 ? "معطّل — موزّع على مرحلة بالفعل" : "استرداد من مستثمر"}>
-                            <span>
-                              <IconButton size="small" disabled={(ex.allocations ?? []).length > 0} onClick={() => openRecoveryDialog(ex)} sx={{ color: ex.recoverable_investor ? "#d97706" : "#9ca3af", "&:hover": { color: "#154278", background: "rgba(21,66,120,0.08)" } }}>
-                                <PersonOutline sx={{ fontSize: 17 }} />
-                              </IconButton>
-                            </span>
+                          <Tooltip title="توزيع المرحلة">
+                            <IconButton size="small" onClick={() => openAllocationDialog(ex)} sx={{ color: (ex.allocations ?? []).length === 0 ? "#ef4444" : "#9ca3af", "&:hover": { color: "#154278", background: "rgba(21,66,120,0.08)" } }}>
+                              <AccountTreeOutlined sx={{ fontSize: 17 }} />
+                            </IconButton>
                           </Tooltip>
                           {!fullyPaid && (
                             <IconButton size="small" title="إضافة دفعة" onClick={() => openPaymentDialog(ex)} sx={{ color: "#9ca3af", "&:hover": { color: "#154278", background: "rgba(21,66,120,0.08)" } }}>
@@ -638,46 +579,31 @@ export default function ExpensesPage() {
           </FormControl>
 
           {/* ── Stage split ── */}
-          <div style={{ background: "#f9f9f7", borderRadius: 10, padding: 14, border: "1px solid #e5e3dc", opacity: form.recoverable_investor_id ? 0.5 : 1 }}>
+          <div style={{ background: "#f9f9f7", borderRadius: 10, padding: 14, border: "1px solid #e5e3dc" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: "#374151" }}>توزيع المصروف على المراحل</span>
               <span style={{ fontSize: 12, fontWeight: 700, color: Math.abs(splitTotal - 100) < 0.01 || splits.length === 0 ? "#16a34a" : "#ef4444" }}>
                 {splits.length > 0 && `${splitTotal}%`}
               </span>
             </div>
-            {!!form.recoverable_investor_id && (
-              <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 8 }}>معطّل — المصروف مرتبط باسترداد من مستثمر</div>
-            )}
             {splits.map((row, i) => (
               <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                <FormControl fullWidth size="small" sx={inputSx} disabled={!!form.recoverable_investor_id}>
+                <FormControl fullWidth size="small" sx={inputSx}>
                   <InputLabel>المرحلة</InputLabel>
                   <Select value={row.stage_id} label="المرحلة" onChange={e => updateSplitRow(i, { stage_id: e.target.value })}>
                     {stages.map(s => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}
                   </Select>
                 </FormControl>
-                <TextField size="small" label="%" type="text" inputMode="decimal" disabled={!!form.recoverable_investor_id} value={row.percentage} onChange={e => updateSplitRow(i, { percentage: sanitizeDecimalInput(e.target.value) })} sx={{ ...inputSx, width: 100 }} />
-                <IconButton size="small" disabled={!!form.recoverable_investor_id} onClick={() => removeSplitRow(i)} sx={{ color: "#ef4444" }}><DeleteOutline fontSize="small" /></IconButton>
+                <TextField size="small" label="%" type="text" inputMode="decimal" value={row.percentage} onChange={e => updateSplitRow(i, { percentage: sanitizeDecimalInput(e.target.value) })} sx={{ ...inputSx, width: 100 }} />
+                <IconButton size="small" onClick={() => removeSplitRow(i)} sx={{ color: "#ef4444" }}><DeleteOutline fontSize="small" /></IconButton>
               </div>
             ))}
-            <Button size="small" disabled={!!form.recoverable_investor_id} onClick={addSplitRow} sx={{ fontFamily: "var(--font-cairo)", color: "#154278", fontWeight: 700, textTransform: "none" }}>+ إضافة مرحلة</Button>
+            <Button size="small" onClick={addSplitRow} sx={{ fontFamily: "var(--font-cairo)", color: "#154278", fontWeight: 700, textTransform: "none" }}>+ إضافة مرحلة</Button>
           </div>
 
-          <FormControl fullWidth sx={inputSx} disabled={splits.length > 0}>
-            <InputLabel>استرداد من مستثمر (اختياري)</InputLabel>
-            <Select value={form.recoverable_investor_id} label="استرداد من مستثمر (اختياري)" onChange={e => setForm({ ...form, recoverable_investor_id: e.target.value })}>
-              <MenuItem value="">— مصروف على المشروع (غير مسترد) —</MenuItem>
-              {investors.map(i => <MenuItem key={i.id} value={i.id}>{i.name}</MenuItem>)}
-            </Select>
-          </FormControl>
-          {splits.length > 0 && (
-            <div style={{ fontSize: 12, color: "#9ca3af", marginTop: -12 }}>معطّل — المصروف موزّع على مرحلة بالفعل</div>
-          )}
-          {form.recoverable_investor_id && (
-            <div style={{ fontSize: 12, color: "#9ca3af", marginTop: -12 }}>
-              سيُخصم هذا المصروف من رصيد المستثمر بدلاً من احتسابه كتكلفة مشروع عامة
-            </div>
-          )}
+          <div style={{ fontSize: 12, color: "#6b7280", background: "rgba(21,66,120,0.05)", borderRadius: 8, padding: "8px 12px" }}>
+            أي مبلغ يُصرف لمستثمر (أرباح، استرداد رأس مال، رد سلفة) يُسجَّل من صفحة مرتجعات المستثمرين وليس هنا
+          </div>
 
           <TextField label="ملاحظات إضافية (اختياري)" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} fullWidth multiline rows={2} sx={inputSx} />
 
@@ -891,36 +817,6 @@ export default function ExpensesPage() {
         <DialogActions sx={{ p: 3, pt: 1 }}>
           <Button onClick={handleSaveAllocation} variant="contained" disabled={allocationSubmitting} sx={{ fontFamily: "var(--font-cairo)", background: allocationSplits.length === 0 ? "#ef4444" : "#154278", borderRadius: "10px", width: "100%", py: 1.2, fontWeight: 700 }}>
             {allocationSubmitting ? "جاري الحفظ..." : allocationSplits.length === 0 ? "تأكيد إلغاء التوزيع" : "حفظ التوزيع"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* ── Investor Recovery Link Dialog ── */}
-      <Dialog open={!!recoveryExpense} onClose={() => setRecoveryExpense(null)} PaperProps={{ sx: { borderRadius: "20px", direction: "rtl", maxWidth: 420, width: "100%" } }}>
-        <DialogTitle sx={{ fontFamily: "var(--font-cairo)", fontWeight: 800 }}>
-          استرداد المصروف من مستثمر
-          <IconButton onClick={() => setRecoveryExpense(null)} sx={{ position: "absolute", left: 12, top: 12 }}><CloseOutlined /></IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ pt: "10px !important", display: "flex", flexDirection: "column", gap: 2.5 }}>
-          {recoveryExpense && (
-            <div style={{ background: "#f9f9f7", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#6b7280" }}>
-              {recoveryExpense.description} — {Number(recoveryExpense.allocated_cost).toLocaleString("ar-EG-u-nu-latn")}
-            </div>
-          )}
-          <FormControl fullWidth sx={inputSx}>
-            <InputLabel>المستثمر</InputLabel>
-            <Select value={recoveryInvestorId} label="المستثمر" onChange={e => setRecoveryInvestorId(e.target.value)}>
-              <MenuItem value="">— مصروف على المشروع (غير مسترد) —</MenuItem>
-              {investors.map(i => <MenuItem key={i.id} value={i.id}>{i.name}</MenuItem>)}
-            </Select>
-          </FormControl>
-          <div style={{ fontSize: 12, color: "#9ca3af" }}>
-            عند الربط بمستثمر، أي دفعة تُسجَّل على هذا المصروف تُخصم مباشرة من رصيد ذلك المستثمر بدلاً من احتسابها كتكلفة مشروع عامة.
-          </div>
-        </DialogContent>
-        <DialogActions sx={{ p: 3, pt: 1 }}>
-          <Button onClick={handleSaveRecovery} variant="contained" disabled={recoverySubmitting} sx={{ fontFamily: "var(--font-cairo)", background: "#154278", borderRadius: "10px", width: "100%", py: 1.2, fontWeight: 700 }}>
-            {recoverySubmitting ? "جاري الحفظ..." : "حفظ"}
           </Button>
         </DialogActions>
       </Dialog>

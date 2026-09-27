@@ -11,7 +11,7 @@ import {
 import {
   AddOutlined, CloseOutlined, ArrowForwardOutlined, DescriptionOutlined,
   ExpandMoreOutlined, ExpandLessOutlined, PaymentsOutlined, CheckCircleOutlined,
-  RemoveCircleOutlineOutlined, PictureAsPdfOutlined, SyncAltOutlined, ContentCopyOutlined,
+  PictureAsPdfOutlined, SyncAltOutlined, ContentCopyOutlined,
   ReceiptLongOutlined, EditOutlined, EventOutlined
 } from "@mui/icons-material";
 import { generateStatementPdfBlob } from "@/lib/sanad-zayed/statementPdf";
@@ -94,9 +94,6 @@ export default function InvestorDetailPage() {
 
   const [ledger, setLedger] = useState<{ balance: number; total_deposits: number; total_withdrawals: number; total_contract_dues: number; transactions: any[]; reconciliations: any[] } | null>(null);
 
-  const [deductionOpen, setDeductionOpen] = useState(false);
-  const [deductionForm, setDeductionForm] = useState({ amount: "", financial_account_id: "", description: "", deduction_date: new Date().toISOString().split("T")[0] });
-  const [deductionSubmitting, setDeductionSubmitting] = useState(false);
 
   const [settleReconciliation, setSettleReconciliation] = useState<any | null>(null);
   const [settleAccountId, setSettleAccountId] = useState("");
@@ -199,32 +196,6 @@ export default function InvestorDetailPage() {
       showFlash("error", err.message);
     } finally {
       setPaySubmitting(false);
-    }
-  };
-
-  const handleAddDeduction = async () => {
-    if (!deductionForm.amount || Number(deductionForm.amount) <= 0) return showFlash("error", "المبلغ غير صحيح");
-    if (!deductionForm.financial_account_id) return showFlash("error", "يجب اختيار الخزينة/الحساب");
-    if (!deductionForm.description.trim()) return showFlash("error", "سبب الخصم مطلوب");
-
-    setDeductionSubmitting(true);
-    try {
-      const res = await fetch(`/api/sanad-zayed/investors/${investorId}/deduction`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(deductionForm),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "حدث خطأ");
-
-      showFlash("success", "تم تسجيل الخصم وخصمه من الخزينة");
-      setDeductionOpen(false);
-      setDeductionForm({ amount: "", financial_account_id: "", description: "", deduction_date: new Date().toISOString().split("T")[0] });
-      fetchAll();
-    } catch (err: any) {
-      showFlash("error", err.message);
-    } finally {
-      setDeductionSubmitting(false);
     }
   };
 
@@ -516,13 +487,6 @@ export default function InvestorDetailPage() {
             sx={{ fontFamily: "var(--font-cairo)", color: "#154278", border: "1.5px solid rgba(21,66,120,0.2)", borderRadius: "12px", fontWeight: 700, textTransform: "none", px: 2.2 }}
           >
             {statementGenerating ? "جاري الإنشاء..." : "كشف حساب PDF"}
-          </Button>
-          <Button
-            onClick={() => setDeductionOpen(true)}
-            startIcon={<RemoveCircleOutlineOutlined />}
-            sx={{ fontFamily: "var(--font-cairo)", color: "#ef4444", border: "1.5px solid rgba(239,68,68,0.2)", borderRadius: "12px", fontWeight: 700, textTransform: "none", px: 2.2 }}
-          >
-            خصم شخصي
           </Button>
           <motion.button
             whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
@@ -947,31 +911,6 @@ export default function InvestorDetailPage() {
         <DialogActions sx={{ p: 3, pt: 1 }}>
           <Button onClick={handleMarkPaid} variant="contained" disabled={paySubmitting} sx={{ fontFamily: "var(--font-cairo)", background: "#154278", borderRadius: "10px", width: "100%", py: 1.2, fontWeight: 700 }}>
             {paySubmitting ? "جاري الحفظ..." : "تأكيد التحصيل"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* ── Personal Deduction Dialog ── */}
-      <Dialog open={deductionOpen} onClose={() => setDeductionOpen(false)} PaperProps={{ sx: { borderRadius: "20px", direction: "rtl", maxWidth: 420, width: "100%" } }}>
-        <DialogTitle sx={{ fontFamily: "var(--font-cairo)", fontWeight: 800 }}>
-          خصم شخصي من رصيد المستثمر
-          <IconButton onClick={() => setDeductionOpen(false)} sx={{ position: "absolute", left: 12, top: 12 }}><CloseOutlined /></IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ pt: "10px !important", display: "flex", flexDirection: "column", gap: 2.5 }}>
-          <TextField label="سبب الخصم *" value={deductionForm.description} onChange={e => setDeductionForm({ ...deductionForm, description: e.target.value })} fullWidth sx={inputSx}
-            helperText="مثال: استخراج ورق حكومي خاص بالمستثمر" />
-          <TextField label="المبلغ *" type="text" inputMode="decimal" value={deductionForm.amount} onChange={e => setDeductionForm({ ...deductionForm, amount: sanitizeDecimalInput(e.target.value) })} fullWidth sx={inputSx} />
-          <TextField label="التاريخ" type="date" value={deductionForm.deduction_date} onChange={e => setDeductionForm({ ...deductionForm, deduction_date: e.target.value })} fullWidth sx={inputSx} InputLabelProps={{ shrink: true }} />
-          <FormControl fullWidth sx={inputSx}>
-            <InputLabel>سحب من (خزينة / عهدة) *</InputLabel>
-            <Select value={deductionForm.financial_account_id} label="سحب من (خزينة / عهدة) *" onChange={e => setDeductionForm({ ...deductionForm, financial_account_id: e.target.value })}>
-              {accounts.map(a => <MenuItem key={a.id} value={a.id}>{a.account_name}</MenuItem>)}
-            </Select>
-          </FormControl>
-        </DialogContent>
-        <DialogActions sx={{ p: 3, pt: 1 }}>
-          <Button onClick={handleAddDeduction} variant="contained" disabled={deductionSubmitting} sx={{ fontFamily: "var(--font-cairo)", background: "#ef4444", borderRadius: "10px", width: "100%", py: 1.2, fontWeight: 700 }}>
-            {deductionSubmitting ? "جاري الحفظ..." : "تسجيل الخصم"}
           </Button>
         </DialogActions>
       </Dialog>

@@ -81,12 +81,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // A cost is either a general project/stage cost, or a personal charge fully
-    // recovered from one investor — never both, or it would be double-counted
-    // (once against the stage's P&L, once against the investor's balance).
-    if (allocations.length > 0 && recoverable_investor_id) {
+    // Money paid to/for an investor is recorded on the investor-returns page,
+    // never as an expense — expenses are company/project costs only.
+    if (recoverable_investor_id) {
       return NextResponse.json(
-        { error: "لا يمكن توزيع المصروف على مرحلة وربطه باسترداد من مستثمر في نفس الوقت" },
+        { error: "لا يمكن ربط المصروف بمستثمر — سجّل المبلغ من صفحة مرتجعات المستثمرين" },
         { status: 422 }
       );
     }

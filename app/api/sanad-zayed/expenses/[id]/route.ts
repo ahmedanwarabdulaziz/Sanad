@@ -80,18 +80,13 @@ export async function PATCH(
     if ("recoverable_investor_id" in body) {
       const newInvestorId = body.recoverable_investor_id || null;
 
+      // Money paid to/for an investor is recorded on the investor-returns page,
+      // never as an expense. Unlinking (null) is still allowed.
       if (newInvestorId) {
-        const { count } = await supabase
-          .from("sz_expense_allocations")
-          .select("id", { count: "exact", head: true })
-          .eq("expense_id", id);
-
-        if ((count ?? 0) > 0) {
-          return NextResponse.json(
-            { error: "لا يمكن ربط المصروف بمستثمر — موزّع على مرحلة بالفعل. ألغِ توزيع المرحلة أولاً" },
-            { status: 422 }
-          );
-        }
+        return NextResponse.json(
+          { error: "لا يمكن ربط المصروف بمستثمر — سجّل المبلغ من صفحة مرتجعات المستثمرين" },
+          { status: 422 }
+        );
       }
 
       update.recoverable_investor_id = newInvestorId;
