@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import Header from "./Header";
 import Footer from "./Footer";
+import MarbleHeader from "./MarbleHeader";
 
 export default function ConditionalLayout({
   children,
@@ -13,13 +14,15 @@ export default function ConditionalLayout({
   const isNAdmin = pathname?.includes("/n-admin");
   const isErpAdmin = pathname?.includes("/admin") && !pathname?.includes("/n-admin");
 
+  const isMarbleProject = pathname?.includes("/projects/marble");
+
   if (isNAdmin || isErpAdmin) {
     return <>{children}</>;
   }
 
   return (
     <>
-      <Header />
+      {isMarbleProject ? <MarbleHeader /> : <Header />}
       {children}
       <Footer />
     </>

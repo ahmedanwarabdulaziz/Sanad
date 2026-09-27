@@ -1119,6 +1119,7 @@
   "Navigation": {
     "home": "Home",
     "about": "About",
+    "marbleCatalog": "Marble Catalog",
     "dashboard": "Dashboard",
     "contact": "Contact"
   },

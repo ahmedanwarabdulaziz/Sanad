@@ -17,6 +17,17 @@ const PROJECTS = [
     gradient: "linear-gradient(135deg, #154278 0%, #1e6abf 100%)",
     stats: ["المستثمرون", "المراحل", "العقود"],
   },
+  {
+    id: "marble-granite",
+    name: "كتالوج الرخام والجرانيت",
+    description: "إدارة منتجات الرخام والجرانيت، الأقسام، الصور، والعلامات",
+    type: "صناعي وتجاري",
+    status: "ACTIVE" as const,
+    href: "/admin/marble",
+    icon: "🪨",
+    gradient: "linear-gradient(135deg, #4b5563 0%, #1f2937 100%)",
+    stats: ["الأقسام", "المنتجات", "الصور"],
+  },
 ];
 
 const STATUS_CONFIG = {

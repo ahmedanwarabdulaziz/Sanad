@@ -64,6 +64,24 @@ const theme = createTheme({
                 input: { textAlign: 'right' },
             },
         },
+        MuiInputLabel: {
+            styleOverrides: {
+                root: {
+                    fontFamily: cairo.style.fontFamily,
+                    transformOrigin: 'top right',
+                }
+            }
+        },
+        MuiOutlinedInput: {
+            styleOverrides: {
+                notchedOutline: {
+                    "& legend": {
+                        fontFamily: cairo.style.fontFamily,
+                        textAlign: 'left !important',
+                    }
+                }
+            }
+        },
         MuiAlert: {
             styleOverrides: {
                 root: {

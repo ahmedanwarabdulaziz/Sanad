@@ -80,6 +80,11 @@ export default function Header() {
                         <ListItemText primary={tAlNasrInterlock("title")} sx={{ textAlign: 'center', fontSize: '0.9rem', fontFamily: isRtl ? 'var(--font-cairo)' : 'inherit' }} />
                     </Link>
                 </ListItem>
+                <ListItem disablePadding sx={{ pl: 4 }}>
+                    <Link href="/projects/marble" passHref style={{ width: '100%', textDecoration: 'none', color: 'inherit' }}>
+                        <ListItemText primary="كتالوج الرخام والجرانيت" sx={{ textAlign: 'center', fontSize: '0.9rem', fontFamily: isRtl ? 'var(--font-cairo)' : 'inherit' }} />
+                    </Link>
+                </ListItem>
 
                 {navItems.slice(1).map((item) => (
                     <ListItem key={item.label} disablePadding>
@@ -183,6 +188,11 @@ export default function Header() {
                                     <MenuItem onClick={handleProjectsClose} component={Link} href="/projects/al-nasr-interlock">
                                         <Box sx={{ fontFamily: isRtl ? 'var(--font-cairo)' : 'inherit' }}>
                                             {tAlNasrInterlock("title")}
+                                        </Box>
+                                    </MenuItem>
+                                    <MenuItem onClick={handleProjectsClose} component={Link} href="/projects/marble">
+                                        <Box sx={{ fontFamily: isRtl ? 'var(--font-cairo)' : 'inherit' }}>
+                                            كتالوج الرخام والجرانيت
                                         </Box>
                                     </MenuItem>
                                 </Menu>

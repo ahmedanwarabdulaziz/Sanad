@@ -14,7 +14,13 @@ const ALL_PROJECTS = [
     icon: "🏗️",
     status: "ACTIVE",
   },
-  // Future projects go here
+  {
+    id: "marble-granite",
+    name: "كتالوج الرخام والجرانيت",
+    href: "/admin/marble",
+    icon: "🪨",
+    status: "ACTIVE",
+  },
 ];
 
 interface SanadTopNavProps {

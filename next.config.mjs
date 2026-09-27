@@ -6,6 +6,15 @@ const withNextIntl = createNextIntlPlugin('./i18n.ts');
 const nextConfig = {
     reactStrictMode: true,
     poweredByHeader: false,
+    images: {
+        remotePatterns: [
+            {
+                protocol: 'https',
+                hostname: 'images.unsplash.com',
+                pathname: '/**',
+            },
+        ],
+    },
 };
 
 export default withNextIntl(nextConfig);
