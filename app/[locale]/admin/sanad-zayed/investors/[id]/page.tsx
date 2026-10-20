@@ -93,9 +93,13 @@ export default function InvestorDetailPage() {
   const [generatingFor, setGeneratingFor] = useState<string | null>(null);
   const [payInstallment, setPayInstallment] = useState<{ contractId: string; installment: Installment } | null>(null);
   const [payAccountId, setPayAccountId] = useState("");
+  const [payFromWallet, setPayFromWallet] = useState(false);
   const [paySubmitting, setPaySubmitting] = useState(false);
 
-  const [ledger, setLedger] = useState<{ balance: number; total_deposits: number; total_withdrawals: number; total_contract_dues: number; transactions: any[]; reconciliations: any[] } | null>(null);
+  const [ledger, setLedger] = useState<{
+    balance: number; total_deposits: number; total_withdrawals: number; total_contract_dues: number; transactions: any[]; reconciliations: any[];
+    wallet?: { net: number; locked: number; refundable: number; contracts: { id: string; issued_at: string | null; claim: number; pending_installments: number }[] };
+  } | null>(null);
 
 
   const [settleReconciliation, setSettleReconciliation] = useState<any | null>(null);
@@ -173,24 +177,25 @@ export default function InvestorDetailPage() {
 
   const openPayInstallment = (contractId: string, installment: Installment) => {
     setPayInstallment({ contractId, installment });
+    setPayFromWallet(false);
     setPayAccountId("");
   };
 
   const handleMarkPaid = async () => {
     if (!payInstallment) return;
-    if (!payAccountId) return showFlash("error", "يجب اختيار الخزينة/الحساب");
+    if (!payFromWallet && !payAccountId) return showFlash("error", "يجب اختيار الخزينة/الحساب");
 
     setPaySubmitting(true);
     try {
       const res = await fetch(`/api/sanad-zayed/contracts/${payInstallment.contractId}/installments/${payInstallment.installment.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mark_paid: true, financial_account_id: payAccountId }),
+        body: JSON.stringify(payFromWallet ? { mark_paid: true, from_wallet: true } : { mark_paid: true, financial_account_id: payAccountId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "حدث خطأ");
 
-      showFlash("success", "تم تسجيل تحصيل الدفعة");
+      showFlash("success", payFromWallet ? "تم سداد القسط من رصيد المحفظة" : "تم تسجيل تحصيل الدفعة");
       const cid = payInstallment.contractId;
       setPayInstallment(null);
       fetchInstallments(cid);
@@ -410,12 +415,25 @@ export default function InvestorDetailPage() {
   // has only one contract in total, there's no ambiguity, so unlinked deposits
   // (older payments recorded before contracts could be tagged, or general
   // deposits) are attributed to it too — otherwise real payments show as 0.
-  const paidForContract = (contractId: string) =>
+  const issuedWallet = (contractId: string) =>
+    ledger?.wallet?.contracts.find(w => w.id === contractId && w.issued_at) ?? null;
+
+  const paidForContract = (contractId: string) => {
+    // Issued contract: what the investor's wallet has been assigned to it.
+    const issued = issuedWallet(contractId);
+    if (issued) return issued.claim;
+    return depositsForContract(contractId);
+  };
+
+  const depositsForContract = (contractId: string) =>
     (ledger?.transactions ?? [])
       .filter((t: any) => t.transaction_type === "DEPOSIT" && (t.contract?.id === contractId || (!t.contract?.id && contracts.length === 1)))
       .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
 
-  const remainingForContract = (c: Contract) => Number(c.total_contract_value) - paidForContract(c.id);
+  const remainingForContract = (c: Contract) => {
+    const issued = issuedWallet(c.id);
+    return issued ? issued.pending_installments : Number(c.total_contract_value) - paidForContract(c.id);
+  };
 
   const scheduledPendingForContract = (contractId: string) =>
     (installmentsByContract[contractId] ?? [])
@@ -562,6 +580,13 @@ export default function InvestorDetailPage() {
           {(ledger?.total_withdrawals ?? 0) > 0 && (
             <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>
               مدفوع {(ledger?.total_deposits ?? 0).toLocaleString()} — مسترد/مخصوم {(ledger?.total_withdrawals ?? 0).toLocaleString()}
+            </div>
+          )}
+          {(ledger?.wallet?.locked ?? 0) > 0 && (
+            <div style={{ fontSize: 12, color: "#6b7280", marginTop: 6, lineHeight: 1.8 }}>
+              مخصص لعقود صادرة: <strong style={{ color: "#154278" }}>{ledger!.wallet!.locked.toLocaleString()}</strong>
+              <br />
+              متاح في المحفظة: <strong style={{ color: "#16a34a" }}>{ledger!.wallet!.refundable.toLocaleString()}</strong>
             </div>
           )}
         </div>
@@ -960,12 +985,40 @@ export default function InvestorDetailPage() {
               {payInstallment.installment.label} — <strong style={{ color: "#154278" }}>{Number(payInstallment.installment.amount).toLocaleString("ar-EG-u-nu-latn")}</strong>
             </div>
           )}
-          <FormControl fullWidth sx={inputSx}>
-            <InputLabel>إيداع في (خزينة / حساب) *</InputLabel>
-            <Select value={payAccountId} label="إيداع في (خزينة / حساب) *" onChange={e => setPayAccountId(e.target.value)}>
-              {accounts.map(a => <MenuItem key={a.id} value={a.id}>{a.account_name}</MenuItem>)}
-            </Select>
-          </FormControl>
+          {(() => {
+            const free = ledger?.wallet?.refundable ?? 0;
+            const amount = Number(payInstallment?.installment.amount ?? 0);
+            const enough = free + 0.5 >= amount;
+            return (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {[
+                  { v: false, title: "إيداع جديد في الخزينة", sub: "المستثمر دفع مبلغًا جديدًا" },
+                  { v: true, title: "من رصيد المحفظة", sub: `المتاح في المحفظة: ${free.toLocaleString("ar-EG-u-nu-latn")}${enough ? "" : " — لا يكفي لهذا القسط"}` },
+                ].map(o => {
+                  const selected = payFromWallet === o.v;
+                  const disabled = o.v && !enough;
+                  return (
+                    <button key={String(o.v)} type="button" disabled={disabled} onClick={() => setPayFromWallet(o.v)}
+                      style={{
+                        textAlign: "right", padding: "10px 14px", borderRadius: 12, cursor: disabled ? "not-allowed" : "pointer", fontFamily: "inherit",
+                        border: `1.5px solid ${selected ? "#154278" : "#e5e7eb"}`, background: selected ? "#f3f6fa" : "#fff", opacity: disabled ? 0.55 : 1,
+                      }}>
+                      <div style={{ fontWeight: 800, color: "#154278", fontSize: 14 }}>{o.title}</div>
+                      <div style={{ fontSize: 12, color: disabled ? "#dc2626" : "#6b7280" }}>{o.sub}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
+          {!payFromWallet && (
+            <FormControl fullWidth sx={inputSx}>
+              <InputLabel>إيداع في (خزينة / حساب) *</InputLabel>
+              <Select value={payAccountId} label="إيداع في (خزينة / حساب) *" onChange={e => setPayAccountId(e.target.value)}>
+                {accounts.map(a => <MenuItem key={a.id} value={a.id}>{a.account_name}</MenuItem>)}
+              </Select>
+            </FormControl>
+          )}
         </DialogContent>
         <DialogActions sx={{ p: 3, pt: 1 }}>
           <Button onClick={handleMarkPaid} variant="contained" disabled={paySubmitting} sx={{ fontFamily: "var(--font-cairo)", background: "#154278", borderRadius: "10px", width: "100%", py: 1.2, fontWeight: 700 }}>

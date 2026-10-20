@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { requireAuth } from "@/lib/auth/requireAuth";
+import { loadInvestorWallet } from "@/lib/sanad-zayed/investorWallet";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -59,6 +60,7 @@ export async function GET(
     const totalReconciliationDelta = reconciliations.reduce((sum, r) => sum + Number(r.delta_amount), 0);
 
     const balance = totalDeposits - totalWithdrawals - totalContractDues - totalReconciliationDelta;
+    const wallet = await loadInvestorWallet(supabase, id);
 
     return NextResponse.json({
       balance,
@@ -69,6 +71,13 @@ export async function GET(
       contracts,
       transactions,
       reconciliations,
+      // Wallet: what issued contracts hold and what is still free (refundable).
+      wallet: {
+        net: wallet.net,
+        locked: wallet.locked,
+        refundable: wallet.refundable,
+        contracts: wallet.contracts.map(c => ({ id: c.id, issued_at: c.issued_at, claim: c.claim, pending_installments: c.pending_installments })),
+      },
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "خطأ في الخادم" }, { status: 500 });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { requireAuth } from "@/lib/auth/requireAuth";
+import { loadInvestorWallet } from "@/lib/sanad-zayed/investorWallet";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,6 +34,28 @@ export async function PATCH(
 
     if (body.mark_paid) {
       if (installment.status === "PAID") return NextResponse.json({ error: "هذه الدفعة مسددة بالفعل" }, { status: 409 });
+
+      // Paid from the investor's wallet: no new cash — the free wallet balance
+      // is assigned to this contract (the installment stops being pending, so
+      // the issued contract's locked share grows by the same amount).
+      if (body.from_wallet) {
+        const wallet = await loadInvestorWallet(supabase, (installment as any).contract?.investor_id);
+        if (Number(installment.amount) > wallet.refundable + 0.5) {
+          return NextResponse.json(
+            { error: `رصيد المحفظة المتاح ${wallet.refundable.toLocaleString("en-US")} لا يكفي لسداد القسط (${Number(installment.amount).toLocaleString("en-US")})` },
+            { status: 422 }
+          );
+        }
+        const { data, error } = await supabase
+          .from("sz_contract_installments")
+          .update({ status: "PAID", paid_treasury_transaction_id: null })
+          .eq("id", installmentId)
+          .select()
+          .single();
+        if (error) throw error;
+        return NextResponse.json({ installment: data, from_wallet: true });
+      }
+
       if (!body.financial_account_id) return NextResponse.json({ error: "يجب اختيار الخزينة/الحساب" }, { status: 422 });
 
       const { data: tx, error: txError } = await supabase
