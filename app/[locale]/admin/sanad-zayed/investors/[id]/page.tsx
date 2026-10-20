@@ -12,7 +12,7 @@ import {
   AddOutlined, CloseOutlined, ArrowForwardOutlined, DescriptionOutlined,
   ExpandMoreOutlined, ExpandLessOutlined, PaymentsOutlined, CheckCircleOutlined,
   PictureAsPdfOutlined, SyncAltOutlined, ContentCopyOutlined,
-  ReceiptLongOutlined, EditOutlined, EventOutlined
+  ReceiptLongOutlined, EditOutlined, EventOutlined, PrintOutlined
 } from "@mui/icons-material";
 import { generateStatementPdfBlob } from "@/lib/sanad-zayed/statementPdf";
 import { sanitizeDecimalInput } from "@/lib/sanad-zayed/decimalInput";
@@ -624,6 +624,9 @@ export default function InvestorDetailPage() {
                         </td>
                         <td style={{ padding: "14px 12px" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                            <IconButton size="small" title="طباعة العقد" onClick={(e) => { e.stopPropagation(); router.push(`/admin/sanad-zayed/contracts/${c.id}/document`); }} sx={{ color: "#9ca3af", "&:hover": { color: "#154278", background: "rgba(21,66,120,0.08)" } }}>
+                              <PrintOutlined sx={{ fontSize: 17 }} />
+                            </IconButton>
                             <IconButton size="small" title="تعديل العقد" onClick={(e) => { e.stopPropagation(); openEditContract(c); }} sx={{ color: "#9ca3af", "&:hover": { color: "#154278", background: "rgba(21,66,120,0.08)" } }}>
                               <EditOutlined sx={{ fontSize: 17 }} />
                             </IconButton>

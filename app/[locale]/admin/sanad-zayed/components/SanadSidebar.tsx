@@ -13,6 +13,7 @@ import {
   MenuOutlined,
   CloseOutlined,
   PaymentsOutlined,
+  DescriptionOutlined,
 } from "@mui/icons-material";
 import { IconButton } from "@mui/material";
 import { useState } from "react";
@@ -25,6 +26,7 @@ const navItems = [
   { label: "الخزينة",          href: "/admin/sanad-zayed/treasury",   icon: AccountBalanceOutlined },
   { label: "المصروفات",        href: "/admin/sanad-zayed/expenses",   icon: ReceiptLongOutlined },
   { label: "مرتجعات المستثمرين", href: "/admin/sanad-zayed/investor-returns", icon: PaymentsOutlined },
+  { label: "قوالب العقود",     href: "/admin/sanad-zayed/contract-templates", icon: DescriptionOutlined },
   { label: "البنود الظاهرة للمستثمر", href: "/admin/sanad-zayed/investor-items", icon: VisibilityOutlined },
 ];
 
