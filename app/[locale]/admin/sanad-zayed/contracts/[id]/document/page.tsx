@@ -8,7 +8,7 @@ import { ArrowForwardOutlined, PrintOutlined, SaveOutlined, RestartAltOutlined, 
 import ContractPaper from "../../../components/ContractPaper";
 import {
   TEMPLATE_VARS, resolveValues, usedVariables, applyConditionals, parseSchedule, formatSchedule, parseAmount, formatNumber,
-  generateSchedule, parseDmy, formatDate, DEFAULT_TEMPLATE_BODY, DEFAULT_TEMPLATE_TITLE, DEFAULT_TEMPLATE_SUBTITLE, type ScheduleRow,
+  generateSchedule, parseDmy, formatDate, upgradeTemplateBody, DEFAULT_TEMPLATE_BODY, DEFAULT_TEMPLATE_TITLE, DEFAULT_TEMPLATE_SUBTITLE, type ScheduleRow,
 } from "@/lib/sanad-zayed/contractTemplate";
 
 // Variables printed by the header, title block and signature block regardless of the body.
@@ -71,7 +71,7 @@ export default function ContractDocumentPage() {
   const template = data?.template;
   const title = template?.title || DEFAULT_TEMPLATE_TITLE;
   const subtitle = template?.subtitle ?? DEFAULT_TEMPLATE_SUBTITLE;
-  const body = template?.body || DEFAULT_TEMPLATE_BODY;
+  const body = useMemo(() => upgradeTemplateBody(template?.body || DEFAULT_TEMPLATE_BODY), [template]);
   const stageDefaults: Record<string, string> = useMemo(() => template?.defaults ?? {}, [template]);
 
   const values = useMemo(
@@ -84,7 +84,9 @@ export default function ContractDocumentPage() {
 
   const used = useMemo(() => {
     const keys = new Set([...usedVariables(body), ...FIXED_VARS]);
-    if (body.includes("[[installments]]") || keys.has("pending_amount")) SCHEDULE_VARS.forEach(k => keys.add(k));
+    // Payment fields are always reviewable, whatever the template wording.
+    SCHEDULE_VARS.forEach(k => keys.add(k));
+    keys.add("payment_method");
     return keys;
   }, [body]);
   // Only variables in the branches that will actually print count as missing.
@@ -262,6 +264,11 @@ export default function ContractDocumentPage() {
             <section className="sz-group">
               <div className="sz-group-title">الأقساط</div>
               <div className="sz-group-hint">عدد الأقساط وتاريخ ومبلغ كل قسط — يمكن أن تكون المبالغ غير متساوية بشرط أن يساوي مجموعها المبلغ المتبقي</div>
+              {!body.includes("[[installments]]") && (
+                <div className="sz-note sz-note-error" style={{ margin: "6px 0" }}>
+                  نص قالب هذه المرحلة لا يحتوي على جدول الأقساط ولن تظهر في العقد — أضف <code>[[installments]]</code> في القالب أو استخدم «القالب القياسي».
+                </div>
+              )}
               <div style={{ display: "flex", gap: 8, margin: "6px 0 10px" }}>
                 <TextField size="small" label="عدد الأقساط" type="number" value={scheduleRows.length || ""}
                   onChange={e => { const n = Math.max(1, Math.min(60, Number(e.target.value) || 1)); redistribute(n, parseAmount(values.installment_interval_months) || 1); }}

@@ -448,6 +448,43 @@ export function usedVariables(body: string): string[] {
 
 // ── Standard template (converted from the approved pre-licensing financing contract) ──
 
+// ── Upgrading templates saved before the paid / installments clause existed ──
+
+const OLD_FINANCING_ROW = "| مبلغ التمويل الفعلي | {{financing_amount}} جنيه مصري ({{financing_amount_words}}) |";
+const PENDING_ROWS = `[[if pending_amount]]
+| المسدد عند التوقيع | {{paid_amount}} جنيه مصري |
+| المبلغ المتبقي | {{pending_amount}} جنيه مصري يسدد على أقساط وفق جدول الأقساط ببند سادسًا |
+[[endif]]`;
+const OLD_FULL_PAYMENT = "يقر الطرفان بأن الشركة تسلمت مبلغ التمويل {{payment_method}} كاملًا بمجلس العقد في تاريخ السداد المبين في جدول بيانات المعاملة، دون تحفظ أو خصم أو تأجيل، ويوقع ممثل الشركة المفوض على إيصال استلام مستقل يبين المبلغ بالأرقام والحروف وبيانات المستلم وصفته ومكان وتاريخ الاستلام.";
+const PARTIAL_PAYMENT_BLOCK = `[[if pending_amount]]
+يقر الطرفان بأن الشركة تسلمت من مبلغ التمويل مبلغًا قدره **{{paid_amount}} جنيه مصري ({{paid_amount_words}})** {{payment_method}} بمجلس العقد في تاريخ السداد المبين في جدول بيانات المعاملة، ويلتزم الممول بسداد باقي مبلغ التمويل وقدره **{{pending_amount}} جنيه مصري ({{pending_amount_words}})** على أقساط في المواعيد المبينة في الجدول الآتي، ويوقع ممثل الشركة المفوض على إيصال استلام مستقل عن كل دفعة يبين المبلغ بالأرقام والحروف وبيانات المستلم وصفته ومكان وتاريخ الاستلام.
+
+[[installments]]
+
+[[else]]
+${OLD_FULL_PAYMENT}
+[[endif]]`;
+const OLD_MAX_AREA = "{{area_increase_pct}}% حتى نحو {{max_area}} م² إجماليًا";
+const NEW_MAX_AREA = "{{area_increase_pct}}% من المساحة الاسترشادية";
+
+/**
+ * Brings a template body saved from an older standard template up to date:
+ * adds the paid / pending rows and the installments clause (only where the
+ * original wording is still unchanged) and states the area limit as a %.
+ * Bodies that already have the clause, or were reworded, are left alone.
+ */
+export function upgradeTemplateBody(body: string): string {
+  let out = (body ?? "").replace(/\r\n/g, "\n");
+  if (!out.includes("[[installments]]") && !out.includes("{{paid_amount}}") && out.includes(OLD_FULL_PAYMENT)) {
+    // The sentence that followed on the same line becomes its own paragraph after the block.
+    out = out.includes(OLD_FULL_PAYMENT + " ")
+      ? out.replace(OLD_FULL_PAYMENT + " ", PARTIAL_PAYMENT_BLOCK + "\n\n")
+      : out.replace(OLD_FULL_PAYMENT, PARTIAL_PAYMENT_BLOCK);
+    if (out.includes(OLD_FINANCING_ROW + "\n")) out = out.replace(OLD_FINANCING_ROW + "\n", `${OLD_FINANCING_ROW}\n${PENDING_ROWS}\n`);
+  }
+  return out.replace(OLD_MAX_AREA, NEW_MAX_AREA);
+}
+
 export const DEFAULT_TEMPLATE_TITLE = "عقد تمويل خاص للمرحلة السابقة على الترخيص";
 export const DEFAULT_TEMPLATE_SUBTITLE = "مشروع سند زايد";
 

@@ -8,7 +8,7 @@ import ContractPaper from "../components/ContractPaper";
 import ContractPrintPreview from "../components/ContractPrintPreview";
 import {
   TEMPLATE_VARS, DEFAULT_STAGE_VALUES, DEFAULT_MANUAL_VALUES, DEFAULT_TEMPLATE_BODY, DEFAULT_TEMPLATE_TITLE,
-  DEFAULT_TEMPLATE_SUBTITLE, usedVariables, resolveValues,
+  DEFAULT_TEMPLATE_SUBTITLE, usedVariables, resolveValues, upgradeTemplateBody,
 } from "@/lib/sanad-zayed/contractTemplate";
 
 interface Stage { id: string; name: string; sort_order: number }
@@ -67,7 +67,7 @@ function ContractTemplatesEditor() {
       .then(d => {
         if (d.template) {
           setExists(true);
-          setDraft({ title: d.template.title, subtitle: d.template.subtitle ?? "", body: d.template.body, defaults: { ...DEFAULT_STAGE_VALUES, ...(d.template.defaults ?? {}) } });
+          setDraft({ title: d.template.title, subtitle: d.template.subtitle ?? "", body: upgradeTemplateBody(d.template.body), defaults: { ...DEFAULT_STAGE_VALUES, ...(d.template.defaults ?? {}) } });
         } else {
           setExists(false);
           setDraft(standardDraft());
@@ -108,7 +108,7 @@ function ContractTemplatesEditor() {
     setCopyFrom("");
     const d = await fetch(`/api/sanad-zayed/contract-templates?stage_id=${sourceId}`).then(r => r.json());
     if (d.template) {
-      setDraft({ title: d.template.title, subtitle: d.template.subtitle ?? "", body: d.template.body, defaults: { ...DEFAULT_STAGE_VALUES, ...(d.template.defaults ?? {}) } });
+      setDraft({ title: d.template.title, subtitle: d.template.subtitle ?? "", body: upgradeTemplateBody(d.template.body), defaults: { ...DEFAULT_STAGE_VALUES, ...(d.template.defaults ?? {}) } });
       setMessage({ type: "success", text: "تم نسخ القالب — راجع البيانات ثم احفظ" });
     }
   };
