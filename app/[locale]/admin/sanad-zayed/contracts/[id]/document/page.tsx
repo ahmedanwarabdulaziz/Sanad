@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useParams, useRouter } from "next/navigation";
-import { Button, CircularProgress, TextField, Alert, Tooltip } from "@mui/material";
-import { ArrowForwardOutlined, PrintOutlined, SaveOutlined, RestartAltOutlined, EditNoteOutlined, AddOutlined, DeleteOutlineOutlined } from "@mui/icons-material";
+import { Button, CircularProgress, TextField, Tooltip } from "@mui/material";
+import { ArrowForwardOutlined, PrintOutlined, SaveOutlined, RestartAltOutlined, EditNoteOutlined, AddOutlined, DeleteOutlineOutlined, ExpandMoreOutlined, ExpandLessOutlined } from "@mui/icons-material";
 import ContractPaper from "../../../components/ContractPaper";
 import {
   TEMPLATE_VARS, resolveValues, usedVariables, applyConditionals, parseSchedule, formatSchedule, parseAmount, formatNumber,
-  DEFAULT_TEMPLATE_BODY, DEFAULT_TEMPLATE_TITLE, DEFAULT_TEMPLATE_SUBTITLE, type VarSource, type ScheduleRow,
+  generateSchedule, parseDmy, formatDate, DEFAULT_TEMPLATE_BODY, DEFAULT_TEMPLATE_TITLE, DEFAULT_TEMPLATE_SUBTITLE, type ScheduleRow,
 } from "@/lib/sanad-zayed/contractTemplate";
 
 // Variables printed by the header, title block and signature block regardless of the body.
@@ -17,11 +17,31 @@ const FIXED_VARS = ["transaction_no", "contract_date", "stage_name", "financing_
 // Inputs that drive the paid / pending split and the installment schedule.
 const SCHEDULE_VARS = ["paid_amount", "paid_amount_words", "pending_amount", "pending_amount_words", "installments", "upfront_pct", "installments_count", "installment_interval_months"];
 
-const GROUPS: { source: VarSource; title: string; hint: string }[] = [
-  { source: "manual", title: "بيانات تُستكمل لهذا العقد", hint: "تُحفظ مع هذا العقد فقط" },
-  { source: "contract", title: "من بيانات المستثمر والعقد", hint: "تُملأ تلقائيًا — اكتب قيمة لاستبدالها في هذا العقد فقط" },
-  { source: "stage", title: "افتراضيات المرحلة", hint: "من قالب المرحلة — يمكن تعديلها لهذا العقد فقط" },
+const LABELS: Record<string, string> = Object.fromEntries(TEMPLATE_VARS.map(v => [v.key, v.label]));
+const HINTS: Record<string, string | undefined> = Object.fromEntries(TEMPLATE_VARS.map(v => [v.key, v.hint]));
+
+// Panel sections, in the order the contract is reviewed.
+const SECTIONS: { title: string; keys: string[] }[] = [
+  { title: "بيانات المعاملة", keys: ["transaction_no", "contract_date"] },
+  { title: "بيانات الممول", keys: ["investor_name", "investor_nationality", "investor_national_id", "investor_address", "investor_job", "investor_phone"] },
+  { title: "بيانات مفوض الشركة", keys: ["company_rep_name", "company_rep_title", "company_address"] },
+  { title: "بيانات الأرض", keys: ["plot_no", "plot_code", "land_area", "separation_date"] },
+  { title: "المساحة والسعر", keys: ["area", "meter_cost", "financing_amount"] },
+  { title: "السداد", keys: ["paid_amount", "payment_method"] },
 ];
+// Derived automatically and never edited directly in the panel.
+const HIDDEN = new Set(["contract_day", "stage_name", "max_area", "financing_amount_words", "paid_amount_words", "pending_amount",
+  "pending_amount_words", "installments", "upfront_pct", "installments_count", "installment_interval_months"]);
+const DATE_KEYS = new Set(["contract_date", "separation_date", "closing_date", "financing_end_date"]);
+
+function dmyToIso(v: string): string {
+  const d = parseDmy(v);
+  return d ? d.toISOString().slice(0, 10) : "";
+}
+function isoToDmy(v: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : "";
+}
 
 export default function ContractDocumentPage() {
   const { id } = useParams<{ id: string }>();
@@ -78,7 +98,29 @@ export default function ContractDocumentPage() {
   const scheduleRows: ScheduleRow[] = useMemo(() => parseSchedule(values.installments ?? ""), [values]);
   const scheduleTotal = scheduleRows.reduce((s, r) => s + (parseAmount(r.amount) || 0), 0);
   const pendingTotal = parseAmount(values.pending_amount) || 0;
+  const scheduleMismatch = pendingTotal > 0 && Math.abs(scheduleTotal - pendingTotal) > 0.5;
   const setScheduleRows = (rows: ScheduleRow[]) => setVar("installments", formatSchedule(rows) || " ");
+  const [showOther, setShowOther] = useState(false);
+
+  // Re-split the pending amount equally (used when the count or interval changes).
+  const redistribute = (count: number, interval: number) => {
+    const rows = generateSchedule(pendingTotal, count, interval, parseDmy(values.contract_date ?? ""));
+    setOverrides(prev => ({
+      ...prev,
+      installments_count: String(count),
+      installment_interval_months: String(interval),
+      installments: formatSchedule(rows) || " ",
+    }));
+    setDirty(true);
+  };
+  const addDifferenceToLast = () => {
+    if (!scheduleRows.length) return;
+    const rows = [...scheduleRows];
+    const last = rows.length - 1;
+    const lastAmount = parseAmount(rows[last].amount) || 0;
+    rows[last] = { ...rows[last], amount: formatNumber(Math.round((lastAmount + pendingTotal - scheduleTotal) * 100) / 100) };
+    setScheduleRows(rows);
+  };
 
   const setVar = (key: string, value: string) => {
     setOverrides(prev => ({ ...prev, [key]: value }));
@@ -109,12 +151,46 @@ export default function ContractDocumentPage() {
   }, [id, overrides]);
 
   const print = async () => {
+    if (scheduleMismatch) {
+      setError("مجموع الأقساط لا يساوي المبلغ المتبقي — عدّل الأقساط قبل الطباعة");
+      return;
+    }
     if (dirty && !(await save())) return;
     const prev = document.title;
     const investor = values.investor_name ? ` - ${values.investor_name}` : "";
     document.title = `${title}${investor}`;
     window.print();
     document.title = prev;
+  };
+
+  const renderField = (key: string) => {
+    const overridden = !!overrides[key]?.trim();
+    const auto = baselineOf(key);
+    const isMissing = !values[key];
+    const reset = overridden && auto ? (
+      <Tooltip title="إرجاع للقيمة التلقائية">
+        <button type="button" className="sz-reset" onClick={() => setVar(key, "")}><RestartAltOutlined sx={{ fontSize: 16 }} /></button>
+      </Tooltip>
+    ) : null;
+    const sx = { "& .MuiOutlinedInput-root": { borderRadius: 2, background: overridden ? "#f3f6fa" : "#fff" }, "& .MuiOutlinedInput-input": reset ? { paddingInlineEnd: "34px !important" } : {} };
+    if (DATE_KEYS.has(key)) {
+      return (
+        <div key={key} style={{ position: "relative" }}>
+          <TextField fullWidth size="small" margin="dense" type="date" label={LABELS[key] ?? key}
+            value={dmyToIso(values[key] ?? "")} onChange={e => setVar(key, isoToDmy(e.target.value))}
+            InputLabelProps={{ shrink: true }} error={isMissing} helperText={HINTS[key]} sx={sx} />
+          {reset}
+        </div>
+      );
+    }
+    return (
+      <div key={key} style={{ position: "relative" }}>
+        <TextField fullWidth size="small" margin="dense" label={LABELS[key] ?? key}
+          value={overrides[key] ?? ""} placeholder={auto || "غير محدد"} helperText={HINTS[key]}
+          onChange={e => setVar(key, e.target.value)} InputLabelProps={{ shrink: true }} error={isMissing} sx={sx} />
+        {reset}
+      </div>
+    );
   };
 
   if (!mounted) return null;
@@ -143,10 +219,14 @@ export default function ContractDocumentPage() {
             sx={{ borderRadius: 2, fontWeight: 700, borderColor: "#154278", color: "#154278" }}>
             حفظ البيانات
           </Button>
-          <Button variant="contained" onClick={print} disabled={!data} startIcon={<PrintOutlined />}
-            sx={{ borderRadius: 2, fontWeight: 700, background: "#154278", "&:hover": { background: "#0f3260" } }}>
-            طباعة / PDF
-          </Button>
+          <Tooltip title={scheduleMismatch ? "مجموع الأقساط لا يساوي المبلغ المتبقي" : ""}>
+            <span>
+              <Button variant="contained" onClick={print} disabled={!data || scheduleMismatch} startIcon={<PrintOutlined />}
+                sx={{ borderRadius: 2, fontWeight: 700, background: "#154278", "&:hover": { background: "#0f3260" } }}>
+                طباعة / PDF
+              </Button>
+            </span>
+          </Tooltip>
         </div>
       </div>
 
@@ -154,88 +234,100 @@ export default function ContractDocumentPage() {
         {/* Variables panel */}
         <aside className="sz-panel sz-no-print">
           {loading && <div style={{ padding: 40, textAlign: "center" }}><CircularProgress sx={{ color: "#154278" }} /></div>}
-          {error && <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>}
+          {error && <div className="sz-note sz-note-error">{error}</div>}
           {data && !template && (
-            <Alert severity="info" sx={{ m: 2 }}>
+            <div className="sz-note sz-note-info">
               لا يوجد قالب محفوظ لهذه المرحلة — يتم استخدام القالب القياسي.{" "}
-              <a href={`/admin/sanad-zayed/contract-templates?stage=${data.contract.stage_id}`} style={{ fontWeight: 700 }}>إعداد قالب المرحلة</a>
-            </Alert>
+              <a href={`/admin/sanad-zayed/contract-templates?stage=${data.contract.stage_id}`} style={{ fontWeight: 700, color: "#154278" }}>إعداد قالب المرحلة</a>
+            </div>
           )}
-          {data && GROUPS.map(g => {
-            const vars = TEMPLATE_VARS.filter(v => v.source === g.source && used.has(v.key));
-            if (!vars.length) return null;
+          {data && SECTIONS.map(sec => {
+            const keys = sec.keys.filter(k => used.has(k));
+            if (!keys.length) return null;
             return (
-              <section key={g.source} className="sz-group">
-                <div className="sz-group-title">{g.title}</div>
-                <div className="sz-group-hint">{g.hint}</div>
-                {vars.map(v => {
-                  const overridden = !!overrides[v.key]?.trim();
-                  const isMissing = !values[v.key];
-                  const auto = baselineOf(v.key);
-                  if (v.key === "installments") {
-                    return (
-                      <div key={v.key} className="sz-sched">
-                        <div className="sz-sched-head">
-                          <span>{v.label}</span>
-                          {overridden && (
-                            <button type="button" className="sz-link" onClick={() => setVar("installments", "")}>
-                              <RestartAltOutlined sx={{ fontSize: 15 }} /> إعادة الحساب تلقائيًا
-                            </button>
-                          )}
-                        </div>
-                        {scheduleRows.length === 0 && <div className="sz-sched-empty">لا يوجد مبلغ متبقي — لا توجد أقساط</div>}
-                        {scheduleRows.map((r, n) => (
-                          <div key={n} className="sz-sched-row">
-                            <span className="sz-sched-n">{n + 1}</span>
-                            <TextField size="small" placeholder="يوم/شهر/سنة" value={r.date}
-                              onChange={e => setScheduleRows(scheduleRows.map((x, j) => j === n ? { ...x, date: e.target.value } : x))}
-                              sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: 2 } }} />
-                            <TextField size="small" placeholder="المبلغ" value={r.amount}
-                              onChange={e => setScheduleRows(scheduleRows.map((x, j) => j === n ? { ...x, amount: e.target.value } : x))}
-                              sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: 2 } }} />
-                            <button type="button" className="sz-icon" title="حذف القسط" onClick={() => setScheduleRows(scheduleRows.filter((_, j) => j !== n))}>
-                              <DeleteOutlineOutlined sx={{ fontSize: 17 }} />
-                            </button>
-                          </div>
-                        ))}
-                        <div className="sz-sched-foot">
-                          <button type="button" className="sz-link" onClick={() => setScheduleRows([...scheduleRows, { date: "", amount: "" }])}>
-                            <AddOutlined sx={{ fontSize: 16 }} /> إضافة قسط
-                          </button>
-                          <span style={{ color: Math.abs(scheduleTotal - pendingTotal) > 0.5 ? "#dc2626" : "#6b7280" }}>
-                            الإجمالي {formatNumber(scheduleTotal)} من {formatNumber(pendingTotal)}
-                          </span>
-                        </div>
-                        {Math.abs(scheduleTotal - pendingTotal) > 0.5 && (
-                          <div className="sz-sched-warn">مجموع الأقساط لا يساوي المبلغ المتبقي</div>
-                        )}
-                      </div>
-                    );
-                  }
-                  return (
-                    <div key={v.key} style={{ position: "relative" }}>
-                      <TextField
-                        fullWidth size="small" margin="dense"
-                        label={v.label}
-                        value={overrides[v.key] ?? ""}
-                        placeholder={auto || "غير محدد"}
-                        helperText={v.hint}
-                        onChange={e => setVar(v.key, e.target.value)}
-                        InputLabelProps={{ shrink: true }}
-                        error={isMissing}
-                        sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2, background: overridden ? "#f3f6fa" : "#fff" } }}
-                      />
-                      {overridden && auto && (
-                        <Tooltip title="إرجاع للقيمة التلقائية">
-                          <button type="button" className="sz-reset" onClick={() => setVar(v.key, "")}><RestartAltOutlined sx={{ fontSize: 16 }} /></button>
-                        </Tooltip>
-                      )}
-                    </div>
-                  );
-                })}
+              <section key={sec.title} className="sz-group">
+                <div className="sz-group-title">{sec.title}</div>
+                {keys.map(renderField)}
+                {sec.title === "السداد" && (
+                  <div className="sz-readonly">
+                    <span>المبلغ المتبقي</span>
+                    <strong>{formatNumber(pendingTotal)} ج.م</strong>
+                  </div>
+                )}
               </section>
             );
           })}
+
+          {data && pendingTotal > 0 && (
+            <section className="sz-group">
+              <div className="sz-group-title">الأقساط</div>
+              <div className="sz-group-hint">عدد الأقساط وتاريخ ومبلغ كل قسط — يمكن أن تكون المبالغ غير متساوية بشرط أن يساوي مجموعها المبلغ المتبقي</div>
+              <div style={{ display: "flex", gap: 8, margin: "6px 0 10px" }}>
+                <TextField size="small" label="عدد الأقساط" type="number" value={scheduleRows.length || ""}
+                  onChange={e => { const n = Math.max(1, Math.min(60, Number(e.target.value) || 1)); redistribute(n, parseAmount(values.installment_interval_months) || 1); }}
+                  InputLabelProps={{ shrink: true }} inputProps={{ min: 1, max: 60 }} sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: 2 } }} />
+                <TextField size="small" label="كل (شهور)" type="number" value={values.installment_interval_months ?? ""}
+                  onChange={e => { const m = Math.max(1, Math.min(24, Number(e.target.value) || 1)); redistribute(scheduleRows.length || 1, m); }}
+                  InputLabelProps={{ shrink: true }} inputProps={{ min: 1, max: 24 }} sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: 2 } }} />
+              </div>
+              <div className="sz-sched">
+                {scheduleRows.map((r, n) => (
+                  <div key={n} className="sz-sched-row">
+                    <span className="sz-sched-n">{n + 1}</span>
+                    <TextField size="small" type="date" value={dmyToIso(r.date)}
+                      onChange={e => setScheduleRows(scheduleRows.map((x, j) => j === n ? { ...x, date: isoToDmy(e.target.value) } : x))}
+                      error={!r.date} sx={{ flex: 1.15, "& .MuiOutlinedInput-root": { borderRadius: 2 }, "& input": { fontSize: 13, px: 1 } }} />
+                    <TextField size="small" placeholder="المبلغ" value={r.amount}
+                      onChange={e => setScheduleRows(scheduleRows.map((x, j) => j === n ? { ...x, amount: e.target.value } : x))}
+                      error={!(parseAmount(r.amount) > 0)} sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: 2 }, "& input": { fontSize: 13, px: 1 } }} />
+                    <button type="button" className="sz-icon" title="حذف القسط" onClick={() => setScheduleRows(scheduleRows.filter((_, j) => j !== n))}>
+                      <DeleteOutlineOutlined sx={{ fontSize: 17 }} />
+                    </button>
+                  </div>
+                ))}
+                <div className="sz-sched-foot">
+                  <button type="button" className="sz-link" onClick={() => {
+                    const lastDate = parseDmy(scheduleRows[scheduleRows.length - 1]?.date ?? "");
+                    const interval = parseAmount(values.installment_interval_months) || 1;
+                    const next = lastDate ? new Date(Date.UTC(lastDate.getUTCFullYear(), lastDate.getUTCMonth() + interval, lastDate.getUTCDate())) : null;
+                    setScheduleRows([...scheduleRows, { date: next ? formatDate(next) : "", amount: "" }]);
+                  }}>
+                    <AddOutlined sx={{ fontSize: 16 }} /> إضافة قسط
+                  </button>
+                  <button type="button" className="sz-link" onClick={() => redistribute(scheduleRows.length || 1, parseAmount(values.installment_interval_months) || 1)}>
+                    <RestartAltOutlined sx={{ fontSize: 15 }} /> توزيع بالتساوي
+                  </button>
+                </div>
+                <div className={`sz-sched-sum ${scheduleMismatch ? "bad" : "ok"}`}>
+                  <span>مجموع الأقساط</span>
+                  <strong>{formatNumber(scheduleTotal)} / {formatNumber(pendingTotal)}</strong>
+                </div>
+                {scheduleMismatch && (
+                  <div className="sz-sched-warn">
+                    {scheduleTotal < pendingTotal ? `ناقص ${formatNumber(pendingTotal - scheduleTotal)}` : `زيادة ${formatNumber(scheduleTotal - pendingTotal)}`} —{" "}
+                    <button type="button" className="sz-link" style={{ color: "#dc2626" }} onClick={addDifferenceToLast}>تسوية الفرق في القسط الأخير</button>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {data && (() => {
+            const listed = new Set(SECTIONS.flatMap(sec => sec.keys));
+            const other = TEMPLATE_VARS.map(v => v.key).filter(k => used.has(k) && !listed.has(k) && !HIDDEN.has(k));
+            if (!other.length) return null;
+            return (
+              <section className="sz-group">
+                <button type="button" className="sz-collapse" onClick={() => setShowOther(o => !o)}>
+                  <span>بنود العقد الأخرى <small>({other.length})</small></span>
+                  {showOther ? <ExpandLessOutlined sx={{ fontSize: 18 }} /> : <ExpandMoreOutlined sx={{ fontSize: 18 }} />}
+                </button>
+                <div className="sz-group-hint">مدد ونسب من قالب المرحلة — عدّلها لهذا العقد فقط عند الحاجة</div>
+                {showOther && other.map(renderField)}
+              </section>
+            );
+          })()}
+
           {data && (
             <a className="sz-edit-template" href={`/admin/sanad-zayed/contract-templates?stage=${data.contract.stage_id}`}>
               <EditNoteOutlined sx={{ fontSize: 18 }} /> تعديل نص قالب المرحلة
@@ -282,6 +374,16 @@ const WORKSPACE_CSS = `
 .sz-link { display:inline-flex; align-items:center; gap:4px; border:none; background:none; color:#154278; font-weight:700; font-size:12px; cursor:pointer; padding:2px 0; font-family:inherit; }
 .sz-icon { border:none; background:none; color:#9ca3af; cursor:pointer; display:flex; padding:4px; border-radius:6px; }
 .sz-icon:hover { color:#dc2626; background:#fef2f2; }
+.sz-note { margin:12px 16px 4px; padding:10px 12px; border-radius:10px; font-size:12.5px; line-height:1.8; }
+.sz-note-info { background:#eff6ff; color:#1e3a8a; border:1px solid #dbeafe; }
+.sz-note-error { background:#fef2f2; color:#991b1b; border:1px solid #fecaca; font-weight:700; }
+.sz-readonly { display:flex; justify-content:space-between; align-items:center; margin:8px 0 6px; padding:9px 12px; border-radius:10px; background:#f3f6fa; font-size:13px; color:#374151; }
+.sz-readonly strong { color:#154278; }
+.sz-sched-sum { display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding:7px 10px; border-radius:8px; font-size:12.5px; }
+.sz-sched-sum.ok { background:#dcfce7; color:#166534; }
+.sz-sched-sum.bad { background:#fee2e2; color:#991b1b; }
+.sz-collapse { width:100%; display:flex; justify-content:space-between; align-items:center; border:none; background:none; padding:0; cursor:pointer; font-family:inherit; font-weight:800; color:#154278; font-size:14px; }
+.sz-collapse small { color:#9ca3af; font-weight:600; }
 .sz-edit-template { display:flex; align-items:center; gap:6px; margin:14px 18px 0; font-size:13px; font-weight:700; color:#154278; text-decoration:none; }
 .sz-stage { flex:1; overflow:auto; padding:28px 24px 60px; display:flex; justify-content:center; align-items:flex-start; }
 .sz-badge { font-size:12px; font-weight:700; border-radius:8px; padding:5px 10px; }

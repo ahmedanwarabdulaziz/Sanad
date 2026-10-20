@@ -173,9 +173,9 @@ function ContractTemplatesEditor() {
 
       {message && <Alert severity={message.type} sx={{ mb: 2, borderRadius: 2 }} onClose={() => setMessage(null)}>{message.text}</Alert>}
       {!exists && draft && (
-        <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+        <div className="tpl-note tpl-note-info">
           لا يوجد قالب محفوظ لمرحلة «{stageName}» بعد — تم تحميل القالب القياسي. راجع البيانات ثم احفظ.
-        </Alert>
+        </div>
       )}
 
       {!draft ? (
@@ -231,7 +231,7 @@ function ContractTemplatesEditor() {
                 ))}
               </div>
               {unknownVars.length > 0 && (
-                <Alert severity="warning" sx={{ my: 1, borderRadius: 2 }}>متغيرات غير معروفة ستظهر فارغة: {unknownVars.map(k => `{{${k}}}`).join("، ")}</Alert>
+                <div className="tpl-note tpl-note-warn">متغيرات غير معروفة ستظهر فارغة: {unknownVars.map(k => `{{${k}}}`).join("، ")}</div>
               )}
               <textarea ref={bodyRef} className="tpl-body" value={draft.body} onChange={e => setDraft({ ...draft, body: e.target.value })} spellCheck={false} dir="rtl" />
             </div>
@@ -262,6 +262,9 @@ function ContractTemplatesEditor() {
 
       <style>{`
         .tpl-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:20px; align-items:start; }
+        .tpl-note { padding:10px 14px; border-radius:10px; font-size:13px; margin:0 0 14px; line-height:1.8; }
+        .tpl-note-info { background:#eff6ff; color:#1e3a8a; border:1px solid #dbeafe; }
+        .tpl-note-warn { background:#fffbeb; color:#92400e; border:1px solid #fde68a; margin:8px 0; }
         .tpl-card { background:#fff; border-radius:14px; border:1px solid #f0ede6; padding:16px 18px; }
         .tpl-card-title { font-weight:800; color:#154278; font-size:15px; margin-bottom:10px; }
         .tpl-card-hint { font-size:12px; color:#6b7280; margin:4px 0 10px; line-height:1.8; }
