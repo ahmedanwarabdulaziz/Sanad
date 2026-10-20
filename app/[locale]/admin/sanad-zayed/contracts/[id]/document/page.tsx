@@ -57,8 +57,8 @@ export default function ContractDocumentPage() {
 
   useEffect(() => { setMounted(true); }, []);
 
-  useEffect(() => {
-    fetch(`/api/sanad-zayed/contracts/${id}/document`)
+  const load = useCallback(() => {
+    return fetch(`/api/sanad-zayed/contracts/${id}/document`)
       .then(r => r.json())
       .then(d => {
         if (d.error) setError(d.error);
@@ -67,6 +67,8 @@ export default function ContractDocumentPage() {
       .catch(() => setError("تعذر تحميل العقد"))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => { load(); }, [load]);
 
   const template = data?.template;
   const title = template?.title || DEFAULT_TEMPLATE_TITLE;
@@ -105,6 +107,7 @@ export default function ContractDocumentPage() {
   const [showOther, setShowOther] = useState(false);
   const [issueOpen, setIssueOpen] = useState(false);
   const [issuing, setIssuing] = useState(false);
+  const [issuedNote, setIssuedNote] = useState("");
 
   const wallet: { net: number; locked: number; locked_by_others: number; refundable: number; available_for_contract: number } | null = data?.wallet ?? null;
   const issuedAt: string | null = data?.contract?.issued_at ?? null;
@@ -183,10 +186,10 @@ export default function ContractDocumentPage() {
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || "تعذر إصدار العقد");
-      setOverrides(d.document_vars);
-      setData((prev: any) => prev && ({ ...prev, contract: { ...prev.contract, issued_at: d.issued_at, document_vars: d.document_vars } }));
+      await load();
       setDirty(false);
       setIssueOpen(false);
+      setIssuedNote(`تم الإصدار: خُصص ${formatNumber(d.paid)} من محفظة المستثمر لهذا العقد${d.installments ? ` وسُجّل ${d.installments} أقساط بإجمالي ${formatNumber(d.pending)}` : ""}.`);
       setSavedAt(new Date().toLocaleTimeString("ar-EG-u-nu-latn", { hour: "2-digit", minute: "2-digit" }));
     } catch (e: any) {
       setError(e.message);
@@ -282,6 +285,7 @@ export default function ContractDocumentPage() {
         <aside className="sz-panel sz-no-print">
           {loading && <div style={{ padding: 40, textAlign: "center" }}><CircularProgress sx={{ color: "#154278" }} /></div>}
           {error && <div className="sz-note sz-note-error">{error}</div>}
+          {issuedNote && <div className="sz-note sz-note-ok">{issuedNote}</div>}
           {data && !template && (
             <div className="sz-note sz-note-info">
               لا يوجد قالب محفوظ لهذه المرحلة — يتم استخدام القالب القياسي.{" "}
@@ -300,8 +304,13 @@ export default function ContractDocumentPage() {
                     {wallet && (
                       <div className="sz-wallet">
                         <div><span>رصيد المستثمر (المدفوع فعليًا)</span><strong>{formatNumber(wallet.net)}</strong></div>
-                        {wallet.locked_by_others > 0 && <div><span>محجوز لعقود أخرى صادرة</span><strong>{formatNumber(wallet.locked_by_others)}</strong></div>}
+                        {wallet.locked_by_others > 0 && <div><span>محجوز لعقود أخرى صادرة</span><strong>− {formatNumber(wallet.locked_by_others)}</strong></div>}
                         <div><span>المتاح لهذا العقد</span><strong>{formatNumber(wallet.available_for_contract)}</strong></div>
+                        <div className="sz-wallet-sep"><span>{issuedAt ? "المخصص لهذا العقد" : "سيُخصص لهذا العقد"}</span><strong>− {formatNumber(paidValue)}</strong></div>
+                        <div className="sz-wallet-total">
+                          <span>يتبقى في المحفظة (قابل للاسترداد)</span>
+                          <strong>{formatNumber(Math.max(wallet.net - wallet.locked_by_others - paidValue, 0))}</strong>
+                        </div>
                       </div>
                     )}
                     {paidExceedsWallet && (
@@ -474,6 +483,9 @@ const WORKSPACE_CSS = `
 .sz-issue-sum { background:#f9f9f7; border-radius:10px; padding:10px 14px; font-size:13.5px; }
 .sz-issue-sum div { display:flex; justify-content:space-between; line-height:2.1; }
 .sz-issue-sum strong { color:#154278; }
+.sz-wallet-sep { border-top:1px dashed #e2d3b8; margin-top:4px; padding-top:4px; }
+.sz-wallet-total { font-weight:800; color:#154278; }
+.sz-note-ok { background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; font-weight:700; }
 .sz-readonly { display:flex; justify-content:space-between; align-items:center; margin:8px 0 6px; padding:9px 12px; border-radius:10px; background:#f3f6fa; font-size:13px; color:#374151; }
 .sz-readonly strong { color:#154278; }
 .sz-sched-sum { display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding:7px 10px; border-radius:8px; font-size:12.5px; }
