@@ -34,20 +34,21 @@ type AuthResult = { error: NextResponse } | { user: ErpUser };
  * call this first and return `.error` immediately if present.
  */
 export async function requireAuth(minRole: ErpRole = "viewer"): Promise<AuthResult> {
+  // getClaims verifies the JWT locally against the project's cached JWKS
+  // (asymmetric signing keys), avoiding a network round trip to the auth
+  // server on every API call. It falls back to getUser() for HS256 tokens.
   const supabase = await createSsrClient();
-  const {
-    data: { user: authUser },
-    error: authError,
-  } = await supabase.auth.getUser();
+  const { data: claimsData, error: authError } = await supabase.auth.getClaims();
+  const authUserId = claimsData?.claims?.sub;
 
-  if (authError || !authUser) {
+  if (authError || !authUserId) {
     return { error: NextResponse.json({ error: "يجب تسجيل الدخول" }, { status: 401 }) };
   }
 
   const { data: erpUser, error: erpError } = await serviceClient
     .from("erp_users")
     .select("id, auth_id, email, name, role, is_active")
-    .eq("auth_id", authUser.id)
+    .eq("auth_id", authUserId)
     .single();
 
   if (erpError || !erpUser) {

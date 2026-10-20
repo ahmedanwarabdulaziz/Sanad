@@ -18,9 +18,12 @@ export default function SanadShell({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     let active = true;
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
+    // getClaims verifies the session JWT locally (no auth-server round trip),
+    // so pages start loading their data immediately. API routes still enforce
+    // auth server-side via requireAuth.
+    supabase.auth.getClaims().then(({ data }) => {
       if (!active) return;
-      if (!data.user) {
+      if (!data?.claims?.sub) {
         router.replace("/admin");
         return;
       }

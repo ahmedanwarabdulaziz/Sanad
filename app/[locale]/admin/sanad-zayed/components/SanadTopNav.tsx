@@ -43,8 +43,9 @@ export default function SanadTopNav({
   // Fetch current user email
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user?.email) setUserEmail(data.user.email);
+    supabase.auth.getClaims().then(({ data }) => {
+      const email = data?.claims?.email;
+      if (typeof email === "string" && email) setUserEmail(email);
     });
   }, []);
 
