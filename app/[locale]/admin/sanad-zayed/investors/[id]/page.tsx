@@ -37,6 +37,7 @@ interface Contract {
   notes: string;
   linked_contract_id: string | null;
   prior_stage_price: number;
+  issued_at?: string | null;
   linked_contract?: { id: string; unit_price_at_contract: number; stage: { name: string } | null } | null;
 }
 
@@ -640,6 +641,11 @@ export default function InvestorDetailPage() {
                           <span style={{ background: `${CONTRACT_STATUS_COLOR[c.status]}18`, color: CONTRACT_STATUS_COLOR[c.status], fontSize: 12, fontWeight: 700, borderRadius: 8, padding: "4px 10px" }}>
                             {CONTRACT_STATUS_LABEL[c.status]}
                           </span>
+                          {c.issued_at && (
+                            <span title={`صدر في ${new Date(c.issued_at).toLocaleDateString("en-GB")}`} style={{ marginInlineStart: 6, background: "#eef2f7", color: "#154278", fontSize: 11, fontWeight: 700, borderRadius: 8, padding: "4px 8px" }}>
+                              صادر
+                            </span>
+                          )}
                         </td>
                         <td style={{ padding: "14px 12px" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 2 }}>

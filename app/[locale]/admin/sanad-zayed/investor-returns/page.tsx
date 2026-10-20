@@ -36,6 +36,7 @@ export default function InvestorReturnsPage() {
 
   // Modal states
   const [addOpen, setAddOpen] = useState(false);
+  const [wallet, setWallet] = useState<{ net: number; locked: number; refundable: number } | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const [form, setForm] = useState({
@@ -83,6 +84,16 @@ export default function InvestorReturnsPage() {
       (ret.investor?.name || "").toLowerCase().includes(q)
     );
   }, [returns, search]);
+
+  useEffect(() => {
+    setWallet(null);
+    if (!form.investor_id) return;
+    let active = true;
+    fetch(`/api/sanad-zayed/investors/${form.investor_id}/wallet`)
+      .then(r => r.json())
+      .then(d => { if (active && !d.error) setWallet(d); });
+    return () => { active = false; };
+  }, [form.investor_id]);
 
   const totalReturns = returns.reduce((sum, ret) => sum + Number(ret.amount), 0);
 
@@ -252,6 +263,17 @@ export default function InvestorReturnsPage() {
               {investors.map(i => <MenuItem key={i.id} value={i.id}>{i.name}</MenuItem>)}
             </Select>
           </FormControl>
+
+          {form.investor_id && wallet && (
+            <div style={{ background: "#f9f9f7", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#374151", lineHeight: 1.9 }}>
+              <div>رصيد المستثمر: <strong>{wallet.net.toLocaleString("ar-EG-u-nu-latn")}</strong></div>
+              {wallet.locked > 0 && <div>محجوز لعقود صادرة: <strong>{wallet.locked.toLocaleString("ar-EG-u-nu-latn")}</strong></div>}
+              <div>المتاح للاسترداد: <strong style={{ color: wallet.refundable > 0 ? "#16a34a" : "#dc2626" }}>{wallet.refundable.toLocaleString("ar-EG-u-nu-latn")}</strong></div>
+              {Number(form.amount) > wallet.refundable && (
+                <div style={{ color: "#dc2626", fontWeight: 700 }}>المبلغ أكبر من المتاح للاسترداد</div>
+              )}
+            </div>
+          )}
 
           <TextField label="المبلغ المراد صرفه *" type="text" inputMode="decimal" value={form.amount} onChange={e => setForm({ ...form, amount: sanitizeDecimalInput(e.target.value) })} fullWidth sx={{ ...inputSx, "& .MuiInputBase-input": { direction: "ltr", textAlign: "right", fontSize: 18, fontWeight: 700, color: "#ef4444" } }} />
 

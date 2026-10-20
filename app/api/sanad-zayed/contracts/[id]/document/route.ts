@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { requireAuth } from "@/lib/auth/requireAuth";
+import { loadInvestorWallet, availableForContract } from "@/lib/sanad-zayed/investorWallet";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,7 +11,8 @@ const supabase = createClient(
 
 // ── GET /api/sanad-zayed/contracts/[id]/document ──────────────────────
 // Everything needed to render the printable contract: the contract with its
-// investor and stage, the stage's template, and the per-contract overrides.
+// investor and stage, the stage's template, the per-contract overrides, and
+// the investor's wallet (what has actually been paid towards this contract).
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -24,7 +26,7 @@ export async function GET(
       .from("sz_investor_contracts")
       .select(`
         id, stage_id, investor_id, contract_date, unit_quantity, unit_price_at_contract,
-        total_contract_value, status, document_vars,
+        total_contract_value, status, document_vars, issued_at,
         investor:investor_id(id, name, phone, national_id, address_in_national_id, job_in_national_id),
         stage:stage_id(id, name),
         installments:sz_contract_installments(seq, due_date, amount, status)
@@ -34,14 +36,24 @@ export async function GET(
 
     if (error || !contract) return NextResponse.json({ error: "العقد غير موجود" }, { status: 404 });
 
-    const { data: template, error: tErr } = await supabase
-      .from("sz_contract_templates")
-      .select("*")
-      .eq("stage_id", contract.stage_id)
-      .maybeSingle();
+    const [{ data: template, error: tErr }, wallet] = await Promise.all([
+      supabase.from("sz_contract_templates").select("*").eq("stage_id", contract.stage_id).maybeSingle(),
+      loadInvestorWallet(supabase, contract.investor_id),
+    ]);
     if (tErr) throw tErr;
 
-    return NextResponse.json({ contract, template });
+    const available = availableForContract(wallet, id);
+    return NextResponse.json({
+      contract: { ...contract, wallet_paid: available },
+      template,
+      wallet: {
+        net: wallet.net,
+        locked: wallet.locked,
+        locked_by_others: wallet.locked - (wallet.contracts.find(c => c.id === id)?.claim ?? 0),
+        refundable: wallet.refundable,
+        available_for_contract: available,
+      },
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "خطأ في الخادم" }, { status: 500 });
   }

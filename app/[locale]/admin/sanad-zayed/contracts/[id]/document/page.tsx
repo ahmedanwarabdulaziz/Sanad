@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useParams, useRouter } from "next/navigation";
-import { Button, CircularProgress, TextField, Tooltip } from "@mui/material";
-import { ArrowForwardOutlined, PrintOutlined, SaveOutlined, RestartAltOutlined, EditNoteOutlined, AddOutlined, DeleteOutlineOutlined, ExpandMoreOutlined, ExpandLessOutlined } from "@mui/icons-material";
+import { Button, CircularProgress, TextField, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
+import { ArrowForwardOutlined, PrintOutlined, SaveOutlined, RestartAltOutlined, EditNoteOutlined, AddOutlined, DeleteOutlineOutlined, ExpandMoreOutlined, ExpandLessOutlined, VerifiedOutlined } from "@mui/icons-material";
 import ContractPaper from "../../../components/ContractPaper";
 import {
   TEMPLATE_VARS, resolveValues, usedVariables, applyConditionals, parseSchedule, formatSchedule, parseAmount, formatNumber,
@@ -103,6 +103,13 @@ export default function ContractDocumentPage() {
   const scheduleMismatch = pendingTotal > 0 && Math.abs(scheduleTotal - pendingTotal) > 0.5;
   const setScheduleRows = (rows: ScheduleRow[]) => setVar("installments", formatSchedule(rows) || " ");
   const [showOther, setShowOther] = useState(false);
+  const [issueOpen, setIssueOpen] = useState(false);
+  const [issuing, setIssuing] = useState(false);
+
+  const wallet: { net: number; locked: number; locked_by_others: number; refundable: number; available_for_contract: number } | null = data?.wallet ?? null;
+  const issuedAt: string | null = data?.contract?.issued_at ?? null;
+  const paidValue = parseAmount(values.paid_amount) || 0;
+  const paidExceedsWallet = !!wallet && paidValue > wallet.available_for_contract + 0.5;
 
   // Re-split the pending amount equally (used when the count or interval changes).
   const redistribute = (count: number, interval: number) => {
@@ -165,6 +172,30 @@ export default function ContractDocumentPage() {
     document.title = prev;
   };
 
+  const issue = async () => {
+    setIssuing(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/sanad-zayed/contracts/${id}/issue`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ document_vars: overrides }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "تعذر إصدار العقد");
+      setOverrides(d.document_vars);
+      setData((prev: any) => prev && ({ ...prev, contract: { ...prev.contract, issued_at: d.issued_at, document_vars: d.document_vars } }));
+      setDirty(false);
+      setIssueOpen(false);
+      setSavedAt(new Date().toLocaleTimeString("ar-EG-u-nu-latn", { hour: "2-digit", minute: "2-digit" }));
+    } catch (e: any) {
+      setError(e.message);
+      setIssueOpen(false);
+    } finally {
+      setIssuing(false);
+    }
+  };
+
   const renderField = (key: string) => {
     const overridden = !!overrides[key]?.trim();
     const auto = baselineOf(key);
@@ -221,6 +252,20 @@ export default function ContractDocumentPage() {
             sx={{ borderRadius: 2, fontWeight: 700, borderColor: "#154278", color: "#154278" }}>
             حفظ البيانات
           </Button>
+          {issuedAt && (
+            <span className="sz-badge sz-badge-issued">
+              <VerifiedOutlined sx={{ fontSize: 15 }} /> صادر {new Date(issuedAt).toLocaleDateString("en-GB")}
+            </span>
+          )}
+          <Tooltip title={scheduleMismatch ? "مجموع الأقساط لا يساوي المبلغ المتبقي" : paidExceedsWallet ? "المبلغ المسدد أكبر من رصيد المستثمر" : ""}>
+            <span>
+              <Button variant="outlined" onClick={() => setIssueOpen(true)} disabled={!data || scheduleMismatch || paidExceedsWallet || data?.contract?.status !== "ACTIVE"}
+                startIcon={<VerifiedOutlined />}
+                sx={{ borderRadius: 2, fontWeight: 700, borderColor: "#b08d57", color: "#8a6a35", "&:hover": { borderColor: "#8a6a35", background: "#faf6ef" } }}>
+                {issuedAt ? "تحديث الإصدار" : "إصدار العقد"}
+              </Button>
+            </span>
+          </Tooltip>
           <Tooltip title={scheduleMismatch ? "مجموع الأقساط لا يساوي المبلغ المتبقي" : ""}>
             <span>
               <Button variant="contained" onClick={print} disabled={!data || scheduleMismatch} startIcon={<PrintOutlined />}
@@ -251,10 +296,24 @@ export default function ContractDocumentPage() {
                 <div className="sz-group-title">{sec.title}</div>
                 {keys.map(renderField)}
                 {sec.title === "السداد" && (
-                  <div className="sz-readonly">
-                    <span>المبلغ المتبقي</span>
-                    <strong>{formatNumber(pendingTotal)} ج.م</strong>
-                  </div>
+                  <>
+                    {wallet && (
+                      <div className="sz-wallet">
+                        <div><span>رصيد المستثمر (المدفوع فعليًا)</span><strong>{formatNumber(wallet.net)}</strong></div>
+                        {wallet.locked_by_others > 0 && <div><span>محجوز لعقود أخرى صادرة</span><strong>{formatNumber(wallet.locked_by_others)}</strong></div>}
+                        <div><span>المتاح لهذا العقد</span><strong>{formatNumber(wallet.available_for_contract)}</strong></div>
+                      </div>
+                    )}
+                    {paidExceedsWallet && (
+                      <div className="sz-note sz-note-error" style={{ margin: "6px 0" }}>
+                        المبلغ المسدد أكبر من رصيد المستثمر المتاح لهذا العقد ({formatNumber(wallet!.available_for_contract)}).
+                      </div>
+                    )}
+                    <div className="sz-readonly">
+                      <span>المبلغ المتبقي</span>
+                      <strong>{formatNumber(pendingTotal)} ج.م</strong>
+                    </div>
+                  </>
                 )}
               </section>
             );
@@ -348,6 +407,31 @@ export default function ContractDocumentPage() {
         </div>
       </div>
 
+      <Dialog open={issueOpen} onClose={() => !issuing && setIssueOpen(false)} PaperProps={{ sx: { borderRadius: "18px", direction: "rtl", maxWidth: 460, width: "100%" } }} sx={{ zIndex: 1400 }}>
+        <DialogTitle sx={{ fontFamily: "var(--font-cairo)", fontWeight: 800, color: "#154278" }}>
+          {issuedAt ? "تحديث إصدار العقد" : "إصدار العقد"}
+        </DialogTitle>
+        <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 1.5, fontFamily: "var(--font-cairo)" }}>
+          <div className="sz-issue-sum">
+            <div><span>قيمة العقد</span><strong>{formatNumber(parseAmount(values.financing_amount) || 0)}</strong></div>
+            <div><span>المسدد (من رصيد المستثمر)</span><strong>{formatNumber(paidValue)}</strong></div>
+            <div><span>المتبقي</span><strong>{formatNumber(pendingTotal)}</strong></div>
+            {pendingTotal > 0 && <div><span>عدد الأقساط</span><strong>{scheduleRows.length}</strong></div>}
+          </div>
+          <div style={{ fontSize: 13, color: "#4b5563", lineHeight: 1.9 }}>
+            {pendingTotal > 0 && <>سيتم تسجيل {scheduleRows.length} أقساط بإجمالي {formatNumber(pendingTotal)} على هذا العقد في النظام{issuedAt ? " (تستبدل الأقساط غير المسددة الحالية)" : ""}. </>}
+            سيُحجز المبلغ المسدد من محفظة المستثمر لهذا العقد، ولن يمكن رد إلا ما يزيد عن قيمة العقود الصادرة. وتثبت بيانات السداد في نص العقد كما هي الآن.
+          </div>
+        </DialogContent>
+        <DialogActions sx={{ p: 2.5, pt: 0, gap: 1 }}>
+          <Button onClick={() => setIssueOpen(false)} disabled={issuing} sx={{ color: "#6b7280", fontWeight: 700, flex: 1 }}>إلغاء</Button>
+          <Button onClick={issue} variant="contained" disabled={issuing}
+            sx={{ flex: 1, fontWeight: 700, borderRadius: 2, background: "#154278", "&:hover": { background: "#0f3260" } }}>
+            {issuing ? "جاري الإصدار..." : "تأكيد الإصدار"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Print version without review highlighting */}
       {data && (
         <div className="sz-print-only">
@@ -384,6 +468,12 @@ const WORKSPACE_CSS = `
 .sz-note { margin:12px 16px 4px; padding:10px 12px; border-radius:10px; font-size:12.5px; line-height:1.8; }
 .sz-note-info { background:#eff6ff; color:#1e3a8a; border:1px solid #dbeafe; }
 .sz-note-error { background:#fef2f2; color:#991b1b; border:1px solid #fecaca; font-weight:700; }
+.sz-wallet { margin:8px 0 2px; padding:8px 12px; border-radius:10px; background:#faf6ef; border:1px solid #efe4d0; font-size:12.5px; color:#5b4a2e; }
+.sz-wallet div { display:flex; justify-content:space-between; line-height:2; }
+.sz-badge-issued { background:#eef2f7; color:#154278; display:inline-flex; align-items:center; gap:4px; }
+.sz-issue-sum { background:#f9f9f7; border-radius:10px; padding:10px 14px; font-size:13.5px; }
+.sz-issue-sum div { display:flex; justify-content:space-between; line-height:2.1; }
+.sz-issue-sum strong { color:#154278; }
 .sz-readonly { display:flex; justify-content:space-between; align-items:center; margin:8px 0 6px; padding:9px 12px; border-radius:10px; background:#f3f6fa; font-size:13px; color:#374151; }
 .sz-readonly strong { color:#154278; }
 .sz-sched-sum { display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding:7px 10px; border-radius:8px; font-size:12.5px; }

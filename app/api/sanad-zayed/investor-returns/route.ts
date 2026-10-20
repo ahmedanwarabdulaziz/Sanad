@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { requireAuth } from "@/lib/auth/requireAuth";
+import { loadInvestorWallet } from "@/lib/sanad-zayed/investorWallet";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -72,6 +73,16 @@ export async function POST(request: NextRequest) {
     }
     if (!return_category) {
       return NextResponse.json({ error: "يجب تحديد نوع المرتجع" }, { status: 422 });
+    }
+
+    // Refunds can only draw on the wallet balance left after issued contracts.
+    const wallet = await loadInvestorWallet(supabase, investor_id);
+    if (Number(amount) > wallet.refundable + 0.5) {
+      const fmt = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+      return NextResponse.json(
+        { error: `المبلغ المتاح للاسترداد ${fmt(wallet.refundable)} فقط (رصيد المستثمر ${fmt(wallet.net)} − قيمة العقود الصادرة ${fmt(wallet.locked)})` },
+        { status: 422 }
+      );
     }
 
     const finalDescription = `${return_category} - ${description?.trim() || ""}`;

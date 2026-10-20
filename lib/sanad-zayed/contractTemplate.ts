@@ -201,6 +201,8 @@ export interface ContractData {
   stage?: { name?: string | null } | null;
   /** Installments already scheduled on the contract record, if any. */
   installments?: { due_date?: string | null; amount?: number | string | null; status?: string | null }[] | null;
+  /** What the investor has actually paid that can count towards this contract (wallet share). */
+  wallet_paid?: number | null;
 }
 
 export interface ScheduleRow { date: string; amount: string }
@@ -326,10 +328,14 @@ export function resolveValues(
 
     let paid = ov("paid_amount") ? parseAmount(merged.paid_amount) : NaN;
     if (!Number.isFinite(paid)) {
+      // Wallet share → recorded installments → template upfront %.
       const pct = parseAmount(merged.upfront_pct);
-      paid = recorded.length
-        ? total - recordedPendingSum
-        : Number.isFinite(pct) ? Math.round(total * Math.min(Math.max(pct, 0), 100)) / 100 : total;
+      const wallet = c.wallet_paid;
+      paid = typeof wallet === "number" && Number.isFinite(wallet)
+        ? Math.min(Math.max(wallet, 0), total)
+        : recorded.length
+          ? total - recordedPendingSum
+          : Number.isFinite(pct) ? Math.round(total * Math.min(Math.max(pct, 0), 100)) / 100 : total;
     }
     let pending = ov("pending_amount") ? parseAmount(merged.pending_amount) : NaN;
     if (!Number.isFinite(pending)) pending = Math.max(Math.round((total - paid) * 100) / 100, 0);
@@ -340,7 +346,7 @@ export function resolveValues(
     if (!ov("pending_amount_words")) merged.pending_amount_words = pending > 0 ? amountInWords(pending) : "";
 
     if (!ov("installments")) {
-      const useRecorded = recordedPending.length > 0 && !ov("paid_amount") && !ov("pending_amount");
+      const useRecorded = recordedPending.length > 0 && Math.abs(recordedPendingSum - pending) < 0.5;
       const rows: ScheduleRow[] = useRecorded
         ? recordedPending.map(i => {
             const d = parseIsoDate(clean(i.due_date));
