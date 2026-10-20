@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { requireAuth } from "@/lib/auth/requireAuth";
 import { loadInvestorWallet, availableForContract } from "@/lib/sanad-zayed/investorWallet";
+import { CONTRACT_LOCKED_VARS } from "@/lib/sanad-zayed/contractTemplate";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -74,7 +75,7 @@ export async function PUT(
     const vars: Record<string, string> = {};
     for (const [k, v] of Object.entries((body.document_vars ?? {}) as Record<string, unknown>)) {
       const value = v === null || v === undefined ? "" : String(v).trim();
-      if (/^[a-z0-9_]+$/i.test(k) && value) vars[k] = value;
+      if (/^[a-z0-9_]+$/i.test(k) && value && !CONTRACT_LOCKED_VARS.includes(k)) vars[k] = value;
     }
 
     const { error } = await supabase

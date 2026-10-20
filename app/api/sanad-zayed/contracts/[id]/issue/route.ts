@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { requireAuth } from "@/lib/auth/requireAuth";
 import { loadInvestorWallet, availableForContract } from "@/lib/sanad-zayed/investorWallet";
-import { resolveValues, parseAmount, parseSchedule, parseDmy, formatNumber } from "@/lib/sanad-zayed/contractTemplate";
+import {
+  resolveValues, parseAmount, parseSchedule, parseDmy, formatNumber, upgradeTemplateBody, missingVariables, variableLabels,
+  CONTRACT_LOCKED_VARS,
+  DEFAULT_TEMPLATE_BODY,
+} from "@/lib/sanad-zayed/contractTemplate";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -47,11 +51,11 @@ export async function POST(
     const vars: Record<string, string> = {};
     for (const [k, v] of Object.entries((body.document_vars ?? contract.document_vars ?? {}) as Record<string, unknown>)) {
       const value = v === null || v === undefined ? "" : String(v).trim();
-      if (/^[a-z0-9_]+$/i.test(k) && value) vars[k] = value;
+      if (/^[a-z0-9_]+$/i.test(k) && value && !CONTRACT_LOCKED_VARS.includes(k)) vars[k] = value;
     }
 
     const [{ data: template }, wallet] = await Promise.all([
-      supabase.from("sz_contract_templates").select("defaults").eq("stage_id", contract.stage_id).maybeSingle(),
+      supabase.from("sz_contract_templates").select("body, defaults").eq("stage_id", contract.stage_id).maybeSingle(),
       loadInvestorWallet(supabase, contract.investor_id),
     ]);
     const available = availableForContract(wallet, id);
@@ -61,6 +65,12 @@ export async function POST(
       (template?.defaults ?? {}) as Record<string, string>,
       vars
     );
+    // Every field the document prints must be filled before it can be issued.
+    const missing = missingVariables(upgradeTemplateBody(template?.body || DEFAULT_TEMPLATE_BODY), values);
+    if (missing.length) {
+      return NextResponse.json({ error: `لا يمكن إصدار العقد — بيانات ناقصة: ${variableLabels(missing).join("، ")}` }, { status: 422 });
+    }
+
     const total = parseAmount(values.financing_amount);
     const paid = parseAmount(values.paid_amount);
     const pending = parseAmount(values.pending_amount) || 0;

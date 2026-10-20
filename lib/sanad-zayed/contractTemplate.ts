@@ -290,6 +290,20 @@ export function contractAutoValues(c: ContractData, stageDefaults: Record<string
  * Final values: per-contract overrides win, then data derived from the
  * contract, then the stage template defaults, then the manual defaults.
  */
+/**
+ * Values that always come from the contract record (edited from the
+ * contract itself, never per document) so the document, the wallet and the
+ * recorded installments can never disagree with the system.
+ */
+export const CONTRACT_LOCKED_VARS = ["area", "meter_cost", "financing_amount", "financing_amount_words", "contract_date", "investor_name", "stage_name"];
+
+/** Drops per-document overrides of contract-owned values. */
+export function stripLockedOverrides(overrides: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(overrides ?? {})) if (!CONTRACT_LOCKED_VARS.includes(k)) out[k] = v;
+  return out;
+}
+
 export function resolveValues(
   c: ContractData,
   stageDefaults: Record<string, string>,
@@ -298,6 +312,7 @@ export function resolveValues(
   const stage = { ...DEFAULT_STAGE_VALUES, ...stageDefaults };
   const merged: Record<string, string> = { ...DEFAULT_MANUAL_VALUES, ...stage };
   for (const [k, v] of Object.entries(contractAutoValues(c, stage))) if (v) merged[k] = v;
+  overrides = stripLockedOverrides(overrides);
   for (const [k, v] of Object.entries(overrides ?? {})) if (clean(v)) merged[k] = clean(v);
 
   // Re-derive dependent values from the final (possibly overridden) inputs,
@@ -450,6 +465,27 @@ export function usedVariables(body: string): string[] {
   const seen = new Set<string>();
   for (const m of (body ?? "").matchAll(/\{\{\s*([a-z0-9_]+)\s*\}\}/gi)) seen.add(m[1]);
   return [...seen];
+}
+
+/** Variables printed by the header, title block and signature block regardless of the body. */
+export const FIXED_VARS = ["transaction_no", "contract_date", "stage_name", "financing_amount", "company_rep_name", "company_rep_title", "investor_name", "investor_national_id", "investor_phone"];
+
+/**
+ * Variables that will print empty: those used by the active branches of the
+ * body plus the fixed header/signature fields, and the installment schedule
+ * when the body prints it.
+ */
+export function missingVariables(body: string, values: Record<string, string>): string[] {
+  const active = applyConditionals(body, values);
+  const keys = new Set([...usedVariables(active), ...FIXED_VARS]);
+  if (active.includes("[[installments]]")) keys.add("installments");
+  return [...keys].filter(k => !clean(values[k]));
+}
+
+/** Arabic labels for a list of variable keys. */
+export function variableLabels(keys: string[]): string[] {
+  const labels = Object.fromEntries(TEMPLATE_VARS.map(v => [v.key, v.label]));
+  return keys.map(k => labels[k] ?? k);
 }
 
 // ── Standard template (converted from the approved pre-licensing financing contract) ──

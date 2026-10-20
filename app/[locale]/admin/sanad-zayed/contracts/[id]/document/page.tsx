@@ -8,11 +8,9 @@ import { ArrowForwardOutlined, PrintOutlined, SaveOutlined, RestartAltOutlined, 
 import ContractPaper from "../../../components/ContractPaper";
 import {
   TEMPLATE_VARS, resolveValues, usedVariables, applyConditionals, parseSchedule, formatSchedule, parseAmount, formatNumber,
-  generateSchedule, parseDmy, formatDate, upgradeTemplateBody, DEFAULT_TEMPLATE_BODY, DEFAULT_TEMPLATE_TITLE, DEFAULT_TEMPLATE_SUBTITLE, type ScheduleRow,
+  generateSchedule, parseDmy, formatDate, upgradeTemplateBody, FIXED_VARS, missingVariables, variableLabels, CONTRACT_LOCKED_VARS, DEFAULT_TEMPLATE_BODY, DEFAULT_TEMPLATE_TITLE, DEFAULT_TEMPLATE_SUBTITLE, type ScheduleRow,
 } from "@/lib/sanad-zayed/contractTemplate";
 
-// Variables printed by the header, title block and signature block regardless of the body.
-const FIXED_VARS = ["transaction_no", "contract_date", "stage_name", "financing_amount", "company_rep_name", "company_rep_title", "investor_name", "investor_national_id", "investor_phone"];
 
 // Inputs that drive the paid / pending split and the installment schedule.
 const SCHEDULE_VARS = ["paid_amount", "paid_amount_words", "pending_amount", "pending_amount_words", "installments", "upfront_pct", "installments_count", "installment_interval_months"];
@@ -21,12 +19,12 @@ const LABELS: Record<string, string> = Object.fromEntries(TEMPLATE_VARS.map(v =>
 const HINTS: Record<string, string | undefined> = Object.fromEntries(TEMPLATE_VARS.map(v => [v.key, v.hint]));
 
 // Panel sections, in the order the contract is reviewed.
-const SECTIONS: { title: string; keys: string[] }[] = [
+const SECTIONS: { title: string; keys: string[]; hint?: string }[] = [
   { title: "بيانات المعاملة", keys: ["transaction_no", "contract_date"] },
   { title: "بيانات الممول", keys: ["investor_name", "investor_nationality", "investor_national_id", "investor_address", "investor_job", "investor_phone"] },
   { title: "بيانات مفوض الشركة", keys: ["company_rep_name", "company_rep_title", "company_address"] },
   { title: "بيانات الأرض", keys: ["plot_no", "plot_code", "land_area", "separation_date"] },
-  { title: "المساحة والسعر", keys: ["area", "meter_cost", "financing_amount"] },
+  { title: "المساحة والسعر", keys: ["area", "meter_cost", "financing_amount"], hint: "من بيانات العقد في النظام — تُعدل من «تعديل العقد» في صفحة المستثمر" },
   { title: "السداد", keys: ["paid_amount", "payment_method"] },
 ];
 // Derived automatically and never edited directly in the panel.
@@ -92,12 +90,7 @@ export default function ContractDocumentPage() {
     return keys;
   }, [body]);
   // Only variables in the branches that will actually print count as missing.
-  const missing = useMemo(() => {
-    const active = applyConditionals(body, values);
-    const keys = new Set([...usedVariables(active), ...FIXED_VARS]);
-    if (active.includes("[[installments]]")) keys.add("installments");
-    return [...keys].filter(k => !values[k]);
-  }, [body, values]);
+  const missing = useMemo(() => missingVariables(body, values), [body, values]);
 
   const scheduleRows: ScheduleRow[] = useMemo(() => parseSchedule(values.installments ?? ""), [values]);
   const scheduleTotal = scheduleRows.reduce((s, r) => s + (parseAmount(r.amount) || 0), 0);
@@ -200,6 +193,15 @@ export default function ContractDocumentPage() {
   };
 
   const renderField = (key: string) => {
+    // Contract-owned values are shown read-only; they change from the contract itself.
+    if (CONTRACT_LOCKED_VARS.includes(key)) {
+      return (
+        <div key={key} className="sz-locked">
+          <span>{LABELS[key] ?? key}</span>
+          <strong>{values[key] || "—"}</strong>
+        </div>
+      );
+    }
     const overridden = !!overrides[key]?.trim();
     const auto = baselineOf(key);
     const isMissing = !values[key];
@@ -246,7 +248,9 @@ export default function ContractDocumentPage() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {missing.length > 0 ? (
-            <span className="sz-badge sz-badge-warn">{missing.length} بيانات ناقصة</span>
+            <Tooltip title={<div style={{ lineHeight: 1.9 }}>{variableLabels(missing).map(l => <div key={l}>• {l}</div>)}</div>}>
+              <span className="sz-badge sz-badge-warn" style={{ cursor: "help" }}>{missing.length} بيانات ناقصة</span>
+            </Tooltip>
           ) : data ? (
             <span className="sz-badge sz-badge-ok">العقد مكتمل البيانات</span>
           ) : null}
@@ -260,9 +264,12 @@ export default function ContractDocumentPage() {
               <VerifiedOutlined sx={{ fontSize: 15 }} /> صادر {new Date(issuedAt).toLocaleDateString("en-GB")}
             </span>
           )}
-          <Tooltip title={scheduleMismatch ? "مجموع الأقساط لا يساوي المبلغ المتبقي" : paidExceedsWallet ? "المبلغ المسدد أكبر من رصيد المستثمر" : ""}>
+          <Tooltip title={
+            missing.length ? `لا يمكن الإصدار — بيانات ناقصة: ${variableLabels(missing).join("، ")}`
+            : scheduleMismatch ? "مجموع الأقساط لا يساوي المبلغ المتبقي"
+            : paidExceedsWallet ? "المبلغ المسدد أكبر من رصيد المستثمر" : ""}>
             <span>
-              <Button variant="outlined" onClick={() => setIssueOpen(true)} disabled={!data || scheduleMismatch || paidExceedsWallet || data?.contract?.status !== "ACTIVE"}
+              <Button variant="outlined" onClick={() => setIssueOpen(true)} disabled={!data || missing.length > 0 || scheduleMismatch || paidExceedsWallet || data?.contract?.status !== "ACTIVE"}
                 startIcon={<VerifiedOutlined />}
                 sx={{ borderRadius: 2, fontWeight: 700, borderColor: "#b08d57", color: "#8a6a35", "&:hover": { borderColor: "#8a6a35", background: "#faf6ef" } }}>
                 {issuedAt ? "تحديث الإصدار" : "إصدار العقد"}
@@ -298,6 +305,7 @@ export default function ContractDocumentPage() {
             return (
               <section key={sec.title} className="sz-group">
                 <div className="sz-group-title">{sec.title}</div>
+                {sec.hint && <div className="sz-group-hint">{sec.hint}</div>}
                 {keys.map(renderField)}
                 {sec.title === "السداد" && (
                   <>
@@ -486,6 +494,8 @@ const WORKSPACE_CSS = `
 .sz-wallet-sep { border-top:1px dashed #e2d3b8; margin-top:4px; padding-top:4px; }
 .sz-wallet-total { font-weight:800; color:#154278; }
 .sz-note-ok { background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; font-weight:700; }
+.sz-locked { display:flex; justify-content:space-between; align-items:center; margin:6px 0; padding:8px 12px; border-radius:10px; background:#f8fafc; border:1px solid #eef2f7; font-size:13px; color:#6b7280; }
+.sz-locked strong { color:#111827; }
 .sz-readonly { display:flex; justify-content:space-between; align-items:center; margin:8px 0 6px; padding:9px 12px; border-radius:10px; background:#f3f6fa; font-size:13px; color:#374151; }
 .sz-readonly strong { color:#154278; }
 .sz-sched-sum { display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding:7px 10px; border-radius:8px; font-size:12.5px; }
