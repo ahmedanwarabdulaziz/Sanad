@@ -30,7 +30,7 @@ export const TEMPLATE_VARS: TemplateVar[] = [
   { key: "stage_name", label: "اسم المرحلة", source: "contract" },
   { key: "contract_date", label: "تاريخ العقد والسداد", source: "contract" },
   { key: "contract_day", label: "يوم التوقيع", source: "contract" },
-  { key: "financing_amount", label: "مبلغ التمويل (رقمًا)", source: "contract" },
+  { key: "financing_amount", label: "مبلغ التمويل (رقمًا)", source: "contract", hint: "المساحة × تكلفة المتر المرجعي" },
   { key: "financing_amount_words", label: "مبلغ التمويل (حروفًا)", source: "contract" },
   { key: "area", label: "المساحة الاسترشادية (م²)", source: "contract" },
   { key: "meter_cost", label: "تكلفة المتر المرجعي", source: "contract" },
@@ -266,7 +266,9 @@ export function contractAutoValues(c: ContractData, stageDefaults: Record<string
     if (months > 0) out.financing_end_date = formatDate(addMonths(date, months));
   }
 
-  const amount = Number(c.total_contract_value);
+  // The price is always area × reference meter cost (not the stored contract
+  // total, which may include a management fee).
+  const amount = Number(c.unit_quantity) * Number(c.unit_price_at_contract) || Number(c.total_contract_value);
   if (amount > 0) {
     out.financing_amount = formatNumber(amount);
     out.financing_amount_words = amountInWords(amount);
@@ -308,6 +310,11 @@ export function resolveValues(
   const area = parseAmount(merged.area);
   const increase = parseAmount(merged.area_increase_pct);
   if (!ov("max_area") && area > 0 && increase >= 0) merged.max_area = formatNumber(Math.round(area * (1 + increase / 100) * 100) / 100);
+
+  const meterCost = parseAmount(merged.meter_cost);
+  if (!ov("financing_amount") && area > 0 && meterCost > 0) {
+    merged.financing_amount = formatNumber(Math.round(area * meterCost * 100) / 100);
+  }
 
   const total = parseAmount(merged.financing_amount);
   if (total > 0) {
