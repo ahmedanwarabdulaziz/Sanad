@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { requireAuth } from "@/lib/auth/requireAuth";
+import { computeWallet } from "@/lib/sanad-zayed/investorWallet";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -68,7 +69,7 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         sz_treasury_transactions (amount, transaction_type),
-        sz_investor_contracts (id, status, total_contract_value)
+        sz_investor_contracts (id, status, total_contract_value, unit_quantity, unit_price_at_contract, issued_at, installments:sz_contract_installments(amount, status))
       `)
       .order("created_at", { ascending: false });
 
@@ -113,6 +114,8 @@ export async function GET(request: NextRequest) {
         .filter((c: any) => c.status === "ACTIVE")
         .reduce((sum: number, c: any) => sum + Number(c.total_contract_value), 0);
       const reconciliationDelta = reconciliationByInvestor.get(inv.id) ?? 0;
+      const wallet = computeWallet(transactions, contracts, reconciliationDelta);
+      const issued = wallet.contracts.filter(c => c.issued_at && c.status === "ACTIVE");
 
       const { sz_treasury_transactions, sz_investor_contracts, ...rest } = inv;
       return {
@@ -122,6 +125,12 @@ export async function GET(request: NextRequest) {
         net_paid: deposits - withdrawals,
         contract_value: contractValue,
         remaining_balance: deposits - withdrawals - contractValue - reconciliationDelta,
+        // Wallet: share assigned to issued contracts, what is still free, and
+        // the unpaid installments recorded on issued contracts.
+        allocated_to_contracts: wallet.locked,
+        wallet_available: wallet.refundable,
+        pending_installments: issued.reduce((s, c) => s + c.pending_installments, 0),
+        issued_contracts: issued.length,
         has_transactions: transactions.length > 0,
         has_contracts: contracts.length > 0,
       };

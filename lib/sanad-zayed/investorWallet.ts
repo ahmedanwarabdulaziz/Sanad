@@ -50,20 +50,37 @@ export async function loadInvestorWallet(supabase: SupabaseClient, investorId: s
     reconciliation = (recs ?? []).reduce((s, r) => s + Number(r.delta_amount), 0);
   }
 
-  const deposits = (txs ?? []).filter(t => t.transaction_type === "DEPOSIT").reduce((s, t) => s + Number(t.amount), 0);
-  const withdrawals = (txs ?? []).filter(t => t.transaction_type === "WITHDRAWAL").reduce((s, t) => s + Number(t.amount), 0);
+  return computeWallet(txs ?? [], contracts ?? [], reconciliation);
+}
+
+/**
+ * Pure wallet calculation from an investor's transactions, contracts (with
+ * their installments) and total reconciliation delta — shared by the
+ * investor list, ledger, contract page, issuing and refunds.
+ */
+export function computeWallet(
+  txs: { amount: number | string; transaction_type: string }[],
+  contracts: {
+    id: string; status: string; unit_quantity?: number | string | null; unit_price_at_contract?: number | string | null;
+    total_contract_value?: number | string | null; issued_at?: string | null;
+    installments?: { amount: number | string; status: string }[] | null;
+  }[],
+  reconciliation: number
+): InvestorWallet {
+  const deposits = txs.filter(t => t.transaction_type === "DEPOSIT").reduce((s, t) => s + Number(t.amount), 0);
+  const withdrawals = txs.filter(t => t.transaction_type === "WITHDRAWAL").reduce((s, t) => s + Number(t.amount), 0);
   const net = deposits - withdrawals - reconciliation;
 
-  const list: WalletContract[] = (contracts ?? []).map((c: any) => {
+  const list: WalletContract[] = contracts.map(c => {
     // The contract price is area × reference meter cost (falls back to the stored total).
     const value = Number(c.unit_quantity) * Number(c.unit_price_at_contract) || Number(c.total_contract_value) || 0;
-    const pending = (c.installments ?? []).filter((i: any) => i.status !== "PAID").reduce((s: number, i: any) => s + Number(i.amount), 0);
+    const pending = (c.installments ?? []).filter(i => i.status !== "PAID").reduce((s, i) => s + Number(i.amount), 0);
     const issued = c.status === "ACTIVE" && !!c.issued_at;
     return {
       id: c.id,
       value,
       status: c.status,
-      issued_at: c.issued_at,
+      issued_at: c.issued_at ?? null,
       pending_installments: pending,
       claim: issued ? Math.max(0, value - pending) : 0,
     };

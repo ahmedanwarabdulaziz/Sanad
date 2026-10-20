@@ -31,6 +31,10 @@ interface Investor {
   net_paid?: number;
   contract_value?: number;
   remaining_balance?: number;
+  allocated_to_contracts?: number;
+  wallet_available?: number;
+  pending_installments?: number;
+  issued_contracts?: number;
   has_transactions?: boolean;
   has_contracts?: boolean;
 }
@@ -558,10 +562,10 @@ export default function InvestorsPage() {
           {/* Table */}
           {!loading && filtered.length > 0 && (
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 700 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 960 }}>
                 <thead>
                   <tr style={{ background: "#f8f7f3", borderBottom: "2px solid #f0ede6" }}>
-                    {["المستثمر", "إجمالي المدفوعات", "قيمة العقد", "المتبقي", "", ""].map((h, i) => (
+                    {["المستثمر", "إجمالي المدفوعات", "قيمة العقد", "مخصص للعقود", "متاح في المحفظة", "المتبقي", "", ""].map((h, i) => (
                       <th key={i} style={{
                         padding: "13px 18px", textAlign: "right", fontSize: 11,
                         fontWeight: 700, color: "#9ca3af",
@@ -628,6 +632,22 @@ export default function InvestorsPage() {
                             {(inv.contract_value ?? 0) > 0 ? `${(inv.contract_value ?? 0).toLocaleString()}` : <span style={{ color: "#d1d5db" }}>—</span>}
                           </td>
 
+                          {/* Allocated to issued contracts */}
+                          <td style={{ padding: "14px 18px", direction: "ltr", textAlign: "right" }}>
+                            {(inv.allocated_to_contracts ?? 0) > 0 ? (
+                              <span style={{ fontSize: 13, fontWeight: 700, color: "#154278" }}>{(inv.allocated_to_contracts ?? 0).toLocaleString()}</span>
+                            ) : <span style={{ color: "#d1d5db" }}>—</span>}
+                          </td>
+
+                          {/* Free wallet balance */}
+                          <td style={{ padding: "14px 18px", direction: "ltr", textAlign: "right" }}>
+                            {inv.has_transactions ? (
+                              <span style={{ fontSize: 13, fontWeight: 700, color: (inv.wallet_available ?? 0) > 0 ? "#16a34a" : "#9ca3af" }}>
+                                {(inv.wallet_available ?? 0).toLocaleString()}
+                              </span>
+                            ) : <span style={{ color: "#d1d5db" }}>—</span>}
+                          </td>
+
                           {/* Remaining */}
                           <td style={{ padding: "14px 18px" }}>
                             {inv.has_contracts || inv.has_transactions ? (
@@ -638,6 +658,11 @@ export default function InvestorsPage() {
                                 {(inv.remaining_balance ?? 0) > 0 ? "+" : ""}{(inv.remaining_balance ?? 0).toLocaleString()}
                               </span>
                             ) : <span style={{ color: "#d1d5db" }}>—</span>}
+                            {(inv.pending_installments ?? 0) > 0 && (
+                              <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2, direction: "rtl" }}>
+                                أقساط مستحقة: <span style={{ color: "#b45309", fontWeight: 700 }}>{(inv.pending_installments ?? 0).toLocaleString()}</span>
+                              </div>
+                            )}
                           </td>
 
                           {/* Status dot */}
