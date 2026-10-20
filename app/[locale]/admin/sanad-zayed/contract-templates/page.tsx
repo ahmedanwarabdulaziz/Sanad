@@ -3,11 +3,12 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button, CircularProgress, TextField, Alert, MenuItem, Select, FormControl, InputLabel, Chip } from "@mui/material";
-import { SaveOutlined, RestartAltOutlined, ContentCopyOutlined, DescriptionOutlined } from "@mui/icons-material";
+import { SaveOutlined, RestartAltOutlined, ContentCopyOutlined, DescriptionOutlined, PrintOutlined } from "@mui/icons-material";
 import ContractPaper from "../components/ContractPaper";
+import ContractPrintPreview from "../components/ContractPrintPreview";
 import {
   TEMPLATE_VARS, DEFAULT_STAGE_VALUES, DEFAULT_MANUAL_VALUES, DEFAULT_TEMPLATE_BODY, DEFAULT_TEMPLATE_TITLE,
-  DEFAULT_TEMPLATE_SUBTITLE, usedVariables,
+  DEFAULT_TEMPLATE_SUBTITLE, usedVariables, resolveValues,
 } from "@/lib/sanad-zayed/contractTemplate";
 
 interface Stage { id: string; name: string; sort_order: number }
@@ -15,6 +16,15 @@ interface Draft { title: string; subtitle: string; body: string; defaults: Recor
 
 const STAGE_VARS = TEMPLATE_VARS.filter(v => v.source === "stage");
 const KNOWN = new Set(TEMPLATE_VARS.map(v => v.key));
+
+// Illustrative contract used only for the print preview.
+const SAMPLE_CONTRACT = {
+  contract_date: new Date().toISOString().slice(0, 10),
+  total_contract_value: 2080000,
+  unit_quantity: 130,
+  unit_price_at_contract: 16000,
+  investor: { name: "اسم الممول (تجريبي)", national_id: "00000000000000", address_in_national_id: "عنوان الممول", phone: "01000000000" },
+};
 
 function standardDraft(): Draft {
   return { title: DEFAULT_TEMPLATE_TITLE, subtitle: DEFAULT_TEMPLATE_SUBTITLE, body: DEFAULT_TEMPLATE_BODY, defaults: { ...DEFAULT_STAGE_VALUES } };
@@ -32,6 +42,7 @@ function ContractTemplatesEditor() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [copyFrom, setCopyFrom] = useState("");
+  const [printPreview, setPrintPreview] = useState(false);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -70,6 +81,11 @@ function ContractTemplatesEditor() {
   const previewValues = useMemo(() => {
     if (!draft) return {};
     return { ...DEFAULT_MANUAL_VALUES, ...draft.defaults, stage_name: stageName };
+  }, [draft, stageName]);
+
+  const sampleValues = useMemo(() => {
+    if (!draft) return {};
+    return resolveValues({ ...SAMPLE_CONTRACT, stage: { name: stageName } }, draft.defaults, { transaction_no: "SZ-0000" });
   }, [draft, stageName]);
 
   const unknownVars = useMemo(() => (draft ? usedVariables(draft.body).filter(k => !KNOWN.has(k)) : []), [draft]);
@@ -144,6 +160,10 @@ function ContractTemplatesEditor() {
               ))}
             </Select>
           </FormControl>
+          <Button variant="outlined" onClick={() => setPrintPreview(true)} disabled={!draft} startIcon={<PrintOutlined />}
+            sx={{ borderRadius: 2, fontWeight: 700, borderColor: "#154278", color: "#154278" }}>
+            معاينة الطباعة A4
+          </Button>
           <Button variant="contained" onClick={save} disabled={saving || !draft} startIcon={saving ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : <SaveOutlined />}
             sx={{ borderRadius: 2, fontWeight: 700, background: "#154278", "&:hover": { background: "#0f3260" } }}>
             {exists ? "حفظ التعديلات" : "حفظ قالب المرحلة"}
@@ -227,6 +247,17 @@ function ContractTemplatesEditor() {
             </div>
           </div>
         </div>
+      )}
+
+      {printPreview && draft && (
+        <ContractPrintPreview
+          title={draft.title}
+          subtitle={draft.subtitle}
+          body={draft.body}
+          sampleValues={sampleValues}
+          blankValues={previewValues}
+          onClose={() => setPrintPreview(false)}
+        />
       )}
 
       <style>{`
