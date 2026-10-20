@@ -105,3 +105,48 @@ export async function PATCH(
     return NextResponse.json({ error: error.message || "خطأ في الخادم" }, { status: 500 });
   }
 }
+
+// ── DELETE /api/sanad-zayed/contracts/[id] ────────────────────────────
+// Permanently removes a contract together with its installments, unit
+// allocations and pending reconciliations (all ON DELETE CASCADE). Refused
+// when money has already moved against it (treasury transactions or settled
+// reconciliations) or when a later-stage contract carries it over — those
+// would lose their audit trail or pricing basis; cancel the contract instead.
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requireAuth("admin");
+  if ("error" in auth) return auth.error;
+
+  try {
+    const { id } = await params;
+
+    const [{ count: txCount }, { count: settledCount }, { count: linkedCount }] = await Promise.all([
+      supabase.from("sz_treasury_transactions").select("id", { count: "exact", head: true }).eq("contract_id", id),
+      supabase.from("sz_area_reconciliations").select("id", { count: "exact", head: true }).eq("contract_id", id).eq("status", "SETTLED"),
+      supabase.from("sz_investor_contracts").select("id", { count: "exact", head: true }).eq("linked_contract_id", id),
+    ]);
+
+    if ((txCount ?? 0) > 0 || (settledCount ?? 0) > 0) {
+      return NextResponse.json(
+        { error: "لا يمكن حذف عقد عليه مدفوعات أو تسويات مسجلة في الخزينة — غيّر حالته إلى «ملغي» بدلاً من ذلك" },
+        { status: 409 }
+      );
+    }
+    if ((linkedCount ?? 0) > 0) {
+      return NextResponse.json(
+        { error: "لا يمكن حذف هذا العقد لأن عقدًا في مرحلة لاحقة مرتبط به — احذف العقد اللاحق أولًا" },
+        { status: 409 }
+      );
+    }
+
+    const { data, error } = await supabase.from("sz_investor_contracts").delete().eq("id", id).select("id");
+    if (error) throw error;
+    if (!data?.length) return NextResponse.json({ error: "العقد غير موجود" }, { status: 404 });
+
+    return NextResponse.json({ message: "تم حذف العقد" });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || "خطأ في الخادم" }, { status: 500 });
+  }
+}

@@ -12,7 +12,7 @@ import {
   AddOutlined, CloseOutlined, ArrowForwardOutlined, DescriptionOutlined,
   ExpandMoreOutlined, ExpandLessOutlined, PaymentsOutlined, CheckCircleOutlined,
   PictureAsPdfOutlined, SyncAltOutlined, ContentCopyOutlined,
-  ReceiptLongOutlined, EditOutlined, EventOutlined, PrintOutlined
+  ReceiptLongOutlined, EditOutlined, EventOutlined, PrintOutlined, DeleteOutlined
 } from "@mui/icons-material";
 import { generateStatementPdfBlob } from "@/lib/sanad-zayed/statementPdf";
 import { sanitizeDecimalInput } from "@/lib/sanad-zayed/decimalInput";
@@ -77,6 +77,8 @@ export default function InvestorDetailPage() {
   const [editContract, setEditContract] = useState<Contract | null>(null);
   const [editForm, setEditForm] = useState({ unit_quantity: "", unit_price_at_contract: "", contract_date: "", notes: "", status: "ACTIVE" });
   const [editSubmitting, setEditSubmitting] = useState(false);
+  const [deleteContract, setDeleteContract] = useState<Contract | null>(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
   const [stagePricing, setStagePricing] = useState<StagePricing | null>(null);
 
@@ -351,6 +353,23 @@ export default function InvestorDetailPage() {
     });
     setStagePricing(null);
     fetchStagePricing(c.stage_id);
+  };
+
+  const handleDeleteContract = async () => {
+    if (!deleteContract) return;
+    setDeleteSubmitting(true);
+    try {
+      const res = await fetch(`/api/sanad-zayed/contracts/${deleteContract.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "حدث خطأ");
+      showFlash("success", "تم حذف العقد");
+      setDeleteContract(null);
+      fetchAll();
+    } catch (err: any) {
+      showFlash("error", err.message);
+    } finally {
+      setDeleteSubmitting(false);
+    }
   };
 
   const handleEditContract = async () => {
@@ -630,6 +649,9 @@ export default function InvestorDetailPage() {
                             <IconButton size="small" title="تعديل العقد" onClick={(e) => { e.stopPropagation(); openEditContract(c); }} sx={{ color: "#9ca3af", "&:hover": { color: "#154278", background: "rgba(21,66,120,0.08)" } }}>
                               <EditOutlined sx={{ fontSize: 17 }} />
                             </IconButton>
+                            <IconButton size="small" title="حذف العقد" onClick={(e) => { e.stopPropagation(); setDeleteContract(c); }} sx={{ color: "#9ca3af", "&:hover": { color: "#dc2626", background: "rgba(220,38,38,0.08)" } }}>
+                              <DeleteOutlined sx={{ fontSize: 17 }} />
+                            </IconButton>
                             <IconButton size="small" sx={{ color: "#9ca3af" }}>
                               {expanded ? <ExpandLessOutlined sx={{ fontSize: 18 }} /> : <ExpandMoreOutlined sx={{ fontSize: 18 }} />}
                             </IconButton>
@@ -858,6 +880,34 @@ export default function InvestorDetailPage() {
         <DialogActions sx={{ p: 3, pt: 1 }}>
           <Button onClick={handleEditContract} variant="contained" disabled={editSubmitting} sx={{ fontFamily: "var(--font-cairo)", background: "#154278", borderRadius: "10px", width: "100%", py: 1.2, fontWeight: 700 }}>
             {editSubmitting ? "جاري الحفظ..." : "حفظ التعديلات"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── Delete Contract ── */}
+      <Dialog open={!!deleteContract} onClose={() => !deleteSubmitting && setDeleteContract(null)} PaperProps={{ sx: { borderRadius: "20px", direction: "rtl", maxWidth: 420, width: "100%" } }}>
+        <DialogTitle sx={{ fontFamily: "var(--font-cairo)", fontWeight: 800, color: "#dc2626" }}>
+          حذف العقد نهائيًا
+          <IconButton onClick={() => setDeleteContract(null)} sx={{ position: "absolute", left: 12, top: 12 }}><CloseOutlined /></IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: "6px !important", display: "flex", flexDirection: "column", gap: 1.5 }}>
+          {deleteContract && (
+            <div style={{ background: "#f9f9f7", borderRadius: 10, padding: "12px 14px", fontSize: 13, color: "#374151", lineHeight: 1.9 }}>
+              <div>المرحلة: <strong>{deleteContract.stage?.name ?? "—"}</strong></div>
+              <div>المساحة: <strong>{Number(deleteContract.unit_quantity).toLocaleString("ar-EG-u-nu-latn")} م²</strong> · سعر المتر: <strong>{Number(deleteContract.unit_price_at_contract).toLocaleString("ar-EG-u-nu-latn")}</strong></div>
+              <div>الإجمالي: <strong style={{ color: "#154278" }}>{Number(deleteContract.total_contract_value).toLocaleString("ar-EG-u-nu-latn")}</strong> · التاريخ: {new Date(deleteContract.contract_date).toLocaleDateString("ar-EG-u-nu-latn")}</div>
+            </div>
+          )}
+          <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.9 }}>
+            سيتم حذف العقد مع جدول أقساطه وتخصيصات الوحدات المرتبطة به، ولا يمكن التراجع. العقود التي عليها مدفوعات مسجلة لا يمكن حذفها — غيّر حالتها إلى «ملغي».
+          </div>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 1, gap: 1 }}>
+          <Button onClick={() => setDeleteContract(null)} disabled={deleteSubmitting} sx={{ fontFamily: "var(--font-cairo)", color: "#6b7280", borderRadius: "10px", flex: 1, py: 1.2, fontWeight: 700 }}>
+            إلغاء
+          </Button>
+          <Button onClick={handleDeleteContract} variant="contained" disabled={deleteSubmitting} sx={{ fontFamily: "var(--font-cairo)", background: "#dc2626", "&:hover": { background: "#b91c1c" }, borderRadius: "10px", flex: 1, py: 1.2, fontWeight: 700 }}>
+            {deleteSubmitting ? "جاري الحذف..." : "حذف العقد"}
           </Button>
         </DialogActions>
       </Dialog>
