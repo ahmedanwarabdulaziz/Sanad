@@ -26,7 +26,8 @@ export async function GET(
         id, stage_id, investor_id, contract_date, unit_quantity, unit_price_at_contract,
         total_contract_value, status, document_vars,
         investor:investor_id(id, name, phone, national_id, address_in_national_id, job_in_national_id),
-        stage:stage_id(id, name)
+        stage:stage_id(id, name),
+        installments:sz_contract_installments(seq, due_date, amount, status)
       `)
       .eq("id", id)
       .single();

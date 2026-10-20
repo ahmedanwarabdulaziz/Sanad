@@ -4,15 +4,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useParams, useRouter } from "next/navigation";
 import { Button, CircularProgress, TextField, Alert, Tooltip } from "@mui/material";
-import { ArrowForwardOutlined, PrintOutlined, SaveOutlined, RestartAltOutlined, EditNoteOutlined } from "@mui/icons-material";
+import { ArrowForwardOutlined, PrintOutlined, SaveOutlined, RestartAltOutlined, EditNoteOutlined, AddOutlined, DeleteOutlineOutlined } from "@mui/icons-material";
 import ContractPaper from "../../../components/ContractPaper";
 import {
-  TEMPLATE_VARS, resolveValues, contractAutoValues, usedVariables, DEFAULT_STAGE_VALUES, DEFAULT_MANUAL_VALUES,
-  DEFAULT_TEMPLATE_BODY, DEFAULT_TEMPLATE_TITLE, DEFAULT_TEMPLATE_SUBTITLE, type VarSource,
+  TEMPLATE_VARS, resolveValues, usedVariables, applyConditionals, parseSchedule, formatSchedule, parseAmount, formatNumber,
+  DEFAULT_TEMPLATE_BODY, DEFAULT_TEMPLATE_TITLE, DEFAULT_TEMPLATE_SUBTITLE, type VarSource, type ScheduleRow,
 } from "@/lib/sanad-zayed/contractTemplate";
 
 // Variables printed by the header, title block and signature block regardless of the body.
 const FIXED_VARS = ["transaction_no", "contract_date", "stage_name", "financing_amount", "company_rep_name", "company_rep_title", "investor_name", "investor_national_id", "investor_phone"];
+
+// Inputs that drive the paid / pending split and the installment schedule.
+const SCHEDULE_VARS = ["paid_amount", "paid_amount_words", "pending_amount", "pending_amount_words", "installments", "upfront_pct", "installments_count", "installment_interval_months"];
 
 const GROUPS: { source: VarSource; title: string; hint: string }[] = [
   { source: "manual", title: "بيانات تُستكمل لهذا العقد", hint: "تُحفظ مع هذا العقد فقط" },
@@ -55,14 +58,27 @@ export default function ContractDocumentPage() {
     () => (data ? resolveValues(data.contract, stageDefaults, overrides) : {}),
     [data, stageDefaults, overrides]
   );
-  const baseline = useMemo(() => {
-    if (!data) return {} as Record<string, string>;
-    const stage = { ...DEFAULT_STAGE_VALUES, ...stageDefaults };
-    return { ...DEFAULT_MANUAL_VALUES, ...stage, ...Object.fromEntries(Object.entries(contractAutoValues(data.contract, stage)).filter(([, v]) => v)) };
-  }, [data, stageDefaults]);
+  // The automatic value of a variable given every other override (shown as the field placeholder).
+  const baselineOf = (key: string) =>
+    data ? resolveValues(data.contract, stageDefaults, { ...overrides, [key]: "" })[key] ?? "" : "";
 
-  const used = useMemo(() => new Set([...usedVariables(body), ...FIXED_VARS]), [body]);
-  const missing = useMemo(() => [...used].filter(k => !values[k]), [used, values]);
+  const used = useMemo(() => {
+    const keys = new Set([...usedVariables(body), ...FIXED_VARS]);
+    if (body.includes("[[installments]]") || keys.has("pending_amount")) SCHEDULE_VARS.forEach(k => keys.add(k));
+    return keys;
+  }, [body]);
+  // Only variables in the branches that will actually print count as missing.
+  const missing = useMemo(() => {
+    const active = applyConditionals(body, values);
+    const keys = new Set([...usedVariables(active), ...FIXED_VARS]);
+    if (active.includes("[[installments]]")) keys.add("installments");
+    return [...keys].filter(k => !values[k]);
+  }, [body, values]);
+
+  const scheduleRows: ScheduleRow[] = useMemo(() => parseSchedule(values.installments ?? ""), [values]);
+  const scheduleTotal = scheduleRows.reduce((s, r) => s + (parseAmount(r.amount) || 0), 0);
+  const pendingTotal = parseAmount(values.pending_amount) || 0;
+  const setScheduleRows = (rows: ScheduleRow[]) => setVar("installments", formatSchedule(rows) || " ");
 
   const setVar = (key: string, value: string) => {
     setOverrides(prev => ({ ...prev, [key]: value }));
@@ -155,20 +171,61 @@ export default function ContractDocumentPage() {
                 {vars.map(v => {
                   const overridden = !!overrides[v.key]?.trim();
                   const isMissing = !values[v.key];
+                  const auto = baselineOf(v.key);
+                  if (v.key === "installments") {
+                    return (
+                      <div key={v.key} className="sz-sched">
+                        <div className="sz-sched-head">
+                          <span>{v.label}</span>
+                          {overridden && (
+                            <button type="button" className="sz-link" onClick={() => setVar("installments", "")}>
+                              <RestartAltOutlined sx={{ fontSize: 15 }} /> إعادة الحساب تلقائيًا
+                            </button>
+                          )}
+                        </div>
+                        {scheduleRows.length === 0 && <div className="sz-sched-empty">لا يوجد مبلغ متبقي — لا توجد أقساط</div>}
+                        {scheduleRows.map((r, n) => (
+                          <div key={n} className="sz-sched-row">
+                            <span className="sz-sched-n">{n + 1}</span>
+                            <TextField size="small" placeholder="يوم/شهر/سنة" value={r.date}
+                              onChange={e => setScheduleRows(scheduleRows.map((x, j) => j === n ? { ...x, date: e.target.value } : x))}
+                              sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: 2 } }} />
+                            <TextField size="small" placeholder="المبلغ" value={r.amount}
+                              onChange={e => setScheduleRows(scheduleRows.map((x, j) => j === n ? { ...x, amount: e.target.value } : x))}
+                              sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: 2 } }} />
+                            <button type="button" className="sz-icon" title="حذف القسط" onClick={() => setScheduleRows(scheduleRows.filter((_, j) => j !== n))}>
+                              <DeleteOutlineOutlined sx={{ fontSize: 17 }} />
+                            </button>
+                          </div>
+                        ))}
+                        <div className="sz-sched-foot">
+                          <button type="button" className="sz-link" onClick={() => setScheduleRows([...scheduleRows, { date: "", amount: "" }])}>
+                            <AddOutlined sx={{ fontSize: 16 }} /> إضافة قسط
+                          </button>
+                          <span style={{ color: Math.abs(scheduleTotal - pendingTotal) > 0.5 ? "#dc2626" : "#6b7280" }}>
+                            الإجمالي {formatNumber(scheduleTotal)} من {formatNumber(pendingTotal)}
+                          </span>
+                        </div>
+                        {Math.abs(scheduleTotal - pendingTotal) > 0.5 && (
+                          <div className="sz-sched-warn">مجموع الأقساط لا يساوي المبلغ المتبقي</div>
+                        )}
+                      </div>
+                    );
+                  }
                   return (
                     <div key={v.key} style={{ position: "relative" }}>
                       <TextField
                         fullWidth size="small" margin="dense"
                         label={v.label}
                         value={overrides[v.key] ?? ""}
-                        placeholder={baseline[v.key] || "غير محدد"}
+                        placeholder={auto || "غير محدد"}
                         helperText={v.hint}
                         onChange={e => setVar(v.key, e.target.value)}
                         InputLabelProps={{ shrink: true }}
                         error={isMissing}
                         sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2, background: overridden ? "#f3f6fa" : "#fff" } }}
                       />
-                      {overridden && baseline[v.key] && (
+                      {overridden && auto && (
                         <Tooltip title="إرجاع للقيمة التلقائية">
                           <button type="button" className="sz-reset" onClick={() => setVar(v.key, "")}><RestartAltOutlined sx={{ fontSize: 16 }} /></button>
                         </Tooltip>
@@ -215,6 +272,16 @@ const WORKSPACE_CSS = `
 .sz-group-hint { font-size:11.5px; color:#9ca3af; margin-bottom:4px; }
 .sz-reset { position:absolute; left:6px; top:16px; border:none; background:#fff; color:#6b7280; cursor:pointer; border-radius:6px; padding:3px; display:flex; }
 .sz-reset:hover { color:#154278; background:#eef2f7; }
+.sz-sched { margin:10px 0 6px; padding:10px; border:1px solid #e5e7eb; border-radius:10px; background:#fbfaf8; }
+.sz-sched-head { display:flex; justify-content:space-between; align-items:center; font-size:13px; font-weight:700; color:#374151; margin-bottom:6px; }
+.sz-sched-row { display:flex; align-items:center; gap:6px; margin-bottom:6px; }
+.sz-sched-n { width:18px; text-align:center; font-size:12px; color:#9ca3af; font-weight:700; }
+.sz-sched-foot { display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-top:2px; }
+.sz-sched-empty { font-size:12px; color:#9ca3af; padding:4px 0 8px; }
+.sz-sched-warn { font-size:12px; color:#dc2626; font-weight:700; margin-top:6px; }
+.sz-link { display:inline-flex; align-items:center; gap:4px; border:none; background:none; color:#154278; font-weight:700; font-size:12px; cursor:pointer; padding:2px 0; font-family:inherit; }
+.sz-icon { border:none; background:none; color:#9ca3af; cursor:pointer; display:flex; padding:4px; border-radius:6px; }
+.sz-icon:hover { color:#dc2626; background:#fef2f2; }
 .sz-edit-template { display:flex; align-items:center; gap:6px; margin:14px 18px 0; font-size:13px; font-weight:700; color:#154278; text-decoration:none; }
 .sz-stage { flex:1; overflow:auto; padding:28px 24px 60px; display:flex; justify-content:center; align-items:flex-start; }
 .sz-badge { font-size:12px; font-weight:700; border-radius:8px; padding:5px 10px; }

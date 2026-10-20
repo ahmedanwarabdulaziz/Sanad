@@ -2,7 +2,7 @@
 
 import { Fragment } from "react";
 import { Noto_Naskh_Arabic } from "next/font/google";
-import { parseTemplate, segmentText, PLACEHOLDER, TEMPLATE_VARS } from "@/lib/sanad-zayed/contractTemplate";
+import { parseTemplate, segmentText, applyConditionals, parseSchedule, parseAmount, formatNumber, amountInWords, PLACEHOLDER, TEMPLATE_VARS } from "@/lib/sanad-zayed/contractTemplate";
 
 const naskh = Noto_Naskh_Arabic({ subsets: ["arabic"], weight: ["400", "500", "600", "700"], display: "swap" });
 
@@ -41,7 +41,7 @@ function V({ k, values, highlight }: { k: string; values: Record<string, string>
 }
 
 export default function ContractPaper({ title, subtitle, body, values, highlight }: Props) {
-  const blocks = parseTemplate(body);
+  const blocks = parseTemplate(applyConditionals(body, values));
 
   return (
     <div className={`sz-paper ${naskh.className}`} dir="rtl">
@@ -98,6 +98,36 @@ export default function ContractPaper({ title, subtitle, body, values, highlight
             {blocks.map((b, i) => {
               if (b.type === "heading") return <h2 key={i} className="sz-h2"><Rich text={b.text} values={values} highlight={highlight} /></h2>;
               if (b.type === "paragraph") return <p key={i} className="sz-p"><Rich text={b.text} values={values} highlight={highlight} /></p>;
+              if (b.type === "installments") {
+                const rows = parseSchedule(values.installments ?? "");
+                const total = rows.reduce((sum, r) => sum + (parseAmount(r.amount) || 0), 0);
+                if (!rows.length) {
+                  return highlight ? <p key={i} className="sz-p"><span className="sz-var-missing">{PLACEHOLDER} جدول الأقساط</span></p> : null;
+                }
+                return (
+                  <table key={i} className="sz-data sz-installments">
+                    <thead><tr><th style={{ width: "10%" }}>م</th><th style={{ width: "24%" }}>تاريخ الاستحقاق</th><th style={{ width: "22%" }}>المبلغ (ج.م)</th><th>المبلغ بالحروف</th></tr></thead>
+                    <tbody>
+                      {rows.map((r, n) => {
+                        const amt = parseAmount(r.amount);
+                        return (
+                          <tr key={n}>
+                            <td className="sz-num">{n + 1}</td>
+                            <td className="sz-num">{r.date || (highlight ? <span className="sz-var-missing">{PLACEHOLDER}</span> : "")}</td>
+                            <td className="sz-num"><strong>{Number.isFinite(amt) ? formatNumber(amt) : r.amount}</strong></td>
+                            <td>{Number.isFinite(amt) && amt > 0 ? amountInWords(amt) : ""}</td>
+                          </tr>
+                        );
+                      })}
+                      <tr className="sz-total">
+                        <td colSpan={2}>الإجمالي</td>
+                        <td className="sz-num">{formatNumber(total)}</td>
+                        <td>{total > 0 ? amountInWords(total) : ""}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                );
+              }
               if (b.type === "table") {
                 return (
                   <table key={i} className="sz-data">
@@ -187,6 +217,11 @@ const PAPER_CSS = `
 .sz-data tr { break-inside:avoid; page-break-inside:avoid; }
 .sz-data tbody tr:nth-child(even) td { background:#fafaf7; }
 .sz-data-label { width:38%; font-weight:700; color:${NAVY}; background:#f3f6fa !important; }
+.sz-installments td { font-size:9.5pt; }
+.sz-num { text-align:center; white-space:nowrap; }
+.sz-installments th { text-align:center; }
+.sz-total td { background:#f3f6fa !important; font-weight:800; color:${NAVY}; }
+.sz-total td:first-child { text-align:center; }
 
 .sz-signatures { display:grid; grid-template-columns:1fr 1fr; gap:8mm; margin-top:8mm; break-inside:avoid; page-break-inside:avoid; }
 .sz-sig { border:1px solid #d1d5db; border-radius:4px; padding:4mm; position:relative; }

@@ -93,7 +93,7 @@ function ContractTemplatesEditor() {
   const insertVar = (key: string) => {
     if (!draft) return;
     const el = bodyRef.current;
-    const token = `{{${key}}}`;
+    const token = key === "installments" ? "[[installments]]" : `{{${key}}}`;
     const start = el?.selectionStart ?? draft.body.length;
     const end = el?.selectionEnd ?? draft.body.length;
     const body = draft.body.slice(0, start) + token + draft.body.slice(end);
@@ -222,7 +222,7 @@ function ContractTemplatesEditor() {
                 </div>
               </div>
               <div className="tpl-card-hint">
-                <code># عنوان</code> لعنوان بند · سطر فارغ بين الفقرات · <code>| البيان | القيمة |</code> لصف جدول · <code>**نص**</code> للخط العريض · <code>[[signatures]]</code> لخانة التوقيعات. اضغط على متغير لإدراجه.
+                <code># عنوان</code> لعنوان بند · سطر فارغ بين الفقرات · <code>| البيان | القيمة |</code> لصف جدول · <code>**نص**</code> للخط العريض · <code>[[signatures]]</code> لخانة التوقيعات · <code>[[installments]]</code> لجدول الأقساط · <code>[[if pending_amount]] … [[else]] … [[endif]]</code> لنص يظهر فقط عند وجود مبلغ متبقٍ. اضغط على متغير لإدراجه.
               </div>
               <div className="tpl-chips">
                 {TEMPLATE_VARS.map(v => (

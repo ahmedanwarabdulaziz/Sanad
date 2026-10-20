@@ -5,6 +5,8 @@
 //   # heading            → clause heading
 //   | label | value |    → row of a two-column data table (consecutive rows form one table)
 //   [[signatures]]       → signature block for both parties
+//   [[installments]]     → table of the pending-amount installment schedule
+//   [[if key]] … [[else]] … [[endif]] → lines kept only when {{key}} has a non-zero value
 //   blank line           → paragraph break
 //   **text**             → bold
 //   {{key}}              → variable placeholder
@@ -34,6 +36,11 @@ export const TEMPLATE_VARS: TemplateVar[] = [
   { key: "meter_cost", label: "تكلفة المتر المرجعي", source: "contract" },
   { key: "max_area", label: "حد الزيادة (م²)", source: "contract", hint: "المساحة × (1 + نسبة الزيادة)" },
   { key: "financing_end_date", label: "نهاية مدة التمويل", source: "contract", hint: "تاريخ العقد + مدة التمويل" },
+  { key: "paid_amount", label: "المسدد عند التوقيع", source: "contract", hint: "إجمالي التمويل × نسبة المسدد عند التوقيع" },
+  { key: "paid_amount_words", label: "المسدد (حروفًا)", source: "contract" },
+  { key: "pending_amount", label: "المبلغ المتبقي", source: "contract", hint: "إجمالي التمويل − المسدد" },
+  { key: "pending_amount_words", label: "المتبقي (حروفًا)", source: "contract" },
+  { key: "installments", label: "جدول أقساط المتبقي", source: "contract", hint: "يُحسب من عدد الأقساط والفترة بينها" },
 
   // ── Filled per contract before review ──
   { key: "transaction_no", label: "رقم المعاملة", source: "manual" },
@@ -62,6 +69,9 @@ export const TEMPLATE_VARS: TemplateVar[] = [
   { key: "force_majeure_days", label: "مهلة إخطار القوة القاهرة (أيام عمل)", source: "stage" },
   { key: "cure_days", label: "مهلة معالجة الإخلال (أيام عمل)", source: "stage" },
   { key: "amicable_days", label: "مدة التسوية الودية (يوم)", source: "stage" },
+  { key: "upfront_pct", label: "نسبة المسدد عند التوقيع %", source: "stage", hint: "100 = سداد كامل عند التوقيع" },
+  { key: "installments_count", label: "عدد أقساط المتبقي", source: "stage" },
+  { key: "installment_interval_months", label: "الفترة بين الأقساط (شهور)", source: "stage" },
 ];
 
 export const DEFAULT_STAGE_VALUES: Record<string, string> = {
@@ -86,6 +96,9 @@ export const DEFAULT_STAGE_VALUES: Record<string, string> = {
   force_majeure_days: "5",
   cure_days: "10",
   amicable_days: "15",
+  upfront_pct: "100",
+  installments_count: "3",
+  installment_interval_months: "1",
 };
 
 export const DEFAULT_MANUAL_VALUES: Record<string, string> = {
@@ -186,6 +199,49 @@ export interface ContractData {
     phone?: string | null;
   } | null;
   stage?: { name?: string | null } | null;
+  /** Installments already scheduled on the contract record, if any. */
+  installments?: { due_date?: string | null; amount?: number | string | null; status?: string | null }[] | null;
+}
+
+export interface ScheduleRow { date: string; amount: string }
+
+/** Parses numbers typed with thousands separators or Arabic-Indic digits. */
+export function parseAmount(v: unknown): number {
+  const raw = v === null || v === undefined ? "" : String(v).trim();
+  const s = raw.replace(/[٠-٩]/g, d => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(/[,٬\s]/g, "");
+  if (!s) return NaN;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+function parseDmy(v: string): Date | null {
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec((v ?? "").trim());
+  if (!m) return null;
+  return new Date(Date.UTC(Number(m[3]), Number(m[2]) - 1, Number(m[1])));
+}
+
+/** Schedule text format: one installment per line, "dd/mm/yyyy | amount". */
+export function parseSchedule(text: string): ScheduleRow[] {
+  return (text ?? "").split("\n").map(l => l.trim()).filter(Boolean).map(l => {
+    const [date, amount] = l.split("|").map(x => x.trim());
+    return { date: date ?? "", amount: amount ?? "" };
+  });
+}
+
+export function formatSchedule(rows: ScheduleRow[]): string {
+  return rows.map(r => `${r.date} | ${r.amount}`).join("\n");
+}
+
+/** Splits the pending amount into equal installments (remainder on the last). */
+export function generateSchedule(pending: number, count: number, intervalMonths: number, start: Date | null): ScheduleRow[] {
+  if (!(pending > 0) || !(count >= 1)) return [];
+  const n = Math.floor(count);
+  const step = intervalMonths > 0 ? intervalMonths : 1;
+  const base = Math.floor(pending / n);
+  return Array.from({ length: n }, (_, i) => ({
+    date: start ? formatDate(addMonths(start, step * (i + 1))) : "",
+    amount: formatNumber(i === n - 1 ? Math.round((pending - base * (n - 1)) * 100) / 100 : base),
+  }));
 }
 
 function clean(v: unknown): string {
@@ -239,7 +295,79 @@ export function resolveValues(
   const merged: Record<string, string> = { ...DEFAULT_MANUAL_VALUES, ...stage };
   for (const [k, v] of Object.entries(contractAutoValues(c, stage))) if (v) merged[k] = v;
   for (const [k, v] of Object.entries(overrides ?? {})) if (clean(v)) merged[k] = clean(v);
+
+  // Re-derive dependent values from the final (possibly overridden) inputs,
+  // unless the dependent value itself was overridden.
+  const ov = (k: string) => !!clean(overrides?.[k]);
+  const date = parseDmy(merged.contract_date);
+  if (date) {
+    if (!ov("contract_day")) merged.contract_day = AR_DAYS[date.getUTCDay()];
+    const months = parseAmount(merged.funding_months);
+    if (!ov("financing_end_date") && months > 0) merged.financing_end_date = formatDate(addMonths(date, months));
+  }
+  const area = parseAmount(merged.area);
+  const increase = parseAmount(merged.area_increase_pct);
+  if (!ov("max_area") && area > 0 && increase >= 0) merged.max_area = formatNumber(Math.round(area * (1 + increase / 100) * 100) / 100);
+
+  const total = parseAmount(merged.financing_amount);
+  if (total > 0) {
+    if (!ov("financing_amount_words")) merged.financing_amount_words = amountInWords(total);
+
+    const recorded = (c.installments ?? []).filter(i => Number(i.amount) > 0);
+    const recordedPending = recorded.filter(i => i.status !== "PAID");
+    const recordedPendingSum = recordedPending.reduce((s, i) => s + Number(i.amount), 0);
+
+    let paid = ov("paid_amount") ? parseAmount(merged.paid_amount) : NaN;
+    if (!Number.isFinite(paid)) {
+      const pct = parseAmount(merged.upfront_pct);
+      paid = recorded.length
+        ? total - recordedPendingSum
+        : Number.isFinite(pct) ? Math.round(total * Math.min(Math.max(pct, 0), 100)) / 100 : total;
+    }
+    let pending = ov("pending_amount") ? parseAmount(merged.pending_amount) : NaN;
+    if (!Number.isFinite(pending)) pending = Math.max(Math.round((total - paid) * 100) / 100, 0);
+
+    if (!ov("paid_amount")) merged.paid_amount = formatNumber(paid);
+    if (!ov("paid_amount_words")) merged.paid_amount_words = paid > 0 ? amountInWords(paid) : "";
+    if (!ov("pending_amount")) merged.pending_amount = formatNumber(pending);
+    if (!ov("pending_amount_words")) merged.pending_amount_words = pending > 0 ? amountInWords(pending) : "";
+
+    if (!ov("installments")) {
+      const useRecorded = recordedPending.length > 0 && !ov("paid_amount") && !ov("pending_amount");
+      const rows: ScheduleRow[] = useRecorded
+        ? recordedPending.map(i => {
+            const d = parseIsoDate(clean(i.due_date));
+            return { date: d ? formatDate(d) : "", amount: formatNumber(Number(i.amount)) };
+          })
+        : generateSchedule(pending, parseAmount(merged.installments_count), parseAmount(merged.installment_interval_months), date);
+      merged.installments = formatSchedule(rows);
+    }
+  }
   return merged;
+}
+
+/** True when a value is present and, if numeric, not zero. */
+function truthy(v: string | undefined): boolean {
+  const s = clean(v);
+  if (!s) return false;
+  const n = parseAmount(s);
+  return Number.isFinite(n) ? n !== 0 : true;
+}
+
+/** Applies [[if key]] / [[else]] / [[endif]] line blocks (nestable). */
+export function applyConditionals(body: string, values: Record<string, string>): string {
+  const out: string[] = [];
+  const stack: { active: boolean; parentActive: boolean }[] = [];
+  const active = () => (stack.length ? stack[stack.length - 1].active : true);
+  for (const line of (body ?? "").replace(/\r\n/g, "\n").split("\n")) {
+    const t = line.trim();
+    const m = /^\[\[if\s+([a-z0-9_]+)\]\]$/i.exec(t);
+    if (m) { const parent = active(); stack.push({ active: parent && truthy(values[m[1]]), parentActive: parent }); continue; }
+    if (/^\[\[else\]\]$/i.test(t) && stack.length) { const top = stack[stack.length - 1]; top.active = top.parentActive && !top.active; continue; }
+    if (/^\[\[endif\]\]$/i.test(t) && stack.length) { stack.pop(); continue; }
+    if (active()) out.push(line);
+  }
+  return out.join("\n");
 }
 
 // ── Markup parsing ──────────────────────────────────────────────────────
@@ -248,7 +376,8 @@ export type Block =
   | { type: "heading"; text: string }
   | { type: "paragraph"; text: string }
   | { type: "table"; rows: [string, string][] }
-  | { type: "signatures" };
+  | { type: "signatures" }
+  | { type: "installments" };
 
 export function parseTemplate(body: string): Block[] {
   const blocks: Block[] = [];
@@ -276,6 +405,7 @@ export function parseTemplate(body: string): Block[] {
     flushTable();
     if (line.startsWith("#")) { flushPara(); blocks.push({ type: "heading", text: line.replace(/^#+\s*/, "") }); continue; }
     if (line === "[[signatures]]") { flushPara(); blocks.push({ type: "signatures" }); continue; }
+    if (line === "[[installments]]") { flushPara(); blocks.push({ type: "installments" }); continue; }
     para.push(line);
   }
   flushPara();
@@ -358,6 +488,10 @@ export const DEFAULT_TEMPLATE_BODY = `# أولًا: أطراف العقد
 | رقم المعاملة | {{transaction_no}} |
 | تاريخ توقيع العقد وتاريخ السداد | {{contract_date}} |
 | مبلغ التمويل الفعلي | {{financing_amount}} جنيه مصري ({{financing_amount_words}}) |
+[[if pending_amount]]
+| المسدد عند التوقيع | {{paid_amount}} جنيه مصري |
+| المبلغ المتبقي | {{pending_amount}} جنيه مصري يسدد على أقساط وفق جدول الأقساط ببند سادسًا |
+[[endif]]
 | مدة التمويل الأساسية ونهايتها | {{funding_months}} شهرًا من تاريخ السداد حتى {{financing_end_date}} |
 | تاريخ الإقفال النهائي المستهدف للترخيص | {{closing_date}} |
 | المساحة الاسترشادية | {{area}} م² إجماليًا شاملة التحميل والبروز |
@@ -399,7 +533,16 @@ export const DEFAULT_TEMPLATE_BODY = `# أولًا: أطراف العقد
 # سادسًا: مبلغ التمويل وطريقة السداد
 بلغ التمويل المتفق عليه مبلغًا قدره **{{financing_amount}} جنيه مصري ({{financing_amount_words}})**، وهو المبلغ المبين في جدول بيانات المعاملة.
 
-يقر الطرفان بأن الشركة تسلمت مبلغ التمويل {{payment_method}} كاملًا بمجلس العقد في تاريخ السداد المبين في جدول بيانات المعاملة، دون تحفظ أو خصم أو تأجيل، ويوقع ممثل الشركة المفوض على إيصال استلام مستقل يبين المبلغ بالأرقام والحروف وبيانات المستلم وصفته ومكان وتاريخ الاستلام. ويعد الإيصال الموقع والمختوم - إن وجد الختم - جزءًا من مستندات إثبات السداد، دون إخلال بالقواعد المحاسبية والقانونية الواجبة. ولا يغير إثبات السداد الأصلي من وجوب رد أي مبالغ مستقبلية للممول بتحويل بنكي موثق أو شيك مصرفي مقبول الدفع.
+[[if pending_amount]]
+يقر الطرفان بأن الشركة تسلمت من مبلغ التمويل مبلغًا قدره **{{paid_amount}} جنيه مصري ({{paid_amount_words}})** {{payment_method}} بمجلس العقد في تاريخ السداد المبين في جدول بيانات المعاملة، ويلتزم الممول بسداد باقي مبلغ التمويل وقدره **{{pending_amount}} جنيه مصري ({{pending_amount_words}})** على أقساط في المواعيد المبينة في الجدول الآتي، ويوقع ممثل الشركة المفوض على إيصال استلام مستقل عن كل دفعة يبين المبلغ بالأرقام والحروف وبيانات المستلم وصفته ومكان وتاريخ الاستلام.
+
+[[installments]]
+
+[[else]]
+يقر الطرفان بأن الشركة تسلمت مبلغ التمويل {{payment_method}} كاملًا بمجلس العقد في تاريخ السداد المبين في جدول بيانات المعاملة، دون تحفظ أو خصم أو تأجيل، ويوقع ممثل الشركة المفوض على إيصال استلام مستقل يبين المبلغ بالأرقام والحروف وبيانات المستلم وصفته ومكان وتاريخ الاستلام.
+[[endif]]
+
+ويعد الإيصال الموقع والمختوم - إن وجد الختم - جزءًا من مستندات إثبات السداد، دون إخلال بالقواعد المحاسبية والقانونية الواجبة. ولا يغير إثبات السداد الأصلي من وجوب رد أي مبالغ مستقبلية للممول بتحويل بنكي موثق أو شيك مصرفي مقبول الدفع.
 
 لا يلتزم الممول بأي مبالغ إضافية إلا بمحرر مكتوب مستقل موقع منه.
 
