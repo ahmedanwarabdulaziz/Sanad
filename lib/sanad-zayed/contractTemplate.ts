@@ -30,6 +30,7 @@ export const TEMPLATE_VARS: TemplateVar[] = [
   { key: "investor_email", label: "البريد الإلكتروني للممول", source: "contract", hint: "المراسلات عليه تعتبر إخطارًا رسميًا" },
   { key: "investor_title", label: "لقب الممول (السيد / السيدة)", source: "contract", hint: "حسب نوع الممول" },
   { key: "investor_referred", label: "ويشار إليه / إليها", source: "contract", hint: "حسب نوع الممول" },
+  { key: "investor_id_label", label: "رقم قومي / جواز سفر رقم", source: "contract", hint: "حسب نوع الإثبات" },
   { key: "stage_name", label: "اسم المرحلة", source: "contract" },
   { key: "contract_date", label: "تاريخ العقد والسداد", source: "contract" },
   { key: "contract_day", label: "يوم التوقيع", source: "contract" },
@@ -48,6 +49,7 @@ export const TEMPLATE_VARS: TemplateVar[] = [
   // ── Filled per contract before review ──
   { key: "transaction_no", label: "رقم المعاملة", source: "manual" },
   { key: "investor_gender", label: "النوع", source: "manual", hint: "ذكر / أنثى" },
+  { key: "investor_id_type", label: "نوع الإثبات", source: "manual", hint: "رقم قومي / جواز سفر" },
   { key: "investor_nationality", label: "جنسية الممول", source: "manual" },
   { key: "payment_method", label: "طريقة السداد", source: "manual", hint: "مثال: نقدًا / بتحويل بنكي" },
 
@@ -334,6 +336,10 @@ export function resolveValues(
   if (!ov("investor_referred")) merged.investor_referred = female ? "ويشار إليها" : "ويشار إليه";
   if (female && !ov("investor_nationality") && merged.investor_nationality === "مصري") merged.investor_nationality = "مصرية";
 
+  // National ID or passport: guessed from the number (14 digits = national ID) unless chosen.
+  if (!ov("investor_id_type")) merged.investor_id_type = looksLikeNationalId(merged.investor_national_id) ? "رقم قومي" : "جواز سفر";
+  if (!ov("investor_id_label")) merged.investor_id_label = isPassport(merged.investor_id_type) ? "جواز سفر رقم" : "رقم قومي";
+
   const date = parseDmy(merged.contract_date);
   if (date) {
     if (!ov("contract_day")) merged.contract_day = AR_DAYS[date.getUTCDay()];
@@ -391,6 +397,17 @@ export function resolveValues(
 }
 
 export const GENDER_OPTIONS = ["ذكر", "أنثى"];
+export const ID_TYPE_OPTIONS = ["رقم قومي", "جواز سفر"];
+
+export function isPassport(v: string | undefined): boolean {
+  return /جواز|passport/i.test(clean(v));
+}
+
+/** Empty or a 14-digit Egyptian national ID (Arabic-Indic digits allowed). */
+function looksLikeNationalId(v: string | undefined): boolean {
+  const s = clean(v).replace(/[٠-٩]/g, d => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(/[\s-]/g, "");
+  return !s || /^\d{14}$/.test(s);
+}
 
 export function isFemale(v: string | undefined): boolean {
   return /^(أنثى|انثى|انثي|أنثي|female|f)$/i.test(clean(v));
@@ -532,7 +549,9 @@ const OLD_INVESTOR_TITLE = "السيد/السيدة **{{investor_name}}**";
 const NEW_INVESTOR_TITLE = "{{investor_title}}/ **{{investor_name}}**";
 const OLD_INVESTOR_REFERRED = "ويشار إليه لاحقًا بـ«الممول»";
 const NEW_INVESTOR_REFERRED = "{{investor_referred}} لاحقًا بـ«الممول»";
-const OLD_COMPANY_ADDRESS = "ومقرها: {{company_address}}، ويمثلها";
+const OLD_INVESTOR_ID = "رقم قومي/جواز سفر {{investor_national_id}}";
+const NEW_INVESTOR_ID = "{{investor_id_label}} {{investor_national_id}}";
+const OLD_COMPANY_ADDRESS ="ومقرها: {{company_address}}، ويمثلها";
 const NEW_COMPANY_ADDRESS = "ومقرها: {{company_address}}، وبريدها الإلكتروني {{company_email}}، ويمثلها";
 const OLD_INVESTOR_ADDRESS = "والعنوان {{investor_address}}، {{investor_referred}}";
 const NEW_INVESTOR_ADDRESS = "والعنوان {{investor_address}}، والبريد الإلكتروني {{investor_email}}، {{investor_referred}}";
@@ -561,7 +580,8 @@ export function upgradeTemplateBody(body: string): string {
     .replace(OLD_INVESTOR_REFERRED, NEW_INVESTOR_REFERRED)
     .replace(OLD_COMPANY_ADDRESS, NEW_COMPANY_ADDRESS)
     .replace(OLD_INVESTOR_ADDRESS, NEW_INVESTOR_ADDRESS)
-    .replace(OLD_NOTICES, NEW_NOTICES);
+    .replace(OLD_NOTICES, NEW_NOTICES)
+    .replace(OLD_INVESTOR_ID, NEW_INVESTOR_ID);
 }
 
 export const DEFAULT_TEMPLATE_TITLE = "عقد تمويل خاص للمرحلة السابقة على الترخيص";
@@ -572,7 +592,7 @@ export const DEFAULT_TEMPLATE_BODY = `# أولًا: أطراف العقد
 
 1. **شركة سند برو كابيتال للمشروعات**، شركة مساهمة مصرية، سجل تجاري رقم 11604، ومقرها: {{company_address}}، وبريدها الإلكتروني {{company_email}}، ويمثلها قانونًا السيد/ {{company_rep_name}} بصفته {{company_rep_title}}، ويشار إليها لاحقًا بـ«الشركة».
 
-2. {{investor_title}}/ **{{investor_name}}**، الجنسية {{investor_nationality}}، رقم قومي/جواز سفر {{investor_national_id}}، والعنوان {{investor_address}}، والبريد الإلكتروني {{investor_email}}، {{investor_referred}} لاحقًا بـ«الممول».
+2. {{investor_title}}/ **{{investor_name}}**، الجنسية {{investor_nationality}}، {{investor_id_label}} {{investor_national_id}}، والعنوان {{investor_address}}، والبريد الإلكتروني {{investor_email}}، {{investor_referred}} لاحقًا بـ«الممول».
 
 # ثانيًا: التعريفات
 لأغراض هذا العقد، يكون للكلمات والعبارات الآتية المعنى المبين قرين كل منها ما لم يقتض السياق غير ذلك:

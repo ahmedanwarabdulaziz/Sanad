@@ -2,7 +2,7 @@
 
 import { Fragment } from "react";
 import { Noto_Naskh_Arabic } from "next/font/google";
-import { parseTemplate, segmentText, applyConditionals, parseSchedule, parseAmount, formatNumber, amountInWords, PLACEHOLDER, TEMPLATE_VARS, type Block } from "@/lib/sanad-zayed/contractTemplate";
+import { parseTemplate, segmentText, applyConditionals, parseSchedule, parseAmount, formatNumber, amountInWords, PLACEHOLDER, TEMPLATE_VARS, isPassport, type Block } from "@/lib/sanad-zayed/contractTemplate";
 
 const naskh = Noto_Naskh_Arabic({ subsets: ["arabic"], weight: ["400", "500", "600", "700"], display: "swap" });
 
@@ -58,7 +58,7 @@ export default function ContractPaper({ title, subtitle, body, values, highlight
         <div className="sz-header">
           <div className="sz-brand">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/short logo.png" alt="" className="sz-logo" />
+            <img src="/images/logo-mark.png" alt="" className="sz-logo" />
             <div>
               <div className="sz-brand-ar">سند برو كابيتال للمشروعات</div>
               <div className="sz-brand-en">SANAD PRO CAPITAL PROJECTS</div>
@@ -146,7 +146,7 @@ export default function ContractPaper({ title, subtitle, body, values, highlight
       <div key={i} className="sz-signatures">
         {[
           { party: "الطرف الأول — الشركة", rows: [["الاسم", "شركة سند برو كابيتال للمشروعات"], ["يمثلها", "{{company_rep_name}}"], ["الصفة", "{{company_rep_title}}"], ["البريد الإلكتروني", "{{company_email}}"]] },
-          { party: "الطرف الثاني — الممول", rows: [["الاسم", "{{investor_name}}"], ["الرقم القومي", "{{investor_national_id}}"], ["الهاتف", "{{investor_phone}}"], ["البريد الإلكتروني", "{{investor_email}}"]] },
+          { party: "الطرف الثاني — الممول", rows: [["الاسم", "{{investor_name}}"], [isPassport(values.investor_id_type) ? "رقم جواز السفر" : "الرقم القومي", "{{investor_national_id}}"], ["الهاتف", "{{investor_phone}}"], ["البريد الإلكتروني", "{{investor_email}}"]] },
         ].map(p => (
           <div key={p.party} className="sz-sig">
             <div className="sz-sig-head">{p.party}</div>
@@ -215,7 +215,7 @@ const PAPER_CSS = `
 
 .sz-header { display:flex; justify-content:space-between; align-items:center; gap:12px; padding-bottom:6px; }
 .sz-brand { display:flex; align-items:center; gap:10px; }
-.sz-logo { width:40px; height:46px; object-fit:contain; }
+.sz-logo { width:auto; height:44px; object-fit:contain; }
 .sz-brand-ar { font-family:var(--font-cairo),Cairo,sans-serif; font-weight:800; color:${NAVY}; font-size:12.5pt; line-height:1.3; }
 .sz-brand-en { font-family:var(--font-playfair-display),Georgia,serif; letter-spacing:.18em; color:${GOLD}; font-size:6.8pt; font-weight:700; line-height:1.4; direction:ltr; text-align:right; }
 .sz-brand-meta { font-size:7.5pt; color:#6b7280; line-height:1.4; }

@@ -8,7 +8,7 @@ import { ArrowForwardOutlined, PrintOutlined, SaveOutlined, RestartAltOutlined, 
 import ContractPaper from "../../../components/ContractPaper";
 import {
   TEMPLATE_VARS, resolveValues, usedVariables, applyConditionals, parseSchedule, formatSchedule, parseAmount, formatNumber,
-  generateSchedule, parseDmy, formatDate, upgradeTemplateBody, isFemale, GENDER_OPTIONS, FIXED_VARS, missingVariables, variableLabels, CONTRACT_LOCKED_VARS, DEFAULT_TEMPLATE_BODY, DEFAULT_TEMPLATE_TITLE, DEFAULT_TEMPLATE_SUBTITLE, type ScheduleRow,
+  generateSchedule, parseDmy, formatDate, upgradeTemplateBody, isFemale, GENDER_OPTIONS, isPassport, ID_TYPE_OPTIONS, FIXED_VARS, missingVariables, variableLabels, CONTRACT_LOCKED_VARS, DEFAULT_TEMPLATE_BODY, DEFAULT_TEMPLATE_TITLE, DEFAULT_TEMPLATE_SUBTITLE, type ScheduleRow,
 } from "@/lib/sanad-zayed/contractTemplate";
 
 
@@ -21,14 +21,14 @@ const HINTS: Record<string, string | undefined> = Object.fromEntries(TEMPLATE_VA
 // Panel sections, in the order the contract is reviewed.
 const SECTIONS: { title: string; keys: string[]; hint?: string }[] = [
   { title: "بيانات المعاملة", keys: ["transaction_no", "contract_date"] },
-  { title: "بيانات الممول", keys: ["investor_name", "investor_gender", "investor_nationality", "investor_national_id", "investor_address", "investor_job", "investor_phone", "investor_email"] },
+  { title: "بيانات الممول", keys: ["investor_name", "investor_gender", "investor_nationality", "investor_id_type", "investor_national_id", "investor_address", "investor_job", "investor_phone", "investor_email"] },
   { title: "بيانات مفوض الشركة", keys: ["company_rep_name", "company_rep_title", "company_address", "company_email"] },
   { title: "بيانات الأرض", keys: ["plot_no", "plot_code", "land_area", "separation_date"] },
   { title: "المساحة والسعر", keys: ["area", "meter_cost", "financing_amount"], hint: "من بيانات العقد في النظام — تُعدل من «تعديل العقد» في صفحة المستثمر" },
   { title: "السداد", keys: ["paid_amount", "payment_method"] },
 ];
 // Derived automatically and never edited directly in the panel.
-const HIDDEN = new Set(["investor_title", "investor_referred", "contract_day", "stage_name", "max_area", "financing_amount_words", "paid_amount_words", "pending_amount",
+const HIDDEN = new Set(["investor_title", "investor_referred", "investor_id_label", "contract_day", "stage_name", "max_area", "financing_amount_words", "paid_amount_words", "pending_amount",
   "pending_amount_words", "installments", "upfront_pct", "installments_count", "installment_interval_months"]);
 const DATE_KEYS = new Set(["contract_date", "separation_date", "closing_date", "financing_end_date"]);
 
@@ -89,6 +89,8 @@ export default function ContractDocumentPage() {
     keys.add("payment_method");
     // The gender drives the investor's title and pronouns in the text.
     if (keys.has("investor_title") || keys.has("investor_referred")) keys.add("investor_gender");
+    // The ID type sets the wording before the ID number (and the signature label).
+    if (keys.has("investor_national_id")) keys.add("investor_id_type");
     return keys;
   }, [body]);
   // Only variables in the branches that will actually print count as missing.
@@ -213,13 +215,14 @@ export default function ContractDocumentPage() {
       </Tooltip>
     ) : null;
     const sx = { "& .MuiOutlinedInput-root": { borderRadius: 2, background: overridden ? "#f3f6fa" : "#fff" }, "& .MuiOutlinedInput-input": reset ? { paddingInlineEnd: "34px !important" } : {} };
-    if (key === "investor_gender") {
-      const current = isFemale(values[key]) ? "أنثى" : "ذكر";
+    if (key === "investor_gender" || key === "investor_id_type") {
+      const gender = key === "investor_gender";
+      const current = gender ? (isFemale(values[key]) ? "أنثى" : "ذكر") : (isPassport(values[key]) ? "جواز سفر" : "رقم قومي");
       return (
         <div key={key} className="sz-gender">
           <span>{LABELS[key]}</span>
           <div>
-            {GENDER_OPTIONS.map(g => (
+            {(gender ? GENDER_OPTIONS : ID_TYPE_OPTIONS).map(g => (
               <button type="button" key={g} className={current === g ? "on" : ""} onClick={() => setVar(key, g)}>{g}</button>
             ))}
           </div>
