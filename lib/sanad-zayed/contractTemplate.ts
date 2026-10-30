@@ -27,6 +27,8 @@ export const TEMPLATE_VARS: TemplateVar[] = [
   { key: "investor_address", label: "عنوان الممول", source: "contract" },
   { key: "investor_job", label: "وظيفة الممول", source: "contract" },
   { key: "investor_phone", label: "هاتف الممول", source: "contract" },
+  { key: "investor_title", label: "لقب الممول (السيد / السيدة)", source: "contract", hint: "حسب نوع الممول" },
+  { key: "investor_referred", label: "ويشار إليه / إليها", source: "contract", hint: "حسب نوع الممول" },
   { key: "stage_name", label: "اسم المرحلة", source: "contract" },
   { key: "contract_date", label: "تاريخ العقد والسداد", source: "contract" },
   { key: "contract_day", label: "يوم التوقيع", source: "contract" },
@@ -44,6 +46,7 @@ export const TEMPLATE_VARS: TemplateVar[] = [
 
   // ── Filled per contract before review ──
   { key: "transaction_no", label: "رقم المعاملة", source: "manual" },
+  { key: "investor_gender", label: "النوع", source: "manual", hint: "ذكر / أنثى" },
   { key: "investor_nationality", label: "جنسية الممول", source: "manual" },
   { key: "payment_method", label: "طريقة السداد", source: "manual", hint: "مثال: نقدًا / بتحويل بنكي" },
 
@@ -102,6 +105,7 @@ export const DEFAULT_STAGE_VALUES: Record<string, string> = {
 };
 
 export const DEFAULT_MANUAL_VALUES: Record<string, string> = {
+  investor_gender: "ذكر",
   investor_nationality: "مصري",
   payment_method: "نقدًا",
 };
@@ -318,6 +322,13 @@ export function resolveValues(
   // Re-derive dependent values from the final (possibly overridden) inputs,
   // unless the dependent value itself was overridden.
   const ov = (k: string) => !!clean(overrides?.[k]);
+
+  // Gendered wording for the investor (السيد / السيدة, إليه / إليها, مصري / مصرية).
+  const female = isFemale(merged.investor_gender);
+  if (!ov("investor_title")) merged.investor_title = female ? "السيدة" : "السيد";
+  if (!ov("investor_referred")) merged.investor_referred = female ? "ويشار إليها" : "ويشار إليه";
+  if (female && !ov("investor_nationality") && merged.investor_nationality === "مصري") merged.investor_nationality = "مصرية";
+
   const date = parseDmy(merged.contract_date);
   if (date) {
     if (!ov("contract_day")) merged.contract_day = AR_DAYS[date.getUTCDay()];
@@ -372,6 +383,12 @@ export function resolveValues(
     }
   }
   return merged;
+}
+
+export const GENDER_OPTIONS = ["ذكر", "أنثى"];
+
+export function isFemale(v: string | undefined): boolean {
+  return /^(أنثى|انثى|انثي|أنثي|female|f)$/i.test(clean(v));
 }
 
 /** True when a value is present and, if numeric, not zero. */
@@ -506,7 +523,11 @@ const PARTIAL_PAYMENT_BLOCK = `[[if pending_amount]]
 [[else]]
 ${OLD_FULL_PAYMENT}
 [[endif]]`;
-const OLD_MAX_AREA = "{{area_increase_pct}}% حتى نحو {{max_area}} م² إجماليًا";
+const OLD_INVESTOR_TITLE = "السيد/السيدة **{{investor_name}}**";
+const NEW_INVESTOR_TITLE = "{{investor_title}}/ **{{investor_name}}**";
+const OLD_INVESTOR_REFERRED = "ويشار إليه لاحقًا بـ«الممول»";
+const NEW_INVESTOR_REFERRED = "{{investor_referred}} لاحقًا بـ«الممول»";
+const OLD_MAX_AREA ="{{area_increase_pct}}% حتى نحو {{max_area}} م² إجماليًا";
 const NEW_MAX_AREA = "{{area_increase_pct}}% من المساحة الاسترشادية";
 
 /**
@@ -524,7 +545,9 @@ export function upgradeTemplateBody(body: string): string {
       : out.replace(OLD_FULL_PAYMENT, PARTIAL_PAYMENT_BLOCK);
     if (out.includes(OLD_FINANCING_ROW + "\n")) out = out.replace(OLD_FINANCING_ROW + "\n", `${OLD_FINANCING_ROW}\n${PENDING_ROWS}\n`);
   }
-  return out.replace(OLD_MAX_AREA, NEW_MAX_AREA);
+  return out.replace(OLD_MAX_AREA, NEW_MAX_AREA)
+    .replace(OLD_INVESTOR_TITLE, NEW_INVESTOR_TITLE)
+    .replace(OLD_INVESTOR_REFERRED, NEW_INVESTOR_REFERRED);
 }
 
 export const DEFAULT_TEMPLATE_TITLE = "عقد تمويل خاص للمرحلة السابقة على الترخيص";
@@ -535,7 +558,7 @@ export const DEFAULT_TEMPLATE_BODY = `# أولًا: أطراف العقد
 
 1. **شركة سند برو كابيتال للمشروعات**، شركة مساهمة مصرية، سجل تجاري رقم 11604، ومقرها: {{company_address}}، ويمثلها قانونًا السيد/ {{company_rep_name}} بصفته {{company_rep_title}}، ويشار إليها لاحقًا بـ«الشركة».
 
-2. السيد/السيدة **{{investor_name}}**، الجنسية {{investor_nationality}}، رقم قومي/جواز سفر {{investor_national_id}}، والعنوان {{investor_address}}، ويشار إليه لاحقًا بـ«الممول».
+2. {{investor_title}}/ **{{investor_name}}**، الجنسية {{investor_nationality}}، رقم قومي/جواز سفر {{investor_national_id}}، والعنوان {{investor_address}}، {{investor_referred}} لاحقًا بـ«الممول».
 
 # ثانيًا: التعريفات
 لأغراض هذا العقد، يكون للكلمات والعبارات الآتية المعنى المبين قرين كل منها ما لم يقتض السياق غير ذلك:

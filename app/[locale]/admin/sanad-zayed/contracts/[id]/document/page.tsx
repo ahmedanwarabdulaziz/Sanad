@@ -8,7 +8,7 @@ import { ArrowForwardOutlined, PrintOutlined, SaveOutlined, RestartAltOutlined, 
 import ContractPaper from "../../../components/ContractPaper";
 import {
   TEMPLATE_VARS, resolveValues, usedVariables, applyConditionals, parseSchedule, formatSchedule, parseAmount, formatNumber,
-  generateSchedule, parseDmy, formatDate, upgradeTemplateBody, FIXED_VARS, missingVariables, variableLabels, CONTRACT_LOCKED_VARS, DEFAULT_TEMPLATE_BODY, DEFAULT_TEMPLATE_TITLE, DEFAULT_TEMPLATE_SUBTITLE, type ScheduleRow,
+  generateSchedule, parseDmy, formatDate, upgradeTemplateBody, isFemale, GENDER_OPTIONS, FIXED_VARS, missingVariables, variableLabels, CONTRACT_LOCKED_VARS, DEFAULT_TEMPLATE_BODY, DEFAULT_TEMPLATE_TITLE, DEFAULT_TEMPLATE_SUBTITLE, type ScheduleRow,
 } from "@/lib/sanad-zayed/contractTemplate";
 
 
@@ -21,14 +21,14 @@ const HINTS: Record<string, string | undefined> = Object.fromEntries(TEMPLATE_VA
 // Panel sections, in the order the contract is reviewed.
 const SECTIONS: { title: string; keys: string[]; hint?: string }[] = [
   { title: "بيانات المعاملة", keys: ["transaction_no", "contract_date"] },
-  { title: "بيانات الممول", keys: ["investor_name", "investor_nationality", "investor_national_id", "investor_address", "investor_job", "investor_phone"] },
+  { title: "بيانات الممول", keys: ["investor_name", "investor_gender", "investor_nationality", "investor_national_id", "investor_address", "investor_job", "investor_phone"] },
   { title: "بيانات مفوض الشركة", keys: ["company_rep_name", "company_rep_title", "company_address"] },
   { title: "بيانات الأرض", keys: ["plot_no", "plot_code", "land_area", "separation_date"] },
   { title: "المساحة والسعر", keys: ["area", "meter_cost", "financing_amount"], hint: "من بيانات العقد في النظام — تُعدل من «تعديل العقد» في صفحة المستثمر" },
   { title: "السداد", keys: ["paid_amount", "payment_method"] },
 ];
 // Derived automatically and never edited directly in the panel.
-const HIDDEN = new Set(["contract_day", "stage_name", "max_area", "financing_amount_words", "paid_amount_words", "pending_amount",
+const HIDDEN = new Set(["investor_title", "investor_referred", "contract_day", "stage_name", "max_area", "financing_amount_words", "paid_amount_words", "pending_amount",
   "pending_amount_words", "installments", "upfront_pct", "installments_count", "installment_interval_months"]);
 const DATE_KEYS = new Set(["contract_date", "separation_date", "closing_date", "financing_end_date"]);
 
@@ -87,6 +87,8 @@ export default function ContractDocumentPage() {
     // Payment fields are always reviewable, whatever the template wording.
     SCHEDULE_VARS.forEach(k => keys.add(k));
     keys.add("payment_method");
+    // The gender drives the investor's title and pronouns in the text.
+    if (keys.has("investor_title") || keys.has("investor_referred")) keys.add("investor_gender");
     return keys;
   }, [body]);
   // Only variables in the branches that will actually print count as missing.
@@ -211,6 +213,19 @@ export default function ContractDocumentPage() {
       </Tooltip>
     ) : null;
     const sx = { "& .MuiOutlinedInput-root": { borderRadius: 2, background: overridden ? "#f3f6fa" : "#fff" }, "& .MuiOutlinedInput-input": reset ? { paddingInlineEnd: "34px !important" } : {} };
+    if (key === "investor_gender") {
+      const current = isFemale(values[key]) ? "أنثى" : "ذكر";
+      return (
+        <div key={key} className="sz-gender">
+          <span>{LABELS[key]}</span>
+          <div>
+            {GENDER_OPTIONS.map(g => (
+              <button type="button" key={g} className={current === g ? "on" : ""} onClick={() => setVar(key, g)}>{g}</button>
+            ))}
+          </div>
+        </div>
+      );
+    }
     if (DATE_KEYS.has(key)) {
       return (
         <div key={key} style={{ position: "relative" }}>
@@ -496,6 +511,10 @@ const WORKSPACE_CSS = `
 .sz-note-ok { background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; font-weight:700; }
 .sz-locked { display:flex; justify-content:space-between; align-items:center; margin:6px 0; padding:8px 12px; border-radius:10px; background:#f8fafc; border:1px solid #eef2f7; font-size:13px; color:#6b7280; }
 .sz-locked strong { color:#111827; }
+.sz-gender { display:flex; justify-content:space-between; align-items:center; margin:8px 0 4px; font-size:13px; color:#374151; }
+.sz-gender > div { display:flex; border:1px solid #d1d5db; border-radius:10px; overflow:hidden; }
+.sz-gender button { border:none; background:#fff; padding:6px 18px; cursor:pointer; font-family:inherit; font-weight:700; font-size:13px; color:#6b7280; }
+.sz-gender button.on { background:#154278; color:#fff; }
 .sz-readonly { display:flex; justify-content:space-between; align-items:center; margin:8px 0 6px; padding:9px 12px; border-radius:10px; background:#f3f6fa; font-size:13px; color:#374151; }
 .sz-readonly strong { color:#154278; }
 .sz-sched-sum { display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding:7px 10px; border-radius:8px; font-size:12.5px; }
