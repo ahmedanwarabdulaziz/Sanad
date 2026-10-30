@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { requireAuth } from "@/lib/auth/requireAuth";
+import { TEMPLATE_VARS, DEFAULT_STAGE_VALUES, DEFAULT_TEMPLATE_BODY, DEFAULT_TEMPLATE_TITLE, DEFAULT_TEMPLATE_SUBTITLE } from "@/lib/sanad-zayed/contractTemplate";
+
+const STAGE_KEYS = new Set(TEMPLATE_VARS.filter(v => v.source === "stage").map(v => v.key));
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -74,6 +77,53 @@ export async function PUT(request: NextRequest) {
       )
       .select("*")
       .single();
+
+    if (error) throw error;
+    return NextResponse.json({ template: data });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || "خطأ في الخادم" }, { status: 500 });
+  }
+}
+
+// ── PATCH /api/sanad-zayed/contract-templates ─────────────────────────
+// Merges stage default values (e.g. the company representative) into the
+// stage's template, creating it from the standard template when missing.
+export async function PATCH(request: NextRequest) {
+  const auth = await requireAuth("editor");
+  if ("error" in auth) return auth.error;
+
+  try {
+    const body = await request.json();
+    if (!body.stage_id) return NextResponse.json({ error: "المرحلة مطلوبة" }, { status: 422 });
+    const updates = Object.fromEntries(Object.entries(cleanDefaults(body.defaults)).filter(([k]) => STAGE_KEYS.has(k)));
+    if (!Object.keys(updates).length) return NextResponse.json({ error: "لا توجد بيانات للحفظ" }, { status: 422 });
+
+    const { data: existing, error: readError } = await supabase
+      .from("sz_contract_templates")
+      .select("*")
+      .eq("stage_id", body.stage_id)
+      .maybeSingle();
+    if (readError) throw readError;
+
+    const { data, error } = existing
+      ? await supabase
+          .from("sz_contract_templates")
+          .update({ defaults: { ...(existing.defaults ?? {}), ...updates }, updated_at: new Date().toISOString() })
+          .eq("stage_id", body.stage_id)
+          .select("*")
+          .single()
+      : await supabase
+          .from("sz_contract_templates")
+          .insert({
+            stage_id: body.stage_id,
+            title: DEFAULT_TEMPLATE_TITLE,
+            subtitle: DEFAULT_TEMPLATE_SUBTITLE,
+            body: DEFAULT_TEMPLATE_BODY,
+            defaults: { ...DEFAULT_STAGE_VALUES, ...updates },
+            updated_at: new Date().toISOString(),
+          })
+          .select("*")
+          .single();
 
     if (error) throw error;
     return NextResponse.json({ template: data });

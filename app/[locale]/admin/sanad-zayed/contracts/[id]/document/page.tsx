@@ -18,11 +18,14 @@ const SCHEDULE_VARS = ["paid_amount", "paid_amount_words", "pending_amount", "pe
 const LABELS: Record<string, string> = Object.fromEntries(TEMPLATE_VARS.map(v => [v.key, v.label]));
 const HINTS: Record<string, string | undefined> = Object.fromEntries(TEMPLATE_VARS.map(v => [v.key, v.hint]));
 
+// Company representative data, saved once as stage defaults for every contract.
+const COMPANY_KEYS = ["company_rep_name", "company_rep_title", "company_address", "company_email"];
+
 // Panel sections, in the order the contract is reviewed.
 const SECTIONS: { title: string; keys: string[]; hint?: string }[] = [
   { title: "بيانات المعاملة", keys: ["transaction_no", "contract_date"] },
   { title: "بيانات الممول", keys: ["investor_name", "investor_gender", "investor_nationality", "investor_id_type", "investor_national_id", "investor_address", "investor_job", "investor_phone", "investor_email"] },
-  { title: "بيانات مفوض الشركة", keys: ["company_rep_name", "company_rep_title", "company_address", "company_email"] },
+  { title: "بيانات مفوض الشركة", keys: COMPANY_KEYS },
   { title: "بيانات الأرض", keys: ["plot_no", "plot_code", "land_area", "separation_date"] },
   { title: "المساحة والسعر", keys: ["area", "meter_cost", "financing_amount"], hint: "من بيانات العقد في النظام — تُعدل من «تعديل العقد» في صفحة المستثمر" },
   { title: "السداد", keys: ["paid_amount", "payment_method"] },
@@ -158,6 +161,40 @@ export default function ContractDocumentPage() {
       setSaving(false);
     }
   }, [id, overrides]);
+
+  // Saves the company representative data typed here as the stage default,
+  // so every contract of the stage fills it in automatically.
+  const companyOverridden = COMPANY_KEYS.some(k => !!overrides[k]?.trim());
+  const [savingDefaults, setSavingDefaults] = useState(false);
+  const saveCompanyDefaults = async () => {
+    setSavingDefaults(true);
+    setError("");
+    try {
+      const defaults = Object.fromEntries(COMPANY_KEYS.map(k => [k, values[k] ?? ""]).filter(([, v]) => v));
+      const res = await fetch("/api/sanad-zayed/contract-templates", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stage_id: data.contract.stage_id, defaults }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "تعذر حفظ بيانات الشركة");
+      // This contract now follows the stage values instead of its own copy.
+      const rest = Object.fromEntries(Object.entries(overrides).filter(([k]) => !COMPANY_KEYS.includes(k)));
+      const put = await fetch(`/api/sanad-zayed/contracts/${id}/document`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ document_vars: rest }),
+      });
+      if (!put.ok) throw new Error((await put.json()).error || "تعذر الحفظ");
+      await load();
+      setDirty(false);
+      setIssuedNote("تم حفظ بيانات مفوض الشركة — ستظهر تلقائيًا في كل عقود هذه المرحلة.");
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSavingDefaults(false);
+    }
+  };
 
   const print = async () => {
     if (scheduleMismatch) {
@@ -325,6 +362,17 @@ export default function ContractDocumentPage() {
                 <div className="sz-group-title">{sec.title}</div>
                 {sec.hint && <div className="sz-group-hint">{sec.hint}</div>}
                 {keys.map(renderField)}
+                {sec.keys === COMPANY_KEYS && (
+                  <Tooltip title="تُحفظ في قالب المرحلة وتُملأ تلقائيًا في كل عقودها">
+                    <span>
+                      <button type="button" className="sz-link" style={{ margin: "4px 0 6px" }} onClick={saveCompanyDefaults}
+                        disabled={!companyOverridden || savingDefaults}>
+                        {savingDefaults ? <CircularProgress size={13} /> : <SaveOutlined sx={{ fontSize: 15 }} />}
+                        {companyOverridden ? "حفظ كبيانات ثابتة لكل عقود المرحلة" : "محفوظة لكل عقود المرحلة"}
+                      </button>
+                    </span>
+                  </Tooltip>
+                )}
                 {sec.title === "السداد" && (
                   <>
                     {wallet && (
@@ -498,6 +546,7 @@ const WORKSPACE_CSS = `
 .sz-sched-empty { font-size:12px; color:#9ca3af; padding:4px 0 8px; }
 .sz-sched-warn { font-size:12px; color:#dc2626; font-weight:700; margin-top:6px; }
 .sz-link { display:inline-flex; align-items:center; gap:4px; border:none; background:none; color:#154278; font-weight:700; font-size:12px; cursor:pointer; padding:2px 0; font-family:inherit; }
+.sz-link:disabled { color:#9ca3af; cursor:default; }
 .sz-icon { border:none; background:none; color:#9ca3af; cursor:pointer; display:flex; padding:4px; border-radius:6px; }
 .sz-icon:hover { color:#dc2626; background:#fef2f2; }
 .sz-note { margin:12px 16px 4px; padding:10px 12px; border-radius:10px; font-size:12.5px; line-height:1.8; }
