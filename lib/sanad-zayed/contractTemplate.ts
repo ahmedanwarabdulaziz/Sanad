@@ -27,6 +27,7 @@ export const TEMPLATE_VARS: TemplateVar[] = [
   { key: "investor_address", label: "عنوان الممول", source: "contract" },
   { key: "investor_job", label: "وظيفة الممول", source: "contract" },
   { key: "investor_phone", label: "هاتف الممول", source: "contract" },
+  { key: "investor_email", label: "البريد الإلكتروني للممول", source: "contract", hint: "المراسلات عليه تعتبر إخطارًا رسميًا" },
   { key: "investor_title", label: "لقب الممول (السيد / السيدة)", source: "contract", hint: "حسب نوع الممول" },
   { key: "investor_referred", label: "ويشار إليه / إليها", source: "contract", hint: "حسب نوع الممول" },
   { key: "stage_name", label: "اسم المرحلة", source: "contract" },
@@ -52,6 +53,7 @@ export const TEMPLATE_VARS: TemplateVar[] = [
 
   // ── Stage defaults (set once on the template) ──
   { key: "company_address", label: "مقر الشركة", source: "stage" },
+  { key: "company_email", label: "البريد الإلكتروني للشركة", source: "stage", hint: "المراسلات عليه تعتبر إخطارًا رسميًا" },
   { key: "company_rep_name", label: "ممثل الشركة", source: "stage" },
   { key: "company_rep_title", label: "صفة ممثل الشركة", source: "stage" },
   { key: "plot_no", label: "رقم القطعة", source: "stage" },
@@ -79,6 +81,7 @@ export const TEMPLATE_VARS: TemplateVar[] = [
 
 export const DEFAULT_STAGE_VALUES: Record<string, string> = {
   company_address: "",
+  company_email: "",
   company_rep_name: "",
   company_rep_title: "",
   plot_no: "208ج",
@@ -201,6 +204,7 @@ export interface ContractData {
     address_in_national_id?: string | null;
     job_in_national_id?: string | null;
     phone?: string | null;
+    email?: string | null;
   } | null;
   stage?: { name?: string | null } | null;
   /** Installments already scheduled on the contract record, if any. */
@@ -262,6 +266,7 @@ export function contractAutoValues(c: ContractData, stageDefaults: Record<string
   out.investor_address = clean(c.investor?.address_in_national_id);
   out.investor_job = clean(c.investor?.job_in_national_id);
   out.investor_phone = clean(c.investor?.phone);
+  out.investor_email = clean(c.investor?.email);
   out.stage_name = clean(c.stage?.name);
 
   const date = parseIsoDate(clean(c.contract_date));
@@ -527,7 +532,13 @@ const OLD_INVESTOR_TITLE = "السيد/السيدة **{{investor_name}}**";
 const NEW_INVESTOR_TITLE = "{{investor_title}}/ **{{investor_name}}**";
 const OLD_INVESTOR_REFERRED = "ويشار إليه لاحقًا بـ«الممول»";
 const NEW_INVESTOR_REFERRED = "{{investor_referred}} لاحقًا بـ«الممول»";
-const OLD_MAX_AREA ="{{area_increase_pct}}% حتى نحو {{max_area}} م² إجماليًا";
+const OLD_COMPANY_ADDRESS = "ومقرها: {{company_address}}، ويمثلها";
+const NEW_COMPANY_ADDRESS = "ومقرها: {{company_address}}، وبريدها الإلكتروني {{company_email}}، ويمثلها";
+const OLD_INVESTOR_ADDRESS = "والعنوان {{investor_address}}، {{investor_referred}}";
+const NEW_INVESTOR_ADDRESS = "والعنوان {{investor_address}}، والبريد الإلكتروني {{investor_email}}، {{investor_referred}}";
+const OLD_NOTICES = "توجه الإخطارات إلى العناوين ووسائل الاتصال المبينة في هذا العقد، ويجوز الاتفاق على البريد الإلكتروني أو الرسائل الفورية كوسيلة إخطار بشرط إثبات الإرسال والاستلام.";
+const NEW_NOTICES = "توجه الإخطارات والمراسلات بين الطرفين إلى العناوين والبريد الإلكتروني المبين لكل طرف في بند أطراف العقد، ويعتبر ما يرسل إلى البريد الإلكتروني المبين لأي طرف إخطارًا رسميًا صحيحًا منتجًا لكافة آثاره القانونية من تاريخ إرساله، ويكون مستخرج الرسالة المرسلة حجة في إثبات الإخطار. ويلتزم كل طرف بإخطار الطرف الآخر كتابةً بأي تغيير في عنوانه أو بريده الإلكتروني، وإلا اعتبرت المراسلات على العنوان أو البريد السابق صحيحة ونافذة في حقه.";
+const OLD_MAX_AREA = "{{area_increase_pct}}% حتى نحو {{max_area}} م² إجماليًا";
 const NEW_MAX_AREA = "{{area_increase_pct}}% من المساحة الاسترشادية";
 
 /**
@@ -547,7 +558,10 @@ export function upgradeTemplateBody(body: string): string {
   }
   return out.replace(OLD_MAX_AREA, NEW_MAX_AREA)
     .replace(OLD_INVESTOR_TITLE, NEW_INVESTOR_TITLE)
-    .replace(OLD_INVESTOR_REFERRED, NEW_INVESTOR_REFERRED);
+    .replace(OLD_INVESTOR_REFERRED, NEW_INVESTOR_REFERRED)
+    .replace(OLD_COMPANY_ADDRESS, NEW_COMPANY_ADDRESS)
+    .replace(OLD_INVESTOR_ADDRESS, NEW_INVESTOR_ADDRESS)
+    .replace(OLD_NOTICES, NEW_NOTICES);
 }
 
 export const DEFAULT_TEMPLATE_TITLE = "عقد تمويل خاص للمرحلة السابقة على الترخيص";
@@ -556,9 +570,9 @@ export const DEFAULT_TEMPLATE_SUBTITLE = "مشروع سند زايد";
 export const DEFAULT_TEMPLATE_BODY = `# أولًا: أطراف العقد
 إنه في يوم {{contract_day}} الموافق {{contract_date}}، أبرم هذا العقد بين كل من:
 
-1. **شركة سند برو كابيتال للمشروعات**، شركة مساهمة مصرية، سجل تجاري رقم 11604، ومقرها: {{company_address}}، ويمثلها قانونًا السيد/ {{company_rep_name}} بصفته {{company_rep_title}}، ويشار إليها لاحقًا بـ«الشركة».
+1. **شركة سند برو كابيتال للمشروعات**، شركة مساهمة مصرية، سجل تجاري رقم 11604، ومقرها: {{company_address}}، وبريدها الإلكتروني {{company_email}}، ويمثلها قانونًا السيد/ {{company_rep_name}} بصفته {{company_rep_title}}، ويشار إليها لاحقًا بـ«الشركة».
 
-2. {{investor_title}}/ **{{investor_name}}**، الجنسية {{investor_nationality}}، رقم قومي/جواز سفر {{investor_national_id}}، والعنوان {{investor_address}}، {{investor_referred}} لاحقًا بـ«الممول».
+2. {{investor_title}}/ **{{investor_name}}**، الجنسية {{investor_nationality}}، رقم قومي/جواز سفر {{investor_national_id}}، والعنوان {{investor_address}}، والبريد الإلكتروني {{investor_email}}، {{investor_referred}} لاحقًا بـ«الممول».
 
 # ثانيًا: التعريفات
 لأغراض هذا العقد، يكون للكلمات والعبارات الآتية المعنى المبين قرين كل منها ما لم يقتض السياق غير ذلك:
@@ -731,7 +745,7 @@ export const DEFAULT_TEMPLATE_BODY = `# أولًا: أطراف العقد
 في الأرقام والتواريخ والبيانات التجارية يسود جدول بيانات المعاملة. وفي أحكام التمويل والسداد والتسوية يسود هذا العقد. وفي بيانات الأرض والإفصاحات يسود المستند الرسمي مع ما ورد من تحفظات في مستندات العقد. وفي الوحدة والثمن النهائي والمواصفات والتسليم يسود عقد البيع المستقل الذي قد يبرم بعد الترخيص.
 
 # ثامن عشر: الإخطارات والقانون والمصروفات
-توجه الإخطارات إلى العناوين ووسائل الاتصال المبينة في هذا العقد، ويجوز الاتفاق على البريد الإلكتروني أو الرسائل الفورية كوسيلة إخطار بشرط إثبات الإرسال والاستلام.
+توجه الإخطارات والمراسلات بين الطرفين إلى العناوين والبريد الإلكتروني المبين لكل طرف في بند أطراف العقد، ويعتبر ما يرسل إلى البريد الإلكتروني المبين لأي طرف إخطارًا رسميًا صحيحًا منتجًا لكافة آثاره القانونية من تاريخ إرساله، ويكون مستخرج الرسالة المرسلة حجة في إثبات الإخطار. ويلتزم كل طرف بإخطار الطرف الآخر كتابةً بأي تغيير في عنوانه أو بريده الإلكتروني، وإلا اعتبرت المراسلات على العنوان أو البريد السابق صحيحة ونافذة في حقه.
 
 يخضع العقد للقانون المصري، وتبذل محاولة تسوية ودية لمدة {{amicable_days}} يومًا قبل اللجوء إلى المحاكم المختصة نوعيًا ومكانيًا بمدينة الشيخ زايد أو محاكم الجيزة بحسب الاختصاص القانوني.
 

@@ -21,8 +21,8 @@ const HINTS: Record<string, string | undefined> = Object.fromEntries(TEMPLATE_VA
 // Panel sections, in the order the contract is reviewed.
 const SECTIONS: { title: string; keys: string[]; hint?: string }[] = [
   { title: "بيانات المعاملة", keys: ["transaction_no", "contract_date"] },
-  { title: "بيانات الممول", keys: ["investor_name", "investor_gender", "investor_nationality", "investor_national_id", "investor_address", "investor_job", "investor_phone"] },
-  { title: "بيانات مفوض الشركة", keys: ["company_rep_name", "company_rep_title", "company_address"] },
+  { title: "بيانات الممول", keys: ["investor_name", "investor_gender", "investor_nationality", "investor_national_id", "investor_address", "investor_job", "investor_phone", "investor_email"] },
+  { title: "بيانات مفوض الشركة", keys: ["company_rep_name", "company_rep_title", "company_address", "company_email"] },
   { title: "بيانات الأرض", keys: ["plot_no", "plot_code", "land_area", "separation_date"] },
   { title: "المساحة والسعر", keys: ["area", "meter_cost", "financing_amount"], hint: "من بيانات العقد في النظام — تُعدل من «تعديل العقد» في صفحة المستثمر" },
   { title: "السداد", keys: ["paid_amount", "payment_method"] },
