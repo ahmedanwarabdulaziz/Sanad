@@ -67,8 +67,11 @@ export default function ContractPaper({ title, subtitle, body, values, highlight
           </div>
           <div className="sz-header-meta">
             <div className="sz-header-title">{title}</div>
-            <div>رقم المعاملة: <strong><V k="transaction_no" values={values} highlight={highlight} /></strong></div>
-            <div>تاريخ العقد: <V k="contract_date" values={values} highlight={highlight} /></div>
+            <div>
+              رقم المعاملة: <strong><V k="transaction_no" values={values} highlight={highlight} /></strong>
+              <span className="sz-header-sep">·</span>
+              تاريخ العقد: <V k="contract_date" values={values} highlight={highlight} />
+            </div>
           </div>
         </div>
         <div className="sz-rule"><span /></div>
@@ -217,6 +220,7 @@ const PAPER_CSS = `
 .sz-brand-en { font-family:var(--font-playfair-display),Georgia,serif; letter-spacing:.18em; color:${GOLD}; font-size:6.8pt; font-weight:700; line-height:1.4; direction:ltr; text-align:right; }
 .sz-brand-meta { font-size:7.5pt; color:#6b7280; line-height:1.4; }
 .sz-header-meta { text-align:left; font-size:8pt; color:#4b5563; line-height:1.6; }
+.sz-header-sep { margin:0 6px; color:${GOLD}; }
 .sz-header-title { font-family:var(--font-cairo),Cairo,sans-serif; font-weight:700; color:${NAVY}; font-size:8.5pt; }
 .sz-rule { height:2px; background:${NAVY}; position:relative; margin-bottom:7mm; }
 .sz-rule span { position:absolute; left:0; right:0; top:4px; height:1px; background:${GOLD}; }
