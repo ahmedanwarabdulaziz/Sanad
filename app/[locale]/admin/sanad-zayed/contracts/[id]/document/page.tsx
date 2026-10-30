@@ -539,6 +539,9 @@ const WORKSPACE_CSS = `
   size: A4;
   margin: 12mm 16mm 13mm;
   @bottom-center { content: "صفحة " counter(page) " من " counter(pages); font-size: 8pt; color: #6b7280; font-family: Cairo, sans-serif; }
+  /* Empty margin boxes keep the browser from printing its own title / date / URL lines. */
+  @top-left { content: ""; } @top-center { content: ""; } @top-right { content: ""; }
+  @bottom-left { content: ""; } @bottom-right { content: ""; }
 }
 @media print {
   html, body { background:#fff !important; }

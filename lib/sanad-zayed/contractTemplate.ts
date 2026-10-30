@@ -490,7 +490,7 @@ export function usedVariables(body: string): string[] {
 }
 
 /** Variables printed by the header, title block and signature block regardless of the body. */
-export const FIXED_VARS = ["transaction_no", "contract_date", "stage_name", "financing_amount", "company_rep_name", "company_rep_title", "investor_name", "investor_national_id", "investor_phone"];
+export const FIXED_VARS = ["transaction_no", "contract_date", "stage_name", "financing_amount", "company_rep_name", "company_rep_title", "investor_name", "investor_national_id", "investor_phone", "company_email", "investor_email"];
 
 /**
  * Variables that will print empty: those used by the active branches of the

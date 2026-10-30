@@ -2,7 +2,7 @@
 
 import { Fragment } from "react";
 import { Noto_Naskh_Arabic } from "next/font/google";
-import { parseTemplate, segmentText, applyConditionals, parseSchedule, parseAmount, formatNumber, amountInWords, PLACEHOLDER, TEMPLATE_VARS } from "@/lib/sanad-zayed/contractTemplate";
+import { parseTemplate, segmentText, applyConditionals, parseSchedule, parseAmount, formatNumber, amountInWords, PLACEHOLDER, TEMPLATE_VARS, type Block } from "@/lib/sanad-zayed/contractTemplate";
 
 const naskh = Noto_Naskh_Arabic({ subsets: ["arabic"], weight: ["400", "500", "600", "700"], display: "swap" });
 
@@ -42,45 +42,129 @@ function V({ k, values, highlight }: { k: string; values: Record<string, string>
 
 export default function ContractPaper({ title, subtitle, body, values, highlight }: Props) {
   const blocks = parseTemplate(applyConditionals(body, values));
+  // The closing clause and the signatures print as their own last page, whose
+  // footer drops the initials boxes since that page is signed and stamped in full.
+  const sigAt = blocks.findIndex(b => b.type === "signatures");
+  let split = blocks.length;
+  if (sigAt >= 0) {
+    split = sigAt;
+    for (let j = sigAt - 1; j >= 0; j--) if (blocks[j].type === "heading") { split = j; break; }
+  }
+  const lastBlocks = blocks.slice(split);
+
+  const header = (
+    <thead>
+      <tr><td>
+        <div className="sz-header">
+          <div className="sz-brand">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/images/short logo.png" alt="" className="sz-logo" />
+            <div>
+              <div className="sz-brand-ar">سند برو كابيتال للمشروعات</div>
+              <div className="sz-brand-en">SANAD PRO CAPITAL PROJECTS</div>
+              <div className="sz-brand-meta">شركة مساهمة مصرية · سجل تجاري رقم 11604</div>
+            </div>
+          </div>
+          <div className="sz-header-meta">
+            <div className="sz-header-title">{title}</div>
+            <div>رقم المعاملة: <strong><V k="transaction_no" values={values} highlight={highlight} /></strong></div>
+            <div>تاريخ العقد: <V k="contract_date" values={values} highlight={highlight} /></div>
+          </div>
+        </div>
+        <div className="sz-rule"><span /></div>
+      </td></tr>
+    </thead>
+  );
+
+  const footer = (initials: boolean) => (
+    <tfoot>
+      <tr><td>
+        <div className="sz-footer">
+          {initials ? <div className="sz-initial">توقيع الشركة <span /></div> : <div />}
+          <div className="sz-footer-center">
+            <div>نسخة خاصة بأطراف العقد ولا يجوز نسخها أو تداولها</div>
+            <div className="sz-footer-addr">مشروع سند زايد · مدينة الشيخ زايد · جمهورية مصر العربية</div>
+          </div>
+          {initials ? <div className="sz-initial">توقيع الممول <span /></div> : <div />}
+        </div>
+      </td></tr>
+    </tfoot>
+  );
+
+  const renderBlock = (b: Block, i: number) => {
+    if (b.type === "heading") return <h2 key={i} className="sz-h2"><Rich text={b.text} values={values} highlight={highlight} /></h2>;
+    if (b.type === "paragraph") return <p key={i} className="sz-p"><Rich text={b.text} values={values} highlight={highlight} /></p>;
+    if (b.type === "installments") {
+      const rows = parseSchedule(values.installments ?? "");
+      const total = rows.reduce((sum, r) => sum + (parseAmount(r.amount) || 0), 0);
+      if (!rows.length) {
+        return highlight ? <p key={i} className="sz-p"><span className="sz-var-missing">{PLACEHOLDER} جدول الأقساط</span></p> : null;
+      }
+      return (
+        <table key={i} className="sz-data sz-installments">
+          <thead><tr><th style={{ width: "10%" }}>م</th><th style={{ width: "24%" }}>تاريخ الاستحقاق</th><th style={{ width: "22%" }}>المبلغ (ج.م)</th><th>المبلغ بالحروف</th></tr></thead>
+          <tbody>
+            {rows.map((r, n) => {
+              const amt = parseAmount(r.amount);
+              return (
+                <tr key={n}>
+                  <td className="sz-num">{n + 1}</td>
+                  <td className="sz-num">{r.date || (highlight ? <span className="sz-var-missing">{PLACEHOLDER}</span> : "")}</td>
+                  <td className="sz-num"><strong>{Number.isFinite(amt) ? formatNumber(amt) : r.amount}</strong></td>
+                  <td>{Number.isFinite(amt) && amt > 0 ? amountInWords(amt) : ""}</td>
+                </tr>
+              );
+            })}
+            <tr className="sz-total">
+              <td colSpan={2}>الإجمالي</td>
+              <td className="sz-num">{formatNumber(total)}</td>
+              <td>{total > 0 ? amountInWords(total) : ""}</td>
+            </tr>
+          </tbody>
+        </table>
+      );
+    }
+    if (b.type === "table") {
+      return (
+        <table key={i} className="sz-data">
+          <thead><tr><th>البيان</th><th>القيمة</th></tr></thead>
+          <tbody>
+            {b.rows.map(([label, value], r) => (
+              <tr key={r}>
+                <td className="sz-data-label"><Rich text={label} values={values} highlight={highlight} /></td>
+                <td><Rich text={value} values={values} highlight={highlight} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      );
+    }
+    return (
+      <div key={i} className="sz-signatures">
+        {[
+          { party: "الطرف الأول — الشركة", rows: [["الاسم", "شركة سند برو كابيتال للمشروعات"], ["يمثلها", "{{company_rep_name}}"], ["الصفة", "{{company_rep_title}}"], ["البريد الإلكتروني", "{{company_email}}"]] },
+          { party: "الطرف الثاني — الممول", rows: [["الاسم", "{{investor_name}}"], ["الرقم القومي", "{{investor_national_id}}"], ["الهاتف", "{{investor_phone}}"], ["البريد الإلكتروني", "{{investor_email}}"]] },
+        ].map(p => (
+          <div key={p.party} className="sz-sig">
+            <div className="sz-sig-head">{p.party}</div>
+            {p.rows.map(([l, v]) => (
+              <Fragment key={l}>
+                <div className="sz-sig-row"><label>{l}:</label><span><Rich text={v} values={values} highlight={highlight} /></span></div>
+              </Fragment>
+            ))}
+            <div className="sz-sig-row sz-sig-line"><label>التوقيع:</label><span /></div>
+            {p.party.includes("الشركة") && <div className="sz-stamp">الختم</div>}
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className={`sz-paper ${naskh.className}`} dir="rtl">
-      <table className="sz-doc">
-        <thead>
-          <tr><td>
-            <div className="sz-header">
-              <div className="sz-brand">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/images/short logo.png" alt="" className="sz-logo" />
-                <div>
-                  <div className="sz-brand-ar">سند برو كابيتال للمشروعات</div>
-                  <div className="sz-brand-en">SANAD PRO CAPITAL PROJECTS</div>
-                  <div className="sz-brand-meta">شركة مساهمة مصرية · سجل تجاري رقم 11604</div>
-                </div>
-              </div>
-              <div className="sz-header-meta">
-                <div className="sz-header-title">{title}</div>
-                <div>رقم المعاملة: <strong><V k="transaction_no" values={values} highlight={highlight} /></strong></div>
-                <div>تاريخ العقد: <V k="contract_date" values={values} highlight={highlight} /></div>
-              </div>
-            </div>
-            <div className="sz-rule"><span /></div>
-          </td></tr>
-        </thead>
-
-        <tfoot>
-          <tr><td>
-            <div className="sz-footer">
-              <div className="sz-initial">توقيع الشركة <span /></div>
-              <div className="sz-footer-center">
-                <div>سري — نسخة خاصة بأطراف العقد ولا يجوز نسخها أو تداولها</div>
-                <div className="sz-footer-addr">مشروع سند زايد · مدينة الشيخ زايد · جمهورية مصر العربية</div>
-              </div>
-              <div className="sz-initial">توقيع الممول <span /></div>
-            </div>
-          </td></tr>
-        </tfoot>
-
+      <table className={`sz-doc${lastBlocks.length ? " sz-doc-main" : ""}`}>
+        {header}
+        {footer(true)}
         <tbody>
           <tr><td>
             <div className="sz-titleblock">
@@ -94,78 +178,21 @@ export default function ContractPaper({ title, subtitle, body, values, highlight
                 <div><label>مبلغ التمويل</label><b><V k="financing_amount" values={values} highlight={highlight} /> ج.م</b></div>
               </div>
             </div>
-
-            {blocks.map((b, i) => {
-              if (b.type === "heading") return <h2 key={i} className="sz-h2"><Rich text={b.text} values={values} highlight={highlight} /></h2>;
-              if (b.type === "paragraph") return <p key={i} className="sz-p"><Rich text={b.text} values={values} highlight={highlight} /></p>;
-              if (b.type === "installments") {
-                const rows = parseSchedule(values.installments ?? "");
-                const total = rows.reduce((sum, r) => sum + (parseAmount(r.amount) || 0), 0);
-                if (!rows.length) {
-                  return highlight ? <p key={i} className="sz-p"><span className="sz-var-missing">{PLACEHOLDER} جدول الأقساط</span></p> : null;
-                }
-                return (
-                  <table key={i} className="sz-data sz-installments">
-                    <thead><tr><th style={{ width: "10%" }}>م</th><th style={{ width: "24%" }}>تاريخ الاستحقاق</th><th style={{ width: "22%" }}>المبلغ (ج.م)</th><th>المبلغ بالحروف</th></tr></thead>
-                    <tbody>
-                      {rows.map((r, n) => {
-                        const amt = parseAmount(r.amount);
-                        return (
-                          <tr key={n}>
-                            <td className="sz-num">{n + 1}</td>
-                            <td className="sz-num">{r.date || (highlight ? <span className="sz-var-missing">{PLACEHOLDER}</span> : "")}</td>
-                            <td className="sz-num"><strong>{Number.isFinite(amt) ? formatNumber(amt) : r.amount}</strong></td>
-                            <td>{Number.isFinite(amt) && amt > 0 ? amountInWords(amt) : ""}</td>
-                          </tr>
-                        );
-                      })}
-                      <tr className="sz-total">
-                        <td colSpan={2}>الإجمالي</td>
-                        <td className="sz-num">{formatNumber(total)}</td>
-                        <td>{total > 0 ? amountInWords(total) : ""}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                );
-              }
-              if (b.type === "table") {
-                return (
-                  <table key={i} className="sz-data">
-                    <thead><tr><th>البيان</th><th>القيمة</th></tr></thead>
-                    <tbody>
-                      {b.rows.map(([label, value], r) => (
-                        <tr key={r}>
-                          <td className="sz-data-label"><Rich text={label} values={values} highlight={highlight} /></td>
-                          <td><Rich text={value} values={values} highlight={highlight} /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                );
-              }
-              return (
-                <div key={i} className="sz-signatures">
-                  {[
-                    { party: "الطرف الأول — الشركة", rows: [["الاسم", "شركة سند برو كابيتال للمشروعات"], ["يمثلها", "{{company_rep_name}}"], ["الصفة", "{{company_rep_title}}"]] },
-                    { party: "الطرف الثاني — الممول", rows: [["الاسم", "{{investor_name}}"], ["الرقم القومي", "{{investor_national_id}}"], ["الهاتف", "{{investor_phone}}"]] },
-                  ].map(p => (
-                    <div key={p.party} className="sz-sig">
-                      <div className="sz-sig-head">{p.party}</div>
-                      {p.rows.map(([l, v]) => (
-                        <Fragment key={l}>
-                          <div className="sz-sig-row"><label>{l}:</label><span><Rich text={v} values={values} highlight={highlight} /></span></div>
-                        </Fragment>
-                      ))}
-                      <div className="sz-sig-row sz-sig-line"><label>التوقيع:</label><span /></div>
-                      {p.party.includes("الشركة") && <div className="sz-stamp">الختم</div>}
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
+            {blocks.slice(0, split).map(renderBlock)}
           </td></tr>
         </tbody>
       </table>
+      {lastBlocks.length > 0 && (
+        <div className="sz-last-page">
+          <table className="sz-doc sz-doc-last">
+            {header}
+            {footer(false)}
+            <tbody>
+              <tr><td>{lastBlocks.map(renderBlock)}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      )}
       <style>{PAPER_CSS}</style>
     </div>
   );
@@ -177,6 +204,11 @@ const PAPER_CSS = `
   -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 .sz-doc { width:100%; border-collapse:collapse; }
 .sz-doc > thead > tr > td, .sz-doc > tfoot > tr > td, .sz-doc > tbody > tr > td { padding:0; }
+.sz-last-page { break-before:page; page-break-before:always; }
+@media screen {
+  /* On screen the two tables read as one document: one header, one footer. */
+  .sz-doc-main > tfoot, .sz-doc-last > thead { display:none; }
+}
 
 .sz-header { display:flex; justify-content:space-between; align-items:center; gap:12px; padding-bottom:6px; }
 .sz-brand { display:flex; align-items:center; gap:10px; }
