@@ -9,7 +9,7 @@ import {
 } from "@mui/material";
 import {
   AddOutlined, AccountBalanceOutlined, CloseOutlined,
-  TrendingUpOutlined, TrendingDownOutlined, AccountBalanceWalletOutlined
+  TrendingUpOutlined, TrendingDownOutlined, AccountBalanceWalletOutlined, EditOutlined
 } from "@mui/icons-material";
 import { sanitizeDecimalInput } from "@/lib/sanad-zayed/decimalInput";
 
@@ -45,6 +45,18 @@ interface Contract {
   stage?: { name: string };
 }
 
+const ACCOUNT_TYPE_LABEL: Record<string, string> = {
+  SAFE_CASH: "خزينة نقدية",
+  PETTY_CASH: "عهدة نقدية",
+  BANK: "حساب بنكي",
+  DEFERRED: "مبالغ مؤجلة / أمانة",
+};
+// Types whose money sits with a named person
+const HOLDER_TYPES = ["PETTY_CASH", "DEFERRED"];
+
+const accountLabel = (a: Account) =>
+  `${a.account_name}${a.custodian_name ? ` (${a.custodian_name})` : ""}`;
+
 const REASON_LABEL: Record<string, string> = {
   CONTRACT_PAYMENT: "دفعة عقد",
   PERSONAL_SERVICE_DEDUCTION: "خصم شخصي",
@@ -69,7 +81,8 @@ export default function TreasuryPage() {
   const [txOpen, setTxOpen] = useState(false);
   
   // Forms
-  const [accForm, setAccForm] = useState({ name: "", type: "SAFE_CASH" });
+  const emptyAccForm = { id: "", name: "", type: "SAFE_CASH", custodian_name: "" };
+  const [accForm, setAccForm] = useState(emptyAccForm);
   const [txForm, setTxForm] = useState({
     type: "DEPOSIT",
     amount: "",
@@ -115,22 +128,34 @@ export default function TreasuryPage() {
       .catch(() => setInvestorContracts([]));
   }, [txForm.investor_id]);
 
-  const handleAddAccount = async () => {
+  const openNewAccount = () => { setAccForm(emptyAccForm); setAccOpen(true); };
+  const openEditAccount = (a: Account) => {
+    setAccForm({ id: a.id, name: a.account_name, type: a.account_type, custodian_name: a.custodian_name || "" });
+    setAccOpen(true);
+  };
+
+  const handleSaveAccount = async () => {
     if (!accForm.name.trim()) return showFlash("error", "اسم الحساب مطلوب");
+    const isEdit = !!accForm.id;
     setSubmitting(true);
     try {
       const res = await fetch("/api/sanad-zayed/treasury/accounts", {
-        method: "POST",
+        method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ account_name: accForm.name, account_type: accForm.type })
+        body: JSON.stringify({
+          id: accForm.id || undefined,
+          account_name: accForm.name,
+          account_type: accForm.type,
+          custodian_name: HOLDER_TYPES.includes(accForm.type) ? accForm.custodian_name : "",
+        })
       });
       if (!res.ok) throw new Error("حدث خطأ");
       setAccOpen(false);
-      setAccForm({ name: "", type: "SAFE_CASH" });
-      showFlash("success", "تم إنشاء الخزينة/الحساب بنجاح");
+      setAccForm(emptyAccForm);
+      showFlash("success", isEdit ? "تم تعديل الحساب بنجاح" : "تم إنشاء الخزينة/الحساب بنجاح");
       fetchData();
     } catch {
-      showFlash("error", "تعذر إنشاء الحساب");
+      showFlash("error", isEdit ? "تعذر تعديل الحساب" : "تعذر إنشاء الحساب");
     } finally {
       setSubmitting(false);
     }
@@ -197,7 +222,7 @@ export default function TreasuryPage() {
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <Button
-            onClick={() => setAccOpen(true)}
+            onClick={openNewAccount}
             sx={{ fontFamily: "var(--font-cairo)", color: "#154278", background: "rgba(21,66,120,0.08)", borderRadius: "10px", fontWeight: 700 }}
           >
             + خزينة/حساب جديد
@@ -237,10 +262,13 @@ export default function TreasuryPage() {
               <div key={acc.id} style={{ background: "#fff", borderRadius: 16, padding: 20, border: "1px solid #f0ede6", boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#6b7280", fontSize: 13, marginBottom: 8 }}>
                   <AccountBalanceWalletOutlined sx={{ fontSize: 18 }} />
-                  {acc.account_type === "BANK" ? "حساب بنكي" : acc.account_type === "PETTY_CASH" ? "عهدة نقدية" : "خزينة نقدية"}
+                  {ACCOUNT_TYPE_LABEL[acc.account_type] ?? "خزينة نقدية"}
+                  <IconButton size="small" onClick={() => openEditAccount(acc)} title="تعديل الحساب" sx={{ marginInlineStart: "auto", color: "#9ca3af" }}>
+                    <EditOutlined sx={{ fontSize: 16 }} />
+                  </IconButton>
                 </div>
                 <div style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 2 }}>
-                  {acc.account_name} {acc.custodian_name ? `(${acc.custodian_name})` : ""}
+                  {accountLabel(acc)}
                 </div>
                 <div style={{ fontSize: 18, fontWeight: 900, color: "#16a34a", direction: "ltr", textAlign: "right" }}>{Number(acc.current_balance).toLocaleString()}</div>
               </div>
@@ -333,33 +361,34 @@ export default function TreasuryPage() {
       {/* ── Add Account Dialog ── */}
       <Dialog open={accOpen} onClose={() => setAccOpen(false)} PaperProps={{ sx: { borderRadius: "20px", direction: "rtl", width: 400 } }}>
         <DialogTitle sx={{ fontFamily: "var(--font-cairo)", fontWeight: 800 }}>
-          إنشاء خزينة / عهدة / حساب بنكي
+          {accForm.id ? "تعديل الحساب" : "إنشاء خزينة / عهدة / حساب بنكي"}
           <IconButton onClick={() => setAccOpen(false)} sx={{ position: "absolute", left: 12, top: 12 }}><CloseOutlined /></IconButton>
         </DialogTitle>
         <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, pt: "10px !important" }}>
-          <TextField label="اسم الحساب (مثال: خزينة الإدارة، عهدة فلان)" value={accForm.name} onChange={e => setAccForm({...accForm, name: e.target.value})} fullWidth sx={inputSx} />
+          <TextField label="اسم الحساب (مثال: خزينة الإدارة، مبالغ مؤجلة عند هشام)" value={accForm.name} onChange={e => setAccForm({...accForm, name: e.target.value})} fullWidth sx={inputSx} />
           <FormControl fullWidth sx={inputSx}>
             <InputLabel>النوع</InputLabel>
             <Select value={accForm.type} label="النوع" onChange={e => setAccForm({...accForm, type: e.target.value})}>
               <MenuItem value="SAFE_CASH">خزينة نقدية (Safe)</MenuItem>
               <MenuItem value="PETTY_CASH">عهدة نقدية (Petty Cash)</MenuItem>
               <MenuItem value="BANK">حساب بنكي (Bank)</MenuItem>
+              <MenuItem value="DEFERRED">مبالغ مؤجلة / أمانة لدى شخص</MenuItem>
             </Select>
           </FormControl>
-          
-          {accForm.type === "PETTY_CASH" && (
-            <TextField 
-              label="اسم صاحب العهدة (اختياري)" 
-              value={(accForm as any).custodian_name || ""} 
-              onChange={e => setAccForm({...accForm, custodian_name: e.target.value} as any)} 
-              fullWidth 
-              sx={inputSx} 
+
+          {HOLDER_TYPES.includes(accForm.type) && (
+            <TextField
+              label={accForm.type === "DEFERRED" ? "المبالغ لدى (اسم الشخص - اختياري)" : "اسم صاحب العهدة (اختياري)"}
+              value={accForm.custodian_name}
+              onChange={e => setAccForm({...accForm, custodian_name: e.target.value})}
+              fullWidth
+              sx={inputSx}
             />
           )}
         </DialogContent>
         <DialogActions sx={{ p: 3, pt: 1 }}>
-          <Button onClick={handleAddAccount} variant="contained" disabled={submitting} sx={{ fontFamily: "var(--font-cairo)", background: "#154278", borderRadius: "10px", width: "100%", py: 1.2 }}>
-            {submitting ? "جاري الحفظ..." : "إنشاء"}
+          <Button onClick={handleSaveAccount} variant="contained" disabled={submitting} sx={{ fontFamily: "var(--font-cairo)", background: "#154278", borderRadius: "10px", width: "100%", py: 1.2 }}>
+            {submitting ? "جاري الحفظ..." : accForm.id ? "حفظ التعديل" : "إنشاء"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -394,7 +423,7 @@ export default function TreasuryPage() {
             <Select value={txForm.account_id} label={txForm.type === "TRANSFER" ? "تحويل من (الخزينة/العهدة)" : "الخزينة / الحساب (إلى أين ستدخل أو تخرج الأموال؟)"} onChange={e => setTxForm({...txForm, account_id: e.target.value})}>
               {accounts.map(a => (
                 <MenuItem key={a.id} value={a.id}>
-                  {a.account_name} {a.account_type === "PETTY_CASH" && a.custodian_name ? `(${a.custodian_name})` : ""}
+                  {accountLabel(a)}
                 </MenuItem>
               ))}
             </Select>
@@ -406,7 +435,7 @@ export default function TreasuryPage() {
               <Select value={txForm.to_account_id} label="تحويل إلى (الخزينة/العهدة)" onChange={e => setTxForm({...txForm, to_account_id: e.target.value})}>
                 {accounts.map(a => (
                   <MenuItem key={a.id} value={a.id} disabled={a.id === txForm.account_id}>
-                    {a.account_name} {a.account_type === "PETTY_CASH" && a.custodian_name ? `(${a.custodian_name})` : ""}
+                    {accountLabel(a)}
                   </MenuItem>
                 ))}
               </Select>

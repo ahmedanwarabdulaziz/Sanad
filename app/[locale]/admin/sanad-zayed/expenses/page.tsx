@@ -561,7 +561,7 @@ export default function ExpensesPage() {
               {accounts.map(a => (
                 <MenuItem key={a.id} value={a.id}>
                   {a.account_name}
-                  {a.account_type === "PETTY_CASH" && a.custodian_name ? ` (${a.custodian_name})` : ""}
+                  {a.custodian_name ? ` (${a.custodian_name})` : ""}
                   {" "}— رصيد: {a.current_balance}
                 </MenuItem>
               ))}
