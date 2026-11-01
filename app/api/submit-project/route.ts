@@ -12,7 +12,7 @@ import {
   validateSubmission,
 } from "@/lib/submitProject";
 
-const TEAM_RECIPIENTS = [process.env.SMTP_USER!, "ahmedanwarabdulaziz@gmail.com"];
+const TEAM_RECIPIENTS = [process.env.MAIL_FROM!, "ahmedanwarabdulaziz@gmail.com"];
 const LOGO_URL = "https://www.sanadproprojects.com/images/long%20logo.png";
 // Bots post the form as soon as it loads; a person can't get through all steps this fast.
 const MIN_FILL_MS = 5000;
@@ -205,7 +205,7 @@ export async function POST(request: Request) {
     const reference = createReference();
     const requestLabel =
       REQUEST_TYPES.find((type) => type.value === values.requestType)?.label ?? values.requestType;
-    const from = `"سند برو كابيتال" <${process.env.SMTP_USER}>`;
+    const from = `"سند برو كابيتال" <${process.env.MAIL_FROM}>`;
 
     // This email is the only record of the submission: if it fails, the applicant must retry.
     await transporter.sendMail({
@@ -222,7 +222,7 @@ export async function POST(request: Request) {
       await transporter.sendMail({
         from,
         to: values.email,
-        replyTo: process.env.SMTP_USER,
+        replyTo: process.env.MAIL_FROM,
         subject: `استلمنا طلبك (${reference}) - سند برو كابيتال`,
         html: confirmationEmailHtml(values, requestLabel, reference),
       });
