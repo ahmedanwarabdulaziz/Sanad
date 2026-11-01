@@ -205,7 +205,7 @@ export async function POST(request: Request) {
     const reference = createReference();
     const requestLabel =
       REQUEST_TYPES.find((type) => type.value === values.requestType)?.label ?? values.requestType;
-    const from = `"سند برو كابيتال" <${process.env.MAIL_FROM}>`;
+    const from = `"سند للمشروعات" <${process.env.MAIL_FROM}>`;
 
     // This email is the only record of the submission: if it fails, the applicant must retry.
     await transporter.sendMail({

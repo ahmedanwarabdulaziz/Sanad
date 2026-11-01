@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
         // API Email Template
         const mailOptions = {
-            from: `"Sanad Website" <${process.env.MAIL_FROM}>`,
+            from: `"سند للمشروعات" <${process.env.MAIL_FROM}>`,
             to: process.env.MAIL_FROM, // Send to self
             replyTo: email,
             subject: `New Contact Request: ${requestType} - ${name}`,
