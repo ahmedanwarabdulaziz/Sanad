@@ -6,6 +6,7 @@ import MenuIcon from "@mui/icons-material/Menu";
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/navigation";
+import ContactModal from "./ContactModal";
 
 export default function Header() {
     const t = useTranslations("Navigation");
@@ -18,6 +19,12 @@ export default function Header() {
     const isRtl = locale === 'ar';
     const [mobileOpen, setMobileOpen] = useState(false);
     const [projectsAnchor, setProjectsAnchor] = useState<null | HTMLElement>(null);
+    const [contactOpen, setContactOpen] = useState(false);
+
+    const handleContactClick = (event: React.MouseEvent) => {
+        event.preventDefault();
+        setContactOpen(true);
+    };
 
     const handleDrawerToggle = () => {
         setMobileOpen(!mobileOpen);
@@ -88,7 +95,7 @@ export default function Header() {
 
                 {navItems.slice(1).map((item) => (
                     <ListItem key={item.label} disablePadding>
-                        <Link href={item.href} passHref style={{ width: '100%', textDecoration: 'none', color: 'inherit' }}>
+                        <Link href={item.href} passHref onClick={item.href === "#" ? handleContactClick : undefined} style={{ width: '100%', textDecoration: 'none', color: 'inherit' }}>
                             <ListItemText
                                 primary={item.label}
                                 sx={{
@@ -202,6 +209,7 @@ export default function Header() {
                                 <Link
                                     key={item.label}
                                     href={item.href}
+                                    onClick={item.href === "#" ? handleContactClick : undefined}
                                     style={{
                                         textDecoration: 'none',
                                         color: '#154278',
@@ -233,6 +241,7 @@ export default function Header() {
             >
                 {drawer}
             </Drawer>
+            <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
         </AppBar>
     );
 }
