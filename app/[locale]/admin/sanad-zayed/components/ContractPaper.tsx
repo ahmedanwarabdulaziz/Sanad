@@ -8,6 +8,8 @@ const naskh = Noto_Naskh_Arabic({ subsets: ["arabic"], weight: ["400", "500", "6
 
 const NAVY = "#154278";
 const GOLD = "#b08d57";
+// Only the header and footer print in color; the contract body is black on white.
+const INK = "#000";
 const LABELS = Object.fromEntries(TEMPLATE_VARS.map(v => [v.key, v.label]));
 
 interface Props {
@@ -202,7 +204,7 @@ export default function ContractPaper({ title, subtitle, body, values, highlight
 }
 
 const PAPER_CSS = `
-.sz-paper { background:#fff; color:#1f2937; width:210mm; min-height:297mm; padding:12mm 16mm 14mm; box-sizing:border-box;
+.sz-paper { background:#fff; color:${INK}; width:210mm; min-height:297mm; padding:12mm 16mm 14mm; box-sizing:border-box;
   box-shadow:0 10px 40px rgba(15,23,42,.12), 0 0 0 1px rgba(15,23,42,.04); font-size:11.5pt; line-height:1.95;
   -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 .sz-doc { width:100%; border-collapse:collapse; }
@@ -233,43 +235,42 @@ const PAPER_CSS = `
 
 .sz-titleblock { text-align:center; margin:2mm 0 8mm; break-inside:avoid; }
 .sz-ornament { display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:4mm; }
-.sz-ornament span { width:22mm; height:1px; background:${GOLD}; }
-.sz-ornament i { width:7px; height:7px; background:${GOLD}; transform:rotate(45deg); display:block; }
-.sz-titleblock h1 { font-family:var(--font-cairo),Cairo,sans-serif; color:${NAVY}; font-size:19pt; font-weight:800; margin:0; line-height:1.5; }
-.sz-subtitle { color:${GOLD}; font-weight:700; font-size:12pt; margin-top:1mm; }
-.sz-meta-grid { display:grid; grid-template-columns:repeat(4,1fr); margin-top:6mm; border:1px solid #e5e7eb; border-radius:4px; overflow:hidden; }
-.sz-meta-grid > div { padding:2.5mm 2mm; border-inline-start:1px solid #e5e7eb; background:#f8fafc; }
+.sz-ornament span { width:22mm; height:1px; background:${INK}; }
+.sz-ornament i { width:7px; height:7px; background:${INK}; transform:rotate(45deg); display:block; }
+.sz-titleblock h1 { font-family:var(--font-cairo),Cairo,sans-serif; color:${INK}; font-size:19pt; font-weight:800; margin:0; line-height:1.5; }
+.sz-subtitle { color:${INK}; font-weight:700; font-size:12pt; margin-top:1mm; }
+.sz-meta-grid { display:grid; grid-template-columns:repeat(4,1fr); margin-top:6mm; border:1px solid ${INK}; border-radius:4px; overflow:hidden; }
+.sz-meta-grid > div { padding:2.5mm 2mm; border-inline-start:1px solid ${INK}; background:#fff; }
 .sz-meta-grid > div:first-child { border-inline-start:none; }
-.sz-meta-grid label { display:block; font-size:7.5pt; color:#6b7280; line-height:1.5; }
-.sz-meta-grid b { display:block; font-size:10pt; color:${NAVY}; line-height:1.6; }
+.sz-meta-grid label { display:block; font-size:7.5pt; color:${INK}; line-height:1.5; }
+.sz-meta-grid b { display:block; font-size:10pt; color:${INK}; line-height:1.6; }
 
-.sz-h2 { font-family:var(--font-cairo),Cairo,sans-serif; color:${NAVY}; font-size:12.5pt; font-weight:800; margin:6mm 0 2.5mm; padding:1.2mm 3mm;
-  border-inline-start:3px solid ${GOLD}; background:linear-gradient(to left, rgba(21,66,120,.06), rgba(21,66,120,0)); break-after:avoid; page-break-after:avoid; line-height:1.6; }
+.sz-h2 { font-family:var(--font-cairo),Cairo,sans-serif; color:${INK}; font-size:12.5pt; font-weight:800; margin:6mm 0 2.5mm; padding:1.2mm 3mm;
+  border-inline-start:3px solid ${INK}; background:#fff; break-after:avoid; page-break-after:avoid; line-height:1.6; }
 .sz-p { margin:0 0 2.6mm; text-align:justify; orphans:3; widows:3; }
 
 .sz-data { width:100%; border-collapse:collapse; margin:3mm 0 4mm; font-size:10pt; line-height:1.7; }
-.sz-data th { background:${NAVY}; color:#fff; font-family:var(--font-cairo),Cairo,sans-serif; font-weight:700; padding:2mm 3mm; text-align:right; font-size:9.5pt; }
-.sz-data td { border:1px solid #e5e7eb; padding:1.8mm 3mm; vertical-align:top; }
+.sz-data th { background:#fff; color:${INK}; border:1px solid ${INK}; border-bottom-width:2px; font-family:var(--font-cairo),Cairo,sans-serif; font-weight:800; padding:2mm 3mm; text-align:right; font-size:9.5pt; }
+.sz-data td { border:1px solid ${INK}; padding:1.8mm 3mm; vertical-align:top; }
 .sz-data tr { break-inside:avoid; page-break-inside:avoid; }
-.sz-data tbody tr:nth-child(even) td { background:#fafaf7; }
-.sz-data-label { width:38%; font-weight:700; color:${NAVY}; background:#f3f6fa !important; }
+.sz-data-label { width:38%; font-weight:700; color:${INK}; }
 .sz-installments td { font-size:9.5pt; }
 .sz-num { text-align:center; white-space:nowrap; }
 .sz-installments th { text-align:center; }
-.sz-total td { background:#f3f6fa !important; font-weight:800; color:${NAVY}; }
+.sz-total td { border-top-width:2px; font-weight:800; color:${INK}; }
 .sz-total td:first-child { text-align:center; }
 
 .sz-signatures { display:grid; grid-template-columns:1fr 1fr; gap:8mm; margin-top:8mm; break-inside:avoid; page-break-inside:avoid; }
-.sz-sig { border:1px solid #d1d5db; border-radius:4px; padding:4mm; position:relative; }
-.sz-sig-head { font-family:var(--font-cairo),Cairo,sans-serif; font-weight:800; color:${NAVY}; border-bottom:1px solid ${GOLD}; padding-bottom:1.5mm; margin-bottom:2mm; }
+.sz-sig { border:1px solid ${INK}; border-radius:4px; padding:4mm; position:relative; }
+.sz-sig-head { font-family:var(--font-cairo),Cairo,sans-serif; font-weight:800; color:${INK}; border-bottom:1px solid ${INK}; padding-bottom:1.5mm; margin-bottom:2mm; }
 .sz-sig-row { display:flex; gap:6px; font-size:10pt; line-height:2; }
-.sz-sig-row label { color:#6b7280; min-width:22mm; }
-.sz-sig-line span { flex:1; border-bottom:1px solid #9ca3af; margin-bottom:6px; min-height:12mm; }
-.sz-stamp { position:absolute; left:4mm; bottom:4mm; width:22mm; height:22mm; border:1px dashed #cbd5e1; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:8pt; color:#9ca3af; }
+.sz-sig-row label { color:${INK}; min-width:22mm; }
+.sz-sig-line span { flex:1; border-bottom:1px solid ${INK}; margin-bottom:6px; min-height:12mm; }
+.sz-stamp { position:absolute; left:4mm; bottom:4mm; width:22mm; height:22mm; border:1px dashed ${INK}; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:8pt; color:${INK}; }
 
 .sz-var-filled { background:rgba(21,66,120,.08); border-radius:3px; padding:0 2px; }
 .sz-var-missing { background:#fef3c7; color:#92400e; border:1px dashed #f59e0b; border-radius:3px; padding:0 4px; font-size:.85em; font-family:var(--font-cairo),Cairo,sans-serif; }
-.sz-var-blank { border-bottom:1px dotted #6b7280; }
+.sz-var-blank { border-bottom:1px dotted ${INK}; }
 
 @media print {
   .sz-paper { width:auto; min-height:0; padding:0; box-shadow:none; }
