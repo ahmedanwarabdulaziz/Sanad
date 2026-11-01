@@ -60,6 +60,7 @@ export default function AboutWhySanad({ data }: AboutWhySanadProps) {
                     <Box
                         sx={{
                             display: 'flex',
+                            flexWrap: { xs: 'wrap', md: 'nowrap' },
                             gap: 4,
                             justifyContent: 'center',
                             alignItems: 'stretch'

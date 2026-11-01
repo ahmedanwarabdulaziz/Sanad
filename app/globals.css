@@ -42,6 +42,11 @@ body {
   text-align: right !important;
 }
 
+/* Slide-in animations start offset sideways; don't let that widen the page on phones */
+main {
+  overflow-x: clip;
+}
+
 /* N-admin: force RTL alignment for all form fields, labels and text */
 .n-admin-rtl .MuiTypography-root,
 .n-admin-rtl .MuiButton-root,
