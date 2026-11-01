@@ -27,34 +27,16 @@ export async function POST(request: Request) {
         }
 
         // Configure Nodemailer Transporter
-        console.log('Configuring transporter with:', {
-            host: process.env.SMTP_HOST,
-            port: process.env.SMTP_PORT,
-            user: process.env.SMTP_USER,
-            secure: true
-        });
-
+        const port = Number(process.env.SMTP_PORT);
         const transporter = nodemailer.createTransport({
-            host: 'smtppro.zoho.com',
-            port: 465,
-            secure: true, // true for 465, false for other ports
+            host: process.env.SMTP_HOST,
+            port,
+            secure: port === 465, // true for 465, false for other ports
             auth: {
-                user: 'info@sanadproprojects.com',
-                pass: 'Anw@r#2020',
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS,
             },
         });
-
-        // Verify connection configuration
-        try {
-            await transporter.verify();
-            console.log('SMTP Connection established');
-        } catch (verifyError) {
-            console.error('SMTP Connection Failed:', verifyError);
-            return NextResponse.json(
-                { error: 'SMTP Connection Failed', details: verifyError },
-                { status: 500 }
-            );
-        }
 
         // Prepare attachments
         const attachments = await Promise.all(
@@ -109,7 +91,7 @@ export async function POST(request: Request) {
     } catch (error) {
         console.error('Error sending email:', error);
         return NextResponse.json(
-            { error: 'Failed to send email', details: error instanceof Error ? error.message : String(error) },
+            { error: 'Failed to send email' },
             { status: 500 }
         );
     }
