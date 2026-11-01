@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Box, Container, Link, Typography, Stack, Grid } from "@mui/material";
 import { useTranslations } from "next-intl";
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -8,10 +9,12 @@ import EmailIcon from '@mui/icons-material/Email';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import InstagramIcon from '@mui/icons-material/Instagram';
+import ContactModal from "./ContactModal";
 
 export default function Footer() {
     const t = useTranslations("Footer");
     const year = new Date().getFullYear();
+    const [contactOpen, setContactOpen] = useState(false);
 
     return (
         <Box component="footer" sx={{ bgcolor: "#154278", color: "white", py: 8, borderTop: "4px solid #C29B40" }}>
@@ -96,7 +99,15 @@ export default function Footer() {
                             <Link href="/projects" color="inherit" underline="none" sx={{ opacity: 0.7, "&:hover": { color: "#C29B40", pl: 1, transition: "all 0.3s" } }}>
                                 {t("links.projects")}
                             </Link>
-                            <Link href="/contact" color="inherit" underline="none" sx={{ opacity: 0.7, "&:hover": { color: "#C29B40", pl: 1, transition: "all 0.3s" } }}>
+                            <Link
+                                href="#"
+                                onClick={(event) => {
+                                    event.preventDefault();
+                                    setContactOpen(true);
+                                }}
+                                color="inherit"
+                                underline="none"
+                                sx={{ opacity: 0.7, "&:hover": { color: "#C29B40", pl: 1, transition: "all 0.3s" } }}>
                                 {t("links.contact")}
                             </Link>
                         </Stack>
@@ -107,6 +118,7 @@ export default function Footer() {
                     {t("copyright", { year })}
                 </Box>
             </Container>
+            <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
         </Box>
     );
 }
