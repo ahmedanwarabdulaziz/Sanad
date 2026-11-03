@@ -1,6 +1,14 @@
-import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
-import nodemailer from "nodemailer";
+import {
+  createMailer,
+  createReference,
+  emailShell,
+  escapeHtml,
+  MAIL_FROM_HEADER,
+  storeSubmissionFiles,
+  submissionsDb,
+} from "@/lib/submissionStore";
+import { addBusinessDays, RESPONSE_BUSINESS_DAYS } from "@/lib/submissionWorkflow";
 import {
   ALLOWED_FILE_EXTENSIONS,
   EMPTY_SUBMISSION,
@@ -13,24 +21,8 @@ import {
 } from "@/lib/submitProject";
 
 const TEAM_RECIPIENTS = [process.env.MAIL_FROM!, "ahmedanwarabdulaziz@gmail.com"];
-const LOGO_URL = "https://www.sanadproprojects.com/images/long%20logo.png";
 // Bots post the form as soon as it loads; a person can't get through all steps this fast.
 const MIN_FILL_MS = 5000;
-
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-function createReference() {
-  const now = new Date();
-  const date = now.toISOString().slice(2, 10).replace(/-/g, "");
-  return `SP-${date}-${randomBytes(2).toString("hex").toUpperCase()}`;
-}
 
 function parseSubmission(raw: string): ProjectSubmission | null {
   try {
@@ -53,19 +45,6 @@ function parseSubmission(raw: string): ProjectSubmission | null {
   } catch {
     return null;
   }
-}
-
-function emailShell(body: string) {
-  return `
-    <div dir="rtl" style="background:#f4f5f7;padding:24px 12px;font-family:Tahoma,Arial,sans-serif;color:#1f2937;line-height:1.8;text-align:right;">
-      <div style="max-width:620px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
-        <div style="background:#154278;padding:18px 24px;text-align:center;">
-          <img src="${LOGO_URL}" alt="Sanad Pro Capital" height="56" style="height:56px;width:auto;" />
-        </div>
-        <div style="padding:24px;">${body}</div>
-      </div>
-    </div>
-  `;
 }
 
 function teamEmailHtml(values: ProjectSubmission, requestLabel: string, reference: string) {
@@ -141,7 +120,7 @@ function confirmationEmailHtml(values: ProjectSubmission, requestLabel: string, 
   return emailShell(`
     <h2 style="margin:0 0 12px;color:#154278;font-size:20px;">وصلنا طلبك، شكرًا لك</h2>
     <p style="margin:0 0 12px;">مرحبًا ${escapeHtml(values.fullName)}،</p>
-    <p style="margin:0 0 16px;">نشكرك على اهتمامك بالتواصل مع سند برو كابيتال للمشروعات. استلمنا طلبك بنجاح، وسيقوم فريقنا بمراجعة بيانات مشروعك، وسنتواصل معك عند الحاجة إلى مزيد من التفاصيل أو لتحديد الخطوة التالية.</p>
+    <p style="margin:0 0 16px;">نشكرك على اهتمامك بالتواصل مع سند برو كابيتال للمشروعات. استلمنا طلبك بنجاح، وسيقوم فريقنا بمراجعة بيانات مشروعك، وسنتواصل معك عبر البريد الإلكتروني خلال ${RESPONSE_BUSINESS_DAYS} أيام عمل لإبلاغك بنتيجة المراجعة والخطوة التالية.</p>
     <div style="background:#f8f9fa;border-radius:8px;padding:14px 16px;margin-bottom:16px;">
       <div style="font-size:13px;color:#6b7280;">نوع الطلب</div>
       <div style="font-weight:bold;color:#154278;margin-bottom:8px;">${escapeHtml(requestLabel)}</div>
@@ -163,7 +142,7 @@ export async function POST(request: Request) {
     const isBot =
       Boolean(formData.get("website")) || !startedAt || Date.now() - startedAt < MIN_FILL_MS;
     if (isBot) {
-      return NextResponse.json({ success: true, reference: createReference() }, { status: 200 });
+      return NextResponse.json({ success: true, reference: createReference("SP") }, { status: 200 });
     }
 
     const values = parseSubmission(String(formData.get("payload") ?? ""));
@@ -194,28 +173,61 @@ export async function POST(request: Request) {
       }))
     );
 
-    const port = Number(process.env.SMTP_PORT);
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port,
-      secure: port === 465,
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-    });
-
-    const reference = createReference();
+    const transporter = createMailer();
+    const reference = createReference("SP");
     const requestLabel =
       REQUEST_TYPES.find((type) => type.value === values.requestType)?.label ?? values.requestType;
-    const from = `"سند للمشروعات" <${process.env.MAIL_FROM}>`;
+    const from = MAIL_FROM_HEADER;
 
-    // This email is the only record of the submission: if it fails, the applicant must retry.
-    await transporter.sendMail({
-      from,
-      to: TEAM_RECIPIENTS,
-      replyTo: values.email,
-      subject: `طلب مشروع جديد (${reference}): ${values.projectName}`,
-      html: teamEmailHtml(values, requestLabel, reference),
-      attachments,
+    const storedFiles = await storeSubmissionFiles(
+      "project",
+      files.map((file, index) => ({
+        name: file.name,
+        type: file.type,
+        content: attachments[index].content,
+      }))
+    );
+    const { error: saveError } = await submissionsDb.from("project_submissions").insert({
+      reference,
+      next_action_due_at: addBusinessDays(new Date(), RESPONSE_BUSINESS_DAYS).toISOString(),
+      request_type: values.requestType,
+      project_name: values.projectName,
+      sector: values.sector,
+      location: values.location,
+      description: values.description,
+      advantage: values.advantage,
+      idea_stage: values.ideaStage,
+      founded_year: values.foundedYear,
+      annual_revenue: values.annualRevenue,
+      team_size: values.teamSize,
+      funding_range: values.fundingRange,
+      use_of_funds: values.useOfFunds,
+      support_types: values.supportTypes,
+      available_documents: values.availableDocuments,
+      documents_link: values.documentsLink,
+      full_name: values.fullName,
+      phone: values.phone,
+      email: values.email,
+      company: values.company,
+      job_title: values.jobTitle,
+      files: storedFiles,
     });
+    if (saveError) console.error("Project submission save failed:", saveError);
+
+    // The database and this email each keep a copy: the applicant only retries if both failed.
+    try {
+      await transporter.sendMail({
+        from,
+        to: TEAM_RECIPIENTS,
+        replyTo: values.email,
+        subject: `طلب مشروع جديد (${reference}): ${values.projectName}`,
+        html: teamEmailHtml(values, requestLabel, reference),
+        attachments,
+      });
+    } catch (teamEmailError) {
+      if (saveError) throw teamEmailError;
+      console.error("Project submission team email failed:", teamEmailError);
+    }
 
     // The team already has the request, so a bad applicant address shouldn't fail the submission.
     try {

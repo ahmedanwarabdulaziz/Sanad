@@ -1,5 +1,13 @@
 import { NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
+import {
+    createMailer,
+    createReference,
+    MAIL_FROM_HEADER,
+    storeSubmissionFiles,
+    submissionsDb,
+} from '@/lib/submissionStore';
+
+const ALLOWED_FILE_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.dwg'];
 
 export async function POST(request: Request) {
     try {
@@ -26,17 +34,14 @@ export async function POST(request: Request) {
             );
         }
 
-        // Configure Nodemailer Transporter
-        const port = Number(process.env.SMTP_PORT);
-        const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port,
-            secure: port === 465, // true for 465, false for other ports
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
-        });
+        if (files.some((file) => !ALLOWED_FILE_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext)))) {
+            return NextResponse.json(
+                { error: 'File type not allowed' },
+                { status: 400 }
+            );
+        }
+
+        const transporter = createMailer();
 
         // Prepare attachments
         const attachments = await Promise.all(
@@ -49,9 +54,32 @@ export async function POST(request: Request) {
             })
         );
 
+        const storedFiles = await storeSubmissionFiles(
+            'contact',
+            files.map((file, index) => ({
+                name: file.name,
+                type: file.type,
+                content: attachments[index].content,
+            }))
+        );
+        const { error: saveError } = await submissionsDb.from('contact_submissions').insert({
+            reference: createReference('CT'),
+            request_type: requestType || '',
+            name,
+            email,
+            phone,
+            company: company || '',
+            job_title: jobTitle || '',
+            city: city || '',
+            message,
+            newsletter_agreed: newsletterAgreed,
+            files: storedFiles,
+        });
+        if (saveError) console.error('Contact submission save failed:', saveError);
+
         // API Email Template
         const mailOptions = {
-            from: `"سند للمشروعات" <${process.env.MAIL_FROM}>`,
+            from: MAIL_FROM_HEADER,
             to: process.env.MAIL_FROM, // Send to self
             replyTo: email,
             subject: `New Contact Request: ${requestType} - ${name}`,
@@ -82,11 +110,17 @@ export async function POST(request: Request) {
         };
 
         // Send Email
+        // The database and this email each keep a copy: the sender only retries if both failed.
         console.log('Sending email...');
-        await transporter.sendMail(mailOptions);
-        console.log('Email sent successfully');
+        try {
+            await transporter.sendMail(mailOptions);
+            console.log('Email sent successfully');
+        } catch (emailError) {
+            if (saveError) throw emailError;
+            console.error('Contact submission team email failed:', emailError);
+        }
 
-        return NextResponse.json({ success: true, message: 'Email sent successfully' }, { status: 200 });
+        return NextResponse.json({ success: true, message: 'Request received' }, { status: 200 });
 
     } catch (error) {
         console.error('Error sending email:', error);

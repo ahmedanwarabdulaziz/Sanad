@@ -9,6 +9,8 @@ import {
   CloseOutlined,
   FolderOutlined,
   ChevronLeftOutlined,
+  AssignmentOutlined,
+  MailOutlined,
 } from "@mui/icons-material";
 import { IconButton } from "@mui/material";
 import { useState } from "react";
@@ -24,6 +26,11 @@ const PROJECTS = [
     status: "ACTIVE" as const,
   },
   // { id: "project-2", label: "مشروع 2", href: "/admin/project-2/dashboard", icon: "🏠", status: "PLANNING" },
+];
+
+const SUBMISSION_LINKS = [
+  { href: "/admin/project-requests", label: "طلبات المشروعات", Icon: AssignmentOutlined },
+  { href: "/admin/contact-requests", label: "رسائل التواصل", Icon: MailOutlined },
 ];
 
 const STATUS_DOT: Record<string, string> = {
@@ -281,6 +288,35 @@ export default function AdminSidebar() {
             margin: "8px 6px",
           }}
         />
+
+        {/* Website form submissions */}
+        {SUBMISSION_LINKS.map(({ href, label, Icon }) => {
+          const active = pathname?.includes(href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              onClick={() => setMobileOpen(false)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "12px 14px",
+                borderRadius: 10,
+                textDecoration: "none",
+                fontSize: 14,
+                fontWeight: active ? 600 : 400,
+                color: active ? "#ffffff" : "rgba(255,255,255,0.7)",
+                background: active ? "rgba(209,208,198,0.2)" : "transparent",
+                transition: "all 0.2s ease",
+                fontFamily: "var(--font-cairo), Cairo, sans-serif",
+              }}
+            >
+              <Icon sx={{ fontSize: 20, color: active ? "#ffffff" : "rgba(255,255,255,0.7)" }} />
+              {label}
+            </Link>
+          );
+        })}
 
         {/* Users */}
         <Link
