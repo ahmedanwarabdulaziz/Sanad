@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 // Configure R2 Client
 const s3Client = new S3Client({
@@ -12,6 +13,10 @@ const s3Client = new S3Client({
 });
 
 export async function POST(request: NextRequest) {
+  // Viewers can generate investor statement PDFs, which are uploaded here.
+  const auth = await requireAuth("viewer");
+  if ("error" in auth) return auth.error;
+
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File;

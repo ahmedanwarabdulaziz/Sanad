@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,6 +10,9 @@ const supabase = createClient(
 
 // GET /api/erp-auth/users — list all ERP users
 export async function GET() {
+  const auth = await requireAuth("admin");
+  if ("error" in auth) return auth.error;
+
   try {
     const { data, error } = await supabase
       .from("erp_users")
@@ -27,6 +31,9 @@ export async function GET() {
 
 // POST /api/erp-auth/users — create a new ERP user
 export async function POST(request: Request) {
+  const auth = await requireAuth("admin");
+  if ("error" in auth) return auth.error;
+
   try {
     const { email, password, name, role } = await request.json();
 
@@ -42,6 +49,13 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "صلاحية غير صالحة" },
         { status: 400 }
+      );
+    }
+
+    if (role === "super_admin" && auth.user.role !== "super_admin") {
+      return NextResponse.json(
+        { error: "ليس لديك صلاحية لهذا الإجراء" },
+        { status: 403 }
       );
     }
 
