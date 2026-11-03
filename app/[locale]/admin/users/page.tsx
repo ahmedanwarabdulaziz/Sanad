@@ -79,6 +79,7 @@ export default function UsersPage() {
   const [users, setUsers] = useState<ErpUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   // Add dialog
@@ -108,9 +109,14 @@ export default function UsersPage() {
     try {
       const res = await fetch("/api/erp-auth/users");
       const data = await res.json();
+      if (!res.ok) {
+        setLoadError(data.error || "فشل في تحميل المستخدمين");
+        return;
+      }
+      setLoadError(null);
       if (data.users) setUsers(data.users);
     } catch {
-      setError("فشل في تحميل المستخدمين");
+      setLoadError("فشل في تحميل المستخدمين");
     } finally {
       setLoading(false);
     }
@@ -194,12 +200,18 @@ export default function UsersPage() {
   };
 
   const handleToggleActive = async (user: ErpUser) => {
+    setError(null);
     try {
-      await fetch(`/api/erp-auth/users/${user.id}`, {
+      const res = await fetch(`/api/erp-auth/users/${user.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ is_active: !user.is_active }),
       });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "فشل في تحديث حالة المستخدم");
+        return;
+      }
       fetchUsers();
     } catch {
       setError("فشل في تحديث حالة المستخدم");
@@ -360,7 +372,7 @@ export default function UsersPage() {
                 fontSize: "16px",
               }}
             >
-              لا يوجد سجلات مستخدمين حتى الآن
+              {loadError || "لا يوجد سجلات مستخدمين حتى الآن"}
             </p>
           </div>
         ) : (

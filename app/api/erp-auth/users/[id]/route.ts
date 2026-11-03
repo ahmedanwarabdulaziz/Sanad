@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,6 +13,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireAuth("admin");
+  if ("error" in auth) return auth.error;
+
   try {
     const { id } = await params;
     const body = await request.json();
@@ -26,6 +30,29 @@ export async function PATCH(
         );
       }
       updates.role = body.role;
+    }
+
+    // Only a super_admin can grant the role or change an existing super_admin.
+    if (auth.user.role !== "super_admin") {
+      const { data: target } = await supabase
+        .from("erp_users")
+        .select("role")
+        .eq("id", id)
+        .single();
+
+      if (!target) {
+        return NextResponse.json(
+          { error: "المستخدم غير موجود" },
+          { status: 404 }
+        );
+      }
+
+      if (body.role === "super_admin" || target.role === "super_admin") {
+        return NextResponse.json(
+          { error: "ليس لديك صلاحية لهذا الإجراء" },
+          { status: 403 }
+        );
+      }
     }
 
     if (typeof body.is_active === "boolean") {
@@ -60,13 +87,16 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireAuth("admin");
+  if ("error" in auth) return auth.error;
+
   try {
     const { id } = await params;
 
     // Get the auth_id first
     const { data: user, error: fetchError } = await supabase
       .from("erp_users")
-      .select("auth_id")
+      .select("auth_id, role")
       .eq("id", id)
       .single();
 
@@ -74,6 +104,13 @@ export async function DELETE(
       return NextResponse.json(
         { error: "المستخدم غير موجود" },
         { status: 404 }
+      );
+    }
+
+    if (user.role === "super_admin" && auth.user.role !== "super_admin") {
+      return NextResponse.json(
+        { error: "ليس لديك صلاحية لهذا الإجراء" },
+        { status: 403 }
       );
     }
 
