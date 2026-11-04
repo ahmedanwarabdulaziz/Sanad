@@ -14,7 +14,14 @@ export const submissionsDb = createClient(
 export const SUBMISSION_TABLES: Record<SubmissionKind, string> = {
   project: "project_submissions",
   contact: "contact_submissions",
+  real_estate: "real_estate_submissions",
 };
+
+export const TEAM_RECIPIENTS = [process.env.MAIL_FROM!, "ahmedanwarabdulaziz@gmail.com"];
+
+// Saved on a request that tripped the hidden spam field: it could still be a real person,
+// so it's kept for review, but no emails go out because the address may not be theirs.
+export const SUSPECTED_SPAM_NOTE = "⚠️ اشتبه النظام في أن هذا الطلب آلي، ولم تُرسل عنه أي إيميلات. راجعه قبل الرد.";
 
 export const MAIL_FROM_HEADER = `"سند للمشروعات" <${process.env.MAIL_FROM}>`;
 const LOGO_URL = "https://www.sanadproprojects.com/images/long%20logo.png";
@@ -51,9 +58,30 @@ export function emailShell(body: string) {
   `;
 }
 
-export function createReference(prefix: "SP" | "CT") {
+export function createReference(prefix: "SP" | "CT" | "RE") {
   const date = new Date().toISOString().slice(2, 10).replace(/-/g, "");
   return `${prefix}-${date}-${randomBytes(2).toString("hex").toUpperCase()}`;
+}
+
+/** Reads a form's JSON payload, keeping only the known fields with the expected types. */
+export function parseFormPayload<T extends object>(raw: string, empty: T): T | null {
+  try {
+    const parsed = JSON.parse(raw);
+    const values = { ...empty } as Record<string, unknown>;
+    for (const [key, expected] of Object.entries(empty)) {
+      const incoming = parsed[key];
+      if (Array.isArray(expected)) {
+        if (Array.isArray(incoming)) values[key] = incoming.filter((v) => typeof v === "string");
+      } else if (typeof expected === "boolean") {
+        values[key] = incoming === true;
+      } else if (typeof incoming === "string") {
+        values[key] = incoming.trim();
+      }
+    }
+    return values as T;
+  } catch {
+    return null;
+  }
 }
 
 /**

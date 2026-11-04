@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const key = searchParams.get("key") ?? "";
   const name = searchParams.get("name") ?? "attachment";
-  if (!/^submissions\/(project|contact)\/[0-9a-f-]+(\.[a-zA-Z0-9]+)?$/.test(key)) {
+  if (!/^submissions\/(project|contact|real_estate)\/[0-9a-f-]+(\.[a-zA-Z0-9]+)?$/.test(key)) {
     return NextResponse.json({ error: "ملف غير صالح" }, { status: 400 });
   }
 

@@ -46,7 +46,7 @@ export async function POST(
   const now = new Date();
   const update: Record<string, unknown> = { updated_at: now.toISOString() };
 
-  if (kind === "project") {
+  if (kind === "project" || kind === "real_estate") {
     const flow = PROJECT_EMAIL_FLOW[type as ProjectEmailType];
     if (!flow) return NextResponse.json({ error: "نوع رسالة غير صالح" }, { status: 400 });
     if (!flow.from.includes(submission.status)) {

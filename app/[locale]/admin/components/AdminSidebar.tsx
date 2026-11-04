@@ -10,6 +10,7 @@ import {
   FolderOutlined,
   ChevronLeftOutlined,
   AssignmentOutlined,
+  HomeWorkOutlined,
   MailOutlined,
 } from "@mui/icons-material";
 import { IconButton } from "@mui/material";
@@ -30,6 +31,7 @@ const PROJECTS = [
 
 const SUBMISSION_LINKS = [
   { href: "/admin/project-requests", label: "طلبات المشروعات", Icon: AssignmentOutlined },
+  { href: "/admin/real-estate-requests", label: "الطلبات العقارية", Icon: HomeWorkOutlined },
   { href: "/admin/contact-requests", label: "رسائل التواصل", Icon: MailOutlined },
 ];
 

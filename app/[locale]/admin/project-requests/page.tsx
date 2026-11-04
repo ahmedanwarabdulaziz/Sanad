@@ -34,6 +34,7 @@ import {
   primaryButtonSx,
   StatusChip,
   SubmissionFiles,
+  WhatsAppButton,
 } from "../components/SubmissionShared";
 import { REQUEST_TYPES } from "@/lib/submitProject";
 import {
@@ -308,6 +309,10 @@ export default function ProjectRequestsPage() {
           <DialogActions sx={{ p: 2, justifyContent: "space-between", flexWrap: "wrap", gap: 1 }}>
             <Button onClick={() => setSelected(null)} sx={{ fontFamily: FONT, color: "#4b5563" }}>إغلاق</Button>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <WhatsAppButton
+                phone={selected.phone}
+                text={selected.email_log.at(-1)?.body ?? `مرحبًا ${selected.full_name}،`}
+              />
               {EMAIL_ORDER.filter((type) => PROJECT_EMAIL_FLOW[type].from.includes(selected.status)).map((type) =>
                 type === "decline" ? (
                   <Button key={type} variant="outlined" color="error" onClick={() => openCompose(type)} sx={{ fontFamily: FONT, fontWeight: 600 }}>
@@ -328,6 +333,7 @@ export default function ProjectRequestsPage() {
         <EmailComposeDialog
           title={`رسالة: ${PROJECT_EMAIL_FLOW[compose.type].label}`}
           recipient={selected.email}
+          phone={selected.phone}
           subject={compose.subject}
           body={compose.body}
           sending={sending}

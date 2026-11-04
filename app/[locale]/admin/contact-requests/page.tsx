@@ -34,6 +34,7 @@ import {
   primaryButtonSx,
   StatusChip,
   SubmissionFiles,
+  WhatsAppButton,
 } from "../components/SubmissionShared";
 import {
   CONTACT_STATUS_LABELS,
@@ -273,16 +274,22 @@ export default function ContactRequestsPage() {
           </DialogContent>
           <DialogActions sx={{ p: 2, justifyContent: "space-between" }}>
             <Button onClick={() => setSelected(null)} sx={{ fontFamily: FONT, color: "#4b5563" }}>إغلاق</Button>
-            <Button
-              variant="contained"
-              onClick={() => {
-                setComposeError(null);
-                setCompose({ subject: "رد على رسالتكم - سند برو كابيتال", body: `مرحبًا ${selected.name}،\n\n\n\nمع تحيات،\nفريق سند برو كابيتال للمشروعات` });
-              }}
-              sx={primaryButtonSx}
-            >
-              إرسال رد
-            </Button>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <WhatsAppButton
+                phone={selected.phone}
+                text={selected.email_log.at(-1)?.body ?? `مرحبًا ${selected.name}،`}
+              />
+              <Button
+                variant="contained"
+                onClick={() => {
+                  setComposeError(null);
+                  setCompose({ subject: "رد على رسالتكم - سند برو كابيتال", body: `مرحبًا ${selected.name}،\n\n\n\nمع تحيات،\nفريق سند برو كابيتال للمشروعات` });
+                }}
+                sx={primaryButtonSx}
+              >
+                إرسال رد
+              </Button>
+            </div>
           </DialogActions>
         </Dialog>
       )}
@@ -291,6 +298,7 @@ export default function ContactRequestsPage() {
         <EmailComposeDialog
           title="إرسال رد"
           recipient={selected.email}
+          phone={selected.phone}
           subject={compose.subject}
           body={compose.body}
           sending={sending}

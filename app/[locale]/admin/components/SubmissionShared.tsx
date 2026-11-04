@@ -12,8 +12,13 @@ import {
   DialogTitle,
   TextField,
 } from "@mui/material";
-import { AttachFileOutlined } from "@mui/icons-material";
-import type { EmailLogEntry, SubmissionFile, SubmissionKind } from "@/lib/submissionWorkflow";
+import { AttachFileOutlined, WhatsApp } from "@mui/icons-material";
+import {
+  whatsappLink,
+  type EmailLogEntry,
+  type SubmissionFile,
+  type SubmissionKind,
+} from "@/lib/submissionWorkflow";
 
 const FONT = "var(--font-cairo), Cairo, sans-serif";
 
@@ -267,9 +272,34 @@ export function NotesEditor({
   );
 }
 
+/** Opens the applicant's WhatsApp chat in a new tab; nothing is sent until the admin presses send there. */
+export function WhatsAppButton({ phone, text }: { phone: string; text: string }) {
+  const href = whatsappLink(phone, text);
+  return (
+    <Button
+      variant="outlined"
+      startIcon={<WhatsApp sx={{ ml: 1, mr: -0.5 }} />}
+      href={href ?? "#"}
+      target="_blank"
+      rel="noopener noreferrer"
+      disabled={!href}
+      sx={{
+        fontFamily: FONT,
+        fontWeight: 600,
+        color: "#128C7E",
+        borderColor: "#128C7E",
+        "&:hover": { borderColor: "#128C7E", background: "rgba(18,140,126,0.08)" },
+      }}
+    >
+      {href ? "واتساب" : "الرقم غير صالح لواتساب"}
+    </Button>
+  );
+}
+
 export function EmailComposeDialog({
   title,
   recipient,
+  phone,
   subject,
   body,
   sending,
@@ -282,6 +312,7 @@ export function EmailComposeDialog({
 }: {
   title: string;
   recipient: string;
+  phone: string;
   subject: string;
   body: string;
   sending: boolean;
@@ -322,14 +353,17 @@ export function EmailComposeDialog({
         <Button onClick={onClose} disabled={sending} sx={{ fontFamily: FONT, color: "#4b5563" }}>
           إلغاء
         </Button>
-        <Button
-          variant="contained"
-          onClick={onSend}
-          disabled={sending || !subject.trim() || !body.trim()}
-          sx={primaryButtonSx}
-        >
-          {sending ? <CircularProgress size={20} sx={{ color: "#fff" }} /> : "إرسال الرسالة"}
-        </Button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <WhatsAppButton phone={phone} text={body} />
+          <Button
+            variant="contained"
+            onClick={onSend}
+            disabled={sending || !subject.trim() || !body.trim()}
+            sx={primaryButtonSx}
+          >
+            {sending ? <CircularProgress size={20} sx={{ color: "#fff" }} /> : "إرسال الإيميل"}
+          </Button>
+        </div>
       </DialogActions>
     </Dialog>
   );

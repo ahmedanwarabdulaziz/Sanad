@@ -5,8 +5,11 @@ import {
   emailShell,
   escapeHtml,
   MAIL_FROM_HEADER,
+  parseFormPayload,
   storeSubmissionFiles,
   submissionsDb,
+  SUSPECTED_SPAM_NOTE,
+  TEAM_RECIPIENTS,
 } from "@/lib/submissionStore";
 import { addBusinessDays, RESPONSE_BUSINESS_DAYS } from "@/lib/submissionWorkflow";
 import {
@@ -20,32 +23,8 @@ import {
   validateSubmission,
 } from "@/lib/submitProject";
 
-const TEAM_RECIPIENTS = [process.env.MAIL_FROM!, "ahmedanwarabdulaziz@gmail.com"];
 // Bots post the form as soon as it loads; a person can't get through all steps this fast.
 const MIN_FILL_MS = 5000;
-
-function parseSubmission(raw: string): ProjectSubmission | null {
-  try {
-    const parsed = JSON.parse(raw);
-    const values: ProjectSubmission = { ...EMPTY_SUBMISSION };
-    for (const key of Object.keys(EMPTY_SUBMISSION) as (keyof ProjectSubmission)[]) {
-      const expected = EMPTY_SUBMISSION[key];
-      const incoming = parsed[key];
-      if (Array.isArray(expected)) {
-        if (Array.isArray(incoming)) {
-          (values[key] as string[]) = incoming.filter((v): v is string => typeof v === "string");
-        }
-      } else if (typeof expected === "boolean") {
-        (values[key] as boolean) = incoming === true;
-      } else if (typeof incoming === "string") {
-        (values[key] as string) = incoming.trim();
-      }
-    }
-    return values;
-  } catch {
-    return null;
-  }
-}
 
 function teamEmailHtml(values: ProjectSubmission, requestLabel: string, reference: string) {
   const isIdea = values.requestType === "idea";
@@ -137,15 +116,15 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
 
-    // Honeypot and timing checks: pretend it worked so bots don't adapt.
+    // Timing check: pretend it worked so bots don't adapt.
     const startedAt = Number(formData.get("startedAt"));
-    const isBot =
-      Boolean(formData.get("website")) || !startedAt || Date.now() - startedAt < MIN_FILL_MS;
-    if (isBot) {
+    if (!startedAt || Date.now() - startedAt < MIN_FILL_MS) {
+      console.warn("Project submission dropped by the timing check");
       return NextResponse.json({ success: true, reference: createReference("SP") }, { status: 200 });
     }
+    const honeypotFilled = Boolean(formData.get("website"));
 
-    const values = parseSubmission(String(formData.get("payload") ?? ""));
+    const values = parseFormPayload(String(formData.get("payload") ?? ""), EMPTY_SUBMISSION);
     if (!values) {
       return NextResponse.json({ error: "بيانات الطلب غير صالحة" }, { status: 400 });
     }
@@ -211,8 +190,13 @@ export async function POST(request: Request) {
       company: values.company,
       job_title: values.jobTitle,
       files: storedFiles,
+      notes: honeypotFilled ? SUSPECTED_SPAM_NOTE : "",
     });
     if (saveError) console.error("Project submission save failed:", saveError);
+    if (honeypotFilled && !saveError) {
+      console.warn(`Project submission ${reference} flagged by the hidden spam field`);
+      return NextResponse.json({ success: true, reference }, { status: 200 });
+    }
 
     // The database and this email each keep a copy: the applicant only retries if both failed.
     try {

@@ -1,8 +1,10 @@
 // Shared by the admin pages and the API routes, so statuses and email wording stay in one place.
 
+import { toLatinDigits } from "@/lib/submitProject";
+
 export const RESPONSE_BUSINESS_DAYS = 3;
 
-export type SubmissionKind = "project" | "contact";
+export type SubmissionKind = "project" | "contact" | "real_estate";
 export type ProjectStatus = "NEW" | "ACCEPTED" | "CALL_INVITED" | "DECLINED";
 export type ContactStatus = "NEW" | "IN_PROGRESS" | "CLOSED";
 export type ProjectEmailType = "initial_acceptance" | "call_invitation" | "decline";
@@ -126,6 +128,85 @@ export function projectEmailDraft(
     subject: `بخصوص طلبكم (${reference}) - سند برو كابيتال`,
     body: `${opening}\n\n${reason.text}\n\nونود أن نشكرك على ثقتك بنا وعلى الوقت الذي خصصته لتقديم طلبك، ونتمنى لك ولمشروعك كل التوفيق والنجاح.\n\n${closing}`,
   };
+}
+
+export const REAL_ESTATE_DECLINE_REASONS = [
+  {
+    value: "location",
+    label: "الموقع خارج نطاق عملنا",
+    text: "وبعد دراسة الطلب، تبيّن لنا أن الموقع المطلوب يقع خارج نطاق المناطق التي نعمل بها في الوقت الحالي.",
+  },
+  {
+    value: "land_fit",
+    label: "الأرض غير مناسبة حاليًا",
+    text: "وبعد دراسة الطلب، تبيّن لنا أن مواصفات الأرض وتقييمها لا يتوافقان مع معايير المشروعات التي نعمل عليها حاليًا.",
+  },
+  {
+    value: "documents",
+    label: "المستندات غير مكتملة",
+    text: "وبعد دراسة الطلب، تبيّن لنا أن موقف الملكية والمستندات المتاحة حاليًا لا يكفي للمضي قدمًا في الدراسة.",
+  },
+  {
+    value: "no_group",
+    label: "لا توجد مجموعة متاحة",
+    text: "وبعد دراسة الطلب، نود إفادتكم بأنه لا توجد لدينا حاليًا مجموعة ملاك مناسبة في الموقع والمواصفات المطلوبة.",
+  },
+  {
+    value: "budget",
+    label: "الميزانية غير مناسبة",
+    text: "وبعد دراسة الطلب، تبيّن لنا أن الميزانية المحددة لا تتناسب مع تكلفة الوحدات في الموقع المطلوب.",
+  },
+  {
+    value: "general",
+    label: "سبب عام",
+    text: "وبعد دراسة الطلب بعناية، نأسف لإبلاغكم بأنه لن يكون بوسعنا المضي قدمًا في هذا الطلب في الوقت الحالي.",
+  },
+];
+
+/** Default wording; the admin reviews and can edit it before sending. */
+export function realEstateEmailDraft(
+  type: ProjectEmailType,
+  { fullName, requestType, reference }: { fullName: string; requestType: string; reference: string },
+  declineReason: string = "general"
+): { subject: string; body: string } {
+  const isLandOwner = requestType === "land_owner";
+  const topic = isLandOwner ? "الشراكة في بناء الأرض" : "شراء وحدة سكنية بنظام اتحاد الملاك";
+  const opening = `مرحبًا ${fullName}،\n\nنشكرك على اهتمامك بالتواصل مع سند برو كابيتال للمشروعات بخصوص ${topic} (رقم الطلب ${reference}).`;
+  const closing = "مع تحيات،\nفريق سند برو كابيتال للمشروعات";
+
+  if (type === "initial_acceptance") {
+    return {
+      subject: `قبول مبدئي لطلبكم (${reference}) - سند برو كابيتال`,
+      body: `${opening}\n\nيسعدنا إبلاغك بأن فريقنا راجع طلبك، وقد حظي بقبول مبدئي للانتقال إلى المرحلة التالية. وسنرسل إليك خلال ${RESPONSE_BUSINESS_DAYS} أيام عمل دعوة لمكالمة لمناقشة الخطوات القادمة.\n\nيُرجى العلم بأن هذا القبول المبدئي لا يمثل التزامًا ${isLandOwner ? "بالشراكة أو البناء" : "بتخصيص وحدة أو حجزها"}.\n\n${closing}`,
+    };
+  }
+
+  if (type === "call_invitation") {
+    return {
+      subject: `دعوة لمكالمة بخصوص طلبكم (${reference}) - سند برو كابيتال`,
+      body: `${opening}\n\nاستكمالًا لرسالتنا السابقة، ندعوك إلى مكالمة مع فريقنا لمناقشة تفاصيل طلبك والخطوة التالية. يُرجى الرد على هذه الرسالة بالأيام والأوقات المناسبة لك خلال الأسبوع القادم، وسنؤكد لك الموعد.\n\n${closing}`,
+    };
+  }
+
+  const reason =
+    REAL_ESTATE_DECLINE_REASONS.find((item) => item.value === declineReason) ??
+    REAL_ESTATE_DECLINE_REASONS[REAL_ESTATE_DECLINE_REASONS.length - 1];
+  return {
+    subject: `بخصوص طلبكم (${reference}) - سند برو كابيتال`,
+    body: `${opening}\n\n${reason.text}\n\nونود أن نشكرك على ثقتك بنا وعلى الوقت الذي خصصته لتقديم طلبك، ونتمنى لك كل التوفيق.\n\n${closing}`,
+  };
+}
+
+/**
+ * Builds a link that opens a WhatsApp chat with the message already typed; the admin presses send.
+ * Numbers with no country code are treated as Egyptian. Returns null if the number can't be used.
+ */
+export function whatsappLink(phone: string, text: string): string | null {
+  let digits = toLatinDigits(phone).replace(/\D/g, "");
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  if (/^0\d{10}$/.test(digits)) digits = `20${digits.slice(1)}`;
+  if (digits.length < 10 || digits.length > 15) return null;
+  return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
 }
 
 /** Adds working days using Egypt's week: Friday and Saturday don't count. Public holidays aren't tracked. */
