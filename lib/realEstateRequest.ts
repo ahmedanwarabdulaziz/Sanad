@@ -16,28 +16,6 @@ export const REAL_ESTATE_REQUEST_TYPES = [
   },
 ];
 
-export const OTHER_CITY = "مدينة أخرى";
-
-export const NEW_URBAN_COMMUNITIES = [
-  "القاهرة الجديدة",
-  "العاصمة الإدارية الجديدة",
-  "الشيخ زايد",
-  "السادس من أكتوبر",
-  "حدائق أكتوبر",
-  "الشروق",
-  "بدر",
-  "العبور الجديدة",
-  "العاشر من رمضان",
-  "برج العرب الجديدة",
-  "المنصورة الجديدة",
-  "دمياط الجديدة",
-  "بني سويف الجديدة",
-  "المنيا الجديدة",
-  "أسيوط الجديدة",
-  "سوهاج الجديدة",
-  OTHER_CITY,
-];
-
 export const OWNERSHIP_STATUSES = [
   "عقد مسجل",
   "تخصيص من هيئة المجتمعات العمرانية",
@@ -73,7 +51,6 @@ export const BUYER_PAYMENT_NOTE = "السداد يكون على دفعات حس�
 export interface RealEstateSubmission {
   requestType: string;
   city: string;
-  otherCity: string;
   district: string;
   landArea: string;
   pricePerMeter: string;
@@ -100,7 +77,6 @@ export interface RealEstateSubmission {
 export const EMPTY_REAL_ESTATE_SUBMISSION: RealEstateSubmission = {
   requestType: "",
   city: "",
-  otherCity: "",
   district: "",
   landArea: "",
   pricePerMeter: "",
@@ -128,7 +104,7 @@ export type RealEstateErrors = Partial<Record<keyof RealEstateSubmission, string
 
 // Which fields each step of the form owns; the form validates one step at a time.
 export const REAL_ESTATE_STEP_FIELDS: (keyof RealEstateSubmission)[][] = [
-  ["requestType", "city", "otherCity", "district"],
+  ["requestType", "city", "district"],
   [
     "landArea",
     "pricePerMeter",
@@ -151,7 +127,6 @@ export const REAL_ESTATE_STEP_FIELDS: (keyof RealEstateSubmission)[][] = [
 ];
 
 const MAX_LENGTHS: Partial<Record<keyof RealEstateSubmission, number>> = {
-  otherCity: 80,
   district: 120,
   documentsLink: 500,
   message: 2000,
@@ -200,14 +175,15 @@ export function keepChosenPathOnly(values: RealEstateSubmission): RealEstateSubm
       };
 }
 
-export function validateRealEstateSubmission(values: RealEstateSubmission): RealEstateErrors {
+/** eligibleCities comes from the admin-managed list (lib/realEstateCities.ts). */
+export function validateRealEstateSubmission(values: RealEstateSubmission, eligibleCities: string[]): RealEstateErrors {
   const errors: RealEstateErrors = {};
 
   if (!REAL_ESTATE_REQUEST_TYPES.some((type) => type.value === values.requestType)) {
     errors.requestType = "اختر نوع الطلب";
   }
-  if (!NEW_URBAN_COMMUNITIES.includes(values.city)) errors.city = "اختر المجتمع العمراني";
-  if (values.city === OTHER_CITY && !values.otherCity.trim()) errors.otherCity = "اكتب اسم المدينة";
+  if (!values.city) errors.city = "اختر المجتمع العمراني";
+  else if (!eligibleCities.includes(values.city)) errors.city = "هذه المدينة غير متاحة حاليًا، اختر مدينة أخرى";
   if (!values.district.trim()) errors.district = "اكتب الحي أو المجاورة";
 
   if (values.requestType === "land_owner") {

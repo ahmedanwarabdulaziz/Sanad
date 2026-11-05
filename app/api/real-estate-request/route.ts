@@ -17,12 +17,12 @@ import {
   EMPTY_REAL_ESTATE_SUBMISSION,
   estimatedLandTotal,
   keepChosenPathOnly,
-  OTHER_CITY,
   parseLocalizedNumber,
   REAL_ESTATE_REQUEST_TYPES,
   RealEstateSubmission,
   validateRealEstateSubmission,
 } from "@/lib/realEstateRequest";
+import { listEligibleCityNames } from "@/lib/realEstateCities";
 import { addBusinessDays, RESPONSE_BUSINESS_DAYS } from "@/lib/submissionWorkflow";
 
 // Bots post the form as soon as it loads; a person can't get through all steps this fast.
@@ -30,7 +30,7 @@ const MIN_FILL_MS = 5000;
 
 const formatNumber = (value: number) => value.toLocaleString("en-US");
 
-function teamEmailHtml(values: RealEstateSubmission, city: string, requestLabel: string, reference: string) {
+function teamEmailHtml(values: RealEstateSubmission, requestLabel: string, reference: string) {
   const isLandOwner = values.requestType === "land_owner";
   const total = estimatedLandTotal(values);
   const sections: [string, [string, string][]][] = [
@@ -45,7 +45,7 @@ function teamEmailHtml(values: RealEstateSubmission, city: string, requestLabel:
     [
       "الموقع",
       [
-        ["المجتمع العمراني", city],
+        ["المجتمع العمراني", values.city],
         ["الحي أو المجاورة", values.district],
       ],
     ],
@@ -143,7 +143,7 @@ export async function POST(request: Request) {
     }
 
     const values = keepChosenPathOnly(parsed);
-    const errors = validateRealEstateSubmission(values);
+    const errors = validateRealEstateSubmission(values, await listEligibleCityNames());
     if (Object.keys(errors).length > 0) {
       return NextResponse.json({ error: "يرجى مراجعة البيانات المدخلة", errors }, { status: 400 });
     }
@@ -172,7 +172,6 @@ export async function POST(request: Request) {
     const reference = createReference("RE");
     const requestLabel =
       REAL_ESTATE_REQUEST_TYPES.find((type) => type.value === values.requestType)?.label ?? values.requestType;
-    const city = values.city === OTHER_CITY ? values.otherCity : values.city;
 
     const storedFiles = await storeSubmissionFiles(
       "real_estate",
@@ -186,7 +185,7 @@ export async function POST(request: Request) {
       reference,
       next_action_due_at: addBusinessDays(new Date(), RESPONSE_BUSINESS_DAYS).toISOString(),
       request_type: values.requestType,
-      city,
+      city: values.city,
       district: values.district,
       land_area: isLandOwner ? parseLocalizedNumber(values.landArea) : null,
       price_per_meter: isLandOwner ? parseLocalizedNumber(values.pricePerMeter) : null,
@@ -224,7 +223,7 @@ export async function POST(request: Request) {
         to: TEAM_RECIPIENTS,
         replyTo: values.email,
         subject: `طلب عقاري جديد (${reference}): ${requestLabel}`,
-        html: teamEmailHtml(values, city, requestLabel, reference),
+        html: teamEmailHtml(values, requestLabel, reference),
         attachments,
       });
     } catch (teamEmailError) {

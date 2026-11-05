@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import RealEstateRequestForm from "@/components/RealEstateRequestForm";
+import { listEligibleCityNames } from "@/lib/realEstateCities";
 
 const title = "شريك للبناء أو وحدة بنظام اتحاد الملاك | سند برو كابيتال";
 const description =
@@ -20,10 +21,19 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RealEstatePartnershipPage() {
+// The city list is edited from the admin page, so it's read on every visit rather than at build time.
+export const dynamic = "force-dynamic";
+
+export default async function RealEstatePartnershipPage() {
+  // With the list unreadable the form shows that no cities are available instead of a broken page.
+  const cities = await listEligibleCityNames().catch((error) => {
+    console.error(error);
+    return [];
+  });
+
   return (
     <main>
-      <RealEstateRequestForm />
+      <RealEstateRequestForm cities={cities} />
     </main>
   );
 }

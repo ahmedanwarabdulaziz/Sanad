@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Alert,
   Box,
@@ -24,8 +25,6 @@ import {
   LAND_PAYMENT_STATUSES,
   LAND_USES,
   LICENSE_STATUSES,
-  NEW_URBAN_COMMUNITIES,
-  OTHER_CITY,
   OWNERSHIP_STATUSES,
   PARTNERSHIP_MODELS,
   PURCHASE_PURPOSES,
@@ -72,7 +71,8 @@ const REQUEST_ICONS: Record<string, React.ReactNode> = {
   unit_buyer: <ApartmentOutlinedIcon />,
 };
 
-export default function RealEstateRequestForm() {
+export default function RealEstateRequestForm({ cities }: { cities: string[] }) {
+  const router = useRouter();
   const [values, setValues] = useState<RealEstateSubmission>(EMPTY_REAL_ESTATE_SUBMISSION);
   const [errors, setErrors] = useState<RealEstateErrors>({});
   const [files, setFiles] = useState<File[]>([]);
@@ -131,7 +131,7 @@ export default function RealEstateRequestForm() {
   );
 
   const goNext = () => {
-    const all = validateRealEstateSubmission(values);
+    const all = validateRealEstateSubmission(values, cities);
     const found: RealEstateErrors = {};
     for (const field of REAL_ESTATE_STEP_FIELDS[step]) {
       if (all[field]) found[field] = all[field];
@@ -161,7 +161,7 @@ export default function RealEstateRequestForm() {
   };
 
   const handleSubmit = async () => {
-    const found = validateRealEstateSubmission(values);
+    const found = validateRealEstateSubmission(values, cities);
     if (Object.keys(found).length > 0) {
       setErrors(found);
       // A mismatch from an earlier step can't be seen from here, so jump back to it.
@@ -181,6 +181,14 @@ export default function RealEstateRequestForm() {
 
       const response = await fetch("/api/real-estate-request", { method: "POST", body: formData });
       const result = await response.json();
+      // The city was turned off while this page was open: reload the list and ask for another one.
+      if (result.errors?.city) {
+        setValues((prev) => ({ ...prev, city: "" }));
+        setErrors({ city: result.errors.city });
+        setStep(0);
+        router.refresh();
+        return;
+      }
       if (!response.ok) throw new Error(result.error);
       setReference(result.reference);
     } catch (error) {
@@ -253,9 +261,18 @@ export default function RealEstateRequestForm() {
                               error={errors.requestType}
                               onSelect={(value) => setField("requestType", value)}
                             />
-                            {selectField("city", "المجتمع العمراني", NEW_URBAN_COMMUNITIES)}
-                            {values.city === OTHER_CITY && (
-                              <TextField {...textFieldProps("otherCity")} label="اسم المدينة" required />
+                            {cities.length > 0 ? (
+                              selectField("city", "المجتمع العمراني", cities)
+                            ) : (
+                              <Box
+                                role="status"
+                                data-field="city"
+                                sx={{ p: 2, borderRadius: 2, bgcolor: "rgba(194, 155, 64, 0.1)", border: `1px solid ${GOLD}` }}
+                              >
+                                <Typography sx={{ color: NAVY, fontWeight: 700, fontSize: "0.95rem" }}>
+                                  لا توجد مدن متاحة لتقديم الطلبات حاليًا. يرجى المحاولة لاحقًا.
+                                </Typography>
+                              </Box>
                             )}
                             <TextField {...textFieldProps("district")} label="الحي أو المجاورة" required />
                           </>

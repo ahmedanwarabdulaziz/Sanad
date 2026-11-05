@@ -20,6 +20,7 @@ import {
   TextField,
 } from "@mui/material";
 import AdminAuthenticatedLayout from "../components/AdminAuthenticatedLayout";
+import CitiesDialog from "./CitiesDialog";
 import {
   cellSx,
   DetailSection,
@@ -120,6 +121,7 @@ export default function RealEstateRequestsPage() {
   const [compose, setCompose] = useState<Compose | null>(null);
   const [sending, setSending] = useState(false);
   const [composeError, setComposeError] = useState<string | null>(null);
+  const [citiesOpen, setCitiesOpen] = useState(false);
 
   const fetchSubmissions = useCallback(async () => {
     try {
@@ -196,6 +198,9 @@ export default function RealEstateRequestsPage() {
       <div style={{ maxWidth: "1600px", margin: "0 auto", width: "100%" }}>
         <PageHeader title="الطلبات العقارية" subtitle="أصحاب الأراضي الباحثون عن شريك، والراغبون في الشراء بنظام اتحاد الملاك">
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <Button variant="contained" onClick={() => setCitiesOpen(true)} sx={primaryButtonSx}>
+              إدارة المدن الجديدة
+            </Button>
             <TextField
               select
               size="small"
@@ -277,6 +282,8 @@ export default function RealEstateRequestsPage() {
           </TableContainer>
         )}
       </div>
+
+      {citiesOpen && <CitiesDialog onClose={() => setCitiesOpen(false)} />}
 
       {selected && (
         <Dialog open onClose={() => setSelected(null)} maxWidth="md" PaperProps={dialogPaperProps}>
