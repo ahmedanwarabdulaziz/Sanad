@@ -79,6 +79,8 @@ export default function ContractPrintPreview({ title, subtitle, body, sampleValu
           @top-left { content: ""; } @top-center { content: ""; } @top-right { content: ""; }
           @bottom-left { content: ""; } @bottom-right { content: ""; }
         }
+        /* The cover counts as page 1 but shows no number. */
+        @page :first { @bottom-center { content: ""; } }
         @media print {
           html, body { background:#fff !important; overflow:visible !important; }
           body > *:not(.sz-print-root) { display:none !important; }

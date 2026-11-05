@@ -8,7 +8,7 @@ const naskh = Noto_Naskh_Arabic({ subsets: ["arabic"], weight: ["400", "500", "6
 
 const NAVY = "#154278";
 const GOLD = "#b08d57";
-// Only the header and footer print in color; the contract body is black on white.
+// Only the cover, header and footer print in color; the contract body is black on white.
 const INK = "#000";
 const LABELS = Object.fromEntries(TEMPLATE_VARS.map(v => [v.key, v.label]));
 
@@ -44,8 +44,8 @@ function V({ k, values, highlight }: { k: string; values: Record<string, string>
 
 export default function ContractPaper({ title, subtitle, body, values, highlight }: Props) {
   const blocks = parseTemplate(applyConditionals(body, values));
-  // The closing clause and the signatures print as their own last page, whose
-  // footer drops the initials boxes since that page is signed and stamped in full.
+  // The closing clause and the signatures flow straight after the contract text,
+  // kept together so the signatures never land on a page without their clause.
   const sigAt = blocks.findIndex(b => b.type === "signatures");
   let split = blocks.length;
   if (sigAt >= 0) {
@@ -81,16 +81,16 @@ export default function ContractPaper({ title, subtitle, body, values, highlight
     </thead>
   );
 
-  const footer = (initials: boolean) => (
+  const footer = (
     <tfoot>
       <tr><td>
         <div className="sz-footer">
-          {initials ? <div className="sz-initial">توقيع الشركة <span /></div> : <div />}
+          <div className="sz-initial">توقيع الشركة <span /></div>
           <div className="sz-footer-center">
             <div>نسخة خاصة بأطراف العقد ولا يجوز نسخها أو تداولها</div>
             <div className="sz-footer-addr">مشروع سند زايد · مدينة الشيخ زايد · جمهورية مصر العربية</div>
           </div>
-          {initials ? <div className="sz-initial">توقيع الممول <span /></div> : <div />}
+          <div className="sz-initial">توقيع الممول <span /></div>
         </div>
       </td></tr>
     </tfoot>
@@ -167,37 +167,45 @@ export default function ContractPaper({ title, subtitle, body, values, highlight
 
   return (
     <div className={`sz-paper ${naskh.className}`} dir="rtl">
-      <table className={`sz-doc${lastBlocks.length ? " sz-doc-main" : ""}`}>
+      <section className="sz-cover">
+        <div className="sz-cover-brand">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/images/logo-mark.png" alt="" />
+          <div className="sz-cover-brand-ar">سند برو كابيتال للمشروعات</div>
+          <div className="sz-cover-brand-en">SANAD PRO CAPITAL PROJECTS</div>
+        </div>
+        <div className="sz-cover-title">
+          <div className="sz-cover-ornament"><span /><i /><span /></div>
+          <h1>{title}</h1>
+          <div className="sz-cover-stage"><V k="stage_name" values={values} highlight={highlight} /></div>
+        </div>
+        <dl className="sz-cover-data">
+          <div><dt>رقم المعاملة</dt><dd><V k="transaction_no" values={values} highlight={highlight} /></dd></div>
+          <div><dt>تاريخ العقد</dt><dd><V k="contract_date" values={values} highlight={highlight} /></dd></div>
+          <div><dt>الممول</dt><dd><V k="investor_name" values={values} highlight={highlight} /></dd></div>
+          <div><dt>المشروع</dt><dd>{(subtitle || "").replace(/^مشروع\s+/, "") || "سند زايد"}</dd></div>
+        </dl>
+        <div className="sz-cover-foot">
+          <div>شركة مساهمة مصرية · سجل تجاري رقم 11604</div>
+          <div>مدينة الشيخ زايد · جمهورية مصر العربية</div>
+          <div className="sz-cover-private">نسخة خاصة بأطراف العقد ولا يجوز نسخها أو تداولها</div>
+        </div>
+      </section>
+      <table className="sz-doc">
         {header}
-        {footer(true)}
+        {footer}
         <tbody>
           <tr><td>
             <div className="sz-titleblock">
               <div className="sz-ornament"><span /><i /><span /></div>
               <h1>{title}</h1>
               {subtitle && <div className="sz-subtitle">{subtitle}</div>}
-              <div className="sz-meta-grid">
-                <div><label>رقم المعاملة</label><b><V k="transaction_no" values={values} highlight={highlight} /></b></div>
-                <div><label>المرحلة</label><b><V k="stage_name" values={values} highlight={highlight} /></b></div>
-                <div><label>تاريخ العقد</label><b><V k="contract_date" values={values} highlight={highlight} /></b></div>
-                <div><label>مبلغ التمويل</label><b><V k="financing_amount" values={values} highlight={highlight} /> ج.م</b></div>
-              </div>
             </div>
             {blocks.slice(0, split).map(renderBlock)}
+            {lastBlocks.length > 0 && <div className="sz-closing">{lastBlocks.map(renderBlock)}</div>}
           </td></tr>
         </tbody>
       </table>
-      {lastBlocks.length > 0 && (
-        <div className="sz-last-page">
-          <table className="sz-doc sz-doc-last">
-            {header}
-            {footer(false)}
-            <tbody>
-              <tr><td>{lastBlocks.map(renderBlock)}</td></tr>
-            </tbody>
-          </table>
-        </div>
-      )}
       <style>{PAPER_CSS}</style>
     </div>
   );
@@ -209,10 +217,37 @@ const PAPER_CSS = `
   -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 .sz-doc { width:100%; border-collapse:collapse; }
 .sz-doc > thead > tr > td, .sz-doc > tfoot > tr > td, .sz-doc > tbody > tr > td { padding:0; }
-.sz-last-page { break-before:page; page-break-before:always; }
+.sz-closing { position:relative; break-inside:avoid; page-break-inside:avoid; }
+/* The repeated table footer can't differ per page, but on the last page it sits right
+   after this block, so two white patches hide its initials boxes: the full signatures are here. */
+.sz-closing::before, .sz-closing::after { content:""; position:absolute; top:calc(100% + 6mm + 2px); width:34mm; height:19mm; background:#fff; }
+.sz-closing::before { right:0; }
+.sz-closing::after { left:0; }
+
+/* Cover: one full page; 270mm stays just inside the 272mm A4 print area so it never spills a blank page. */
+.sz-cover { position:relative; height:270mm; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; padding:20mm 16mm 14mm;
+  border:1.5px solid ${NAVY}; text-align:center; break-after:page; page-break-after:always; overflow:hidden; }
+.sz-cover::before { content:""; position:absolute; inset:2mm; border:.5px solid ${GOLD}; pointer-events:none; }
+.sz-cover-brand img { display:block; height:32mm; width:auto; margin:0 auto 4mm; }
+.sz-cover-brand-ar { font-family:var(--font-cairo),Cairo,sans-serif; font-weight:800; color:${NAVY}; font-size:17pt; line-height:1.4; }
+.sz-cover-brand-en { font-family:var(--font-playfair-display),Georgia,serif; letter-spacing:.24em; color:${GOLD}; font-size:8pt; font-weight:700; line-height:1.8; direction:ltr; }
+.sz-cover-title { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; }
+.sz-cover-ornament { display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:8mm; }
+.sz-cover-ornament span { width:34mm; height:1px; background:${GOLD}; }
+.sz-cover-ornament i { width:8px; height:8px; background:${GOLD}; transform:rotate(45deg); display:block; }
+.sz-cover-title h1 { font-family:var(--font-cairo),Cairo,sans-serif; color:${NAVY}; font-size:27pt; font-weight:800; line-height:1.5; margin:0; max-width:150mm; }
+.sz-cover-stage { margin-top:5mm; color:${GOLD}; font-family:var(--font-cairo),Cairo,sans-serif; font-weight:700; font-size:14pt; line-height:1.6; }
+.sz-cover-data { width:100%; max-width:150mm; display:grid; grid-template-columns:1fr 1fr; margin:0 0 14mm; border-top:2px solid ${NAVY}; border-bottom:1px solid ${GOLD}; }
+.sz-cover-data > div { padding:3.5mm 4mm; text-align:right; border-bottom:1px solid #e5e7eb; }
+.sz-cover-data > div:nth-last-child(-n+2) { border-bottom:none; }
+.sz-cover-data > div:nth-child(odd) { border-inline-end:1px solid #e5e7eb; }
+.sz-cover-data dt { font-family:var(--font-cairo),Cairo,sans-serif; font-size:8.5pt; color:#6b7280; line-height:1.6; }
+.sz-cover-data dd { margin:0; font-size:12.5pt; font-weight:700; color:${NAVY}; line-height:1.7; }
+.sz-cover-foot { font-size:8.5pt; color:#6b7280; line-height:1.8; }
+.sz-cover-private { margin-top:1mm; color:${NAVY}; font-weight:700; }
 @media screen {
-  /* On screen the two tables read as one document: one header, one footer. */
-  .sz-doc-main > tfoot, .sz-doc-last > thead { display:none; }
+  /* On screen the cover reads as its own sheet above the contract text. */
+  .sz-cover { margin-bottom:12mm; }
 }
 
 .sz-header { display:flex; justify-content:space-between; align-items:center; gap:12px; padding-bottom:6px; }
@@ -239,11 +274,6 @@ const PAPER_CSS = `
 .sz-ornament i { width:7px; height:7px; background:${INK}; transform:rotate(45deg); display:block; }
 .sz-titleblock h1 { font-family:var(--font-cairo),Cairo,sans-serif; color:${INK}; font-size:19pt; font-weight:800; margin:0; line-height:1.5; }
 .sz-subtitle { color:${INK}; font-weight:700; font-size:12pt; margin-top:1mm; }
-.sz-meta-grid { display:grid; grid-template-columns:repeat(4,1fr); margin-top:6mm; border:1px solid ${INK}; border-radius:4px; overflow:hidden; }
-.sz-meta-grid > div { padding:2.5mm 2mm; border-inline-start:1px solid ${INK}; background:#fff; }
-.sz-meta-grid > div:first-child { border-inline-start:none; }
-.sz-meta-grid label { display:block; font-size:7.5pt; color:${INK}; line-height:1.5; }
-.sz-meta-grid b { display:block; font-size:10pt; color:${INK}; line-height:1.6; }
 
 .sz-h2 { font-family:var(--font-cairo),Cairo,sans-serif; color:${INK}; font-size:12.5pt; font-weight:800; margin:6mm 0 2.5mm; padding:1.2mm 3mm;
   border-inline-start:3px solid ${INK}; background:#fff; break-after:avoid; page-break-after:avoid; line-height:1.6; }
