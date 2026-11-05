@@ -252,7 +252,7 @@ export default function RealEstateRequestsPage() {
               <TableHead sx={{ background: "#154278" }}>
                 <TableRow>
                   {["رقم الطلب", "مقدم الطلب", "النوع", "الموقع", "تاريخ التقديم", "موعد الرد", "الحالة"].map((title) => (
-                    <TableCell key={title} align="right" sx={headCellSx}>{title}</TableCell>
+                    <TableCell key={title} sx={headCellSx}>{title}</TableCell>
                   ))}
                 </TableRow>
               </TableHead>
@@ -263,13 +263,13 @@ export default function RealEstateRequestsPage() {
                     onClick={() => setSelected(item)}
                     sx={{ cursor: "pointer", backgroundColor: "#e8e8e3", "&:hover": { backgroundColor: "#d1d0c6" } }}
                   >
-                    <TableCell align="right" sx={cellSx}><span dir="ltr">{item.reference}</span></TableCell>
-                    <TableCell align="right" sx={{ ...cellSx, fontWeight: 600 }}>{item.full_name}</TableCell>
-                    <TableCell align="right" sx={cellSx}>{SHORT_TYPE_LABELS[item.request_type]}</TableCell>
-                    <TableCell align="right" sx={cellSx}>{item.city} - {item.district}</TableCell>
-                    <TableCell align="right" sx={cellSx}>{formatDate(item.created_at)}</TableCell>
-                    <TableCell align="right" sx={cellSx}><DueDate value={item.next_action_due_at} /></TableCell>
-                    <TableCell align="right" sx={cellSx}><StatusChip {...PROJECT_STATUS_LABELS[item.status]} /></TableCell>
+                    <TableCell sx={cellSx}><span dir="ltr">{item.reference}</span></TableCell>
+                    <TableCell sx={{ ...cellSx, fontWeight: 600 }}>{item.full_name}</TableCell>
+                    <TableCell sx={cellSx}>{SHORT_TYPE_LABELS[item.request_type]}</TableCell>
+                    <TableCell sx={cellSx}>{item.city} - {item.district}</TableCell>
+                    <TableCell sx={cellSx}>{formatDate(item.created_at)}</TableCell>
+                    <TableCell sx={cellSx}><DueDate value={item.next_action_due_at} /></TableCell>
+                    <TableCell sx={cellSx}><StatusChip {...PROJECT_STATUS_LABELS[item.status]} /></TableCell>
                   </TableRow>
                 ))}
               </TableBody>

@@ -37,7 +37,8 @@ export const fieldSx = {
     fontFamily: FONT,
     "&.Mui-focused": { color: "#154278" },
   },
-  "& .MuiInputBase-input": { textAlign: "right" },
+  // The RTL plugin flips "right" to "left", so this uses a logical value.
+  "& .MuiInputBase-input": { textAlign: "start" },
   "& .MuiSelect-icon": { color: "#4b5563" },
 };
 

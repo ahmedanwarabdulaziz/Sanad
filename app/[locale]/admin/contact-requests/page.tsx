@@ -206,7 +206,7 @@ export default function ContactRequestsPage() {
               <TableHead sx={{ background: "#154278" }}>
                 <TableRow>
                   {["المرسل", "الموضوع", "الهاتف", "التاريخ", "الحالة"].map((title) => (
-                    <TableCell key={title} align="right" sx={headCellSx}>{title}</TableCell>
+                    <TableCell key={title} sx={headCellSx}>{title}</TableCell>
                   ))}
                 </TableRow>
               </TableHead>
@@ -217,11 +217,11 @@ export default function ContactRequestsPage() {
                     onClick={() => setSelected(item)}
                     sx={{ cursor: "pointer", backgroundColor: "#e8e8e3", "&:hover": { backgroundColor: "#d1d0c6" } }}
                   >
-                    <TableCell align="right" sx={{ ...cellSx, fontWeight: 600 }}>{item.name}</TableCell>
-                    <TableCell align="right" sx={cellSx}>{requestTypeLabel(item.request_type)}</TableCell>
-                    <TableCell align="right" sx={cellSx}><span dir="ltr">{item.phone}</span></TableCell>
-                    <TableCell align="right" sx={cellSx}>{formatDate(item.created_at)}</TableCell>
-                    <TableCell align="right" sx={cellSx}><StatusChip {...CONTACT_STATUS_LABELS[item.status]} /></TableCell>
+                    <TableCell sx={{ ...cellSx, fontWeight: 600 }}>{item.name}</TableCell>
+                    <TableCell sx={cellSx}>{requestTypeLabel(item.request_type)}</TableCell>
+                    <TableCell sx={cellSx}><span dir="ltr">{item.phone}</span></TableCell>
+                    <TableCell sx={cellSx}>{formatDate(item.created_at)}</TableCell>
+                    <TableCell sx={cellSx}><StatusChip {...CONTACT_STATUS_LABELS[item.status]} /></TableCell>
                   </TableRow>
                 ))}
               </TableBody>

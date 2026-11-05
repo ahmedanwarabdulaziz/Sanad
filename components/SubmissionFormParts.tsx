@@ -37,6 +37,10 @@ export const inputStyles = {
     "&.Mui-focused fieldset": { borderColor: GOLD, borderWidth: 2 },
   },
   "& .MuiInputLabel-root.Mui-focused": { color: NAVY, fontWeight: 700 },
+  // The RTL plugin flips "right" to "left", so these use logical values. Fields typed left to
+  // right (numbers, phone, email) still sit on the right, under their label.
+  "& .MuiInputBase-input": { textAlign: "start" },
+  "& .MuiInputBase-input[dir='ltr']": { textAlign: "end" },
 };
 
 function formatFileSize(bytes: number) {
@@ -265,7 +269,7 @@ export function RequestTypeCards({
                 gap: 1.5,
                 width: "100%",
                 p: 2,
-                textAlign: "right",
+                textAlign: "start",
                 fontFamily: "inherit",
                 cursor: "pointer",
                 borderRadius: 2,
