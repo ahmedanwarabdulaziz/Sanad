@@ -16,7 +16,10 @@ export default function ConditionalLayout({
 
   const isMarbleProject = pathname?.includes("/projects/marble");
 
-  if (isNAdmin || isErpAdmin) {
+  // The interactive master plan is a full-screen experience with its own header.
+  const isMasterplan = pathname?.includes("/masterplan");
+
+  if (isNAdmin || isErpAdmin || isMasterplan) {
     return <>{children}</>;
   }
 

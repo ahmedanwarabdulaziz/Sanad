@@ -58,7 +58,7 @@ export function emailShell(body: string) {
   `;
 }
 
-export function createReference(prefix: "SP" | "CT" | "RE") {
+export function createReference(prefix: "SP" | "CT" | "RE" | "UE") {
   const date = new Date().toISOString().slice(2, 10).replace(/-/g, "");
   return `${prefix}-${date}-${randomBytes(2).toString("hex").toUpperCase()}`;
 }
