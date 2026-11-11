@@ -98,8 +98,8 @@ export type HubChoice = "plan" | "3d" | "nearby" | "enquiry";
 const OPTIONS: { id: HubChoice; title: string; text: string; icon: JSX.Element; primary?: boolean }[] = [
     {
         id: "plan",
-        title: "المخطط التفاعلي",
-        text: "استكشف المباني والأدوار وتفاصيل كل وحدة",
+        title: "استكشف الوحدات",
+        text: "المباني والأدوار وتفاصيل كل وحدة",
         primary: true,
         icon: (
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -231,7 +231,7 @@ export default function MasterplanIntro({ onChoose, startAtMenu = false }: { onC
                         </motion.h1>
                         <motion.div className={s.introLine} initial={{ width: 0 }} animate={{ width: 240 }} transition={{ delay: 1.4, duration: 1.1 }} />
                         <motion.p className={s.introSub} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.8, duration: 0.8 }}>
-                            الشيخ زايد · المخطط التفاعلي للمشروع
+                            مشروع سكني في قلب الشيخ زايد
                         </motion.p>
                     </motion.div>
                 ) : (
@@ -246,7 +246,7 @@ export default function MasterplanIntro({ onChoose, startAtMenu = false }: { onC
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={LOGO} alt="سند" className={s.hubLogo} />
                             <div className={s.hubHeadTitle}>سند زايد</div>
-                            <div className={s.hubHeadSub}>الشيخ زايد · المخطط التفاعلي للمشروع</div>
+                            <div className={s.hubHeadSub}>مشروع سكني في قلب الشيخ زايد</div>
                         </motion.div>
                         <div className={s.hub}>
                             <div className={s.hubGrid}>

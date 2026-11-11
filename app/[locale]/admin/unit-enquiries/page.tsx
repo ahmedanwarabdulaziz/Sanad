@@ -120,7 +120,7 @@ export default function UnitEnquiriesPage() {
     return (
         <AdminAuthenticatedLayout>
             <div style={{ maxWidth: "1600px", margin: "0 auto", width: "100%" }}>
-                <PageHeader title="استفسارات وحدات سند زايد" subtitle="طلبات التواصل من المخطط التفاعلي، والوحدات الأكثر اهتمامًا">
+                <PageHeader title="استفسارات وحدات سند زايد" subtitle="طلبات التواصل من صفحة المشروع، والوحدات الأكثر اهتمامًا">
                     <TextField select size="small" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} sx={{ ...fieldSx, minWidth: 180 }}>
                         <MenuItem value="ALL">كل الحالات</MenuItem>
                         {Object.entries(ENQUIRY_STATUS_LABELS).map(([k, v]) => (

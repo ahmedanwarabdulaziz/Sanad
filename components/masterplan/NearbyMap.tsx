@@ -387,7 +387,7 @@ export default function NearbyMap({ onPlan, onHome }: { onPlan: () => void; onHo
                         </button>
                         <p className={s.nearNote}>المسافات والأوقات حسب أفضل مسار في Google Maps في الظروف العادية، وقد تختلف حسب حركة المرور.</p>
                         <button className={s.nearCta} onClick={onPlan}>
-                            استكشف المخطط التفاعلي
+                            استكشف الوحدات
                         </button>
                     </motion.aside>
                 )}
