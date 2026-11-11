@@ -19,9 +19,10 @@ const T3 = 3000; // dive onto the plot
 const HOLD_MS = 800;
 
 /** Centre of the triangle, so the pause frames the whole area. */
+const AREA_CORNERS = PROJECT_AREA.corners.map((i) => PROJECT_AREA.polygon[i]);
 const AREA_C = {
-    lat: PROJECT_AREA.polygon.reduce((a, p) => a + p.lat, 0) / PROJECT_AREA.polygon.length,
-    lng: PROJECT_AREA.polygon.reduce((a, p) => a + p.lng, 0) / PROJECT_AREA.polygon.length,
+    lat: AREA_CORNERS.reduce((a, p) => a + p.lat, 0) / AREA_CORNERS.length,
+    lng: AREA_CORNERS.reduce((a, p) => a + p.lng, 0) / AREA_CORNERS.length,
 };
 
 export default function MapZoom({ onDone }: { onDone: () => void }) {
@@ -65,7 +66,7 @@ export default function MapZoom({ onDone }: { onDone: () => void }) {
             const pts = PROJECT_AREA.polygon.map((p) => tiles.project(p, c, Z, W / 2, H / 2));
             const reveal = clamp01((t - T1 + 500) / 1500);
             const fade = t < T1 + T2 ? clamp01((t - T1 + 700) / 500) : 1 - clamp01((t - T1 - T2) / 1400);
-            drawArea(g, pts, reveal, fade, now, reveal);
+            drawArea(g, pts, reveal, fade, now, reveal, PROJECT_AREA.corners);
 
             const band = (a: number, b: number) => clamp01(Math.min((Z - a) / 0.8, (b - Z) / 0.8));
             if (capEgypt.current) capEgypt.current.style.opacity = String(band(Z_START - 1, 8.6));

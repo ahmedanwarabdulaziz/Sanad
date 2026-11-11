@@ -95,7 +95,8 @@ export function drawArea(
     reveal: number,
     alpha: number,
     now: number,
-    dim = 0
+    dim = 0,
+    corners?: readonly number[]
 ) {
     if (alpha <= 0.01 || pts.length < 3) return;
     const W = g.canvas.width;
@@ -129,7 +130,7 @@ export function drawArea(
     g.fill();
     // corner markers
     if (k > 0) {
-        for (const [x, y] of pts) {
+        for (const [x, y] of corners ? corners.map((i) => pts[i]) : pts) {
             g.beginPath();
             g.arc(x, y, 6, 0, Math.PI * 2);
             g.fillStyle = `rgba(229,199,127,${k})`;

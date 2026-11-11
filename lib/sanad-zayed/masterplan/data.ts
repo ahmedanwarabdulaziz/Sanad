@@ -63,18 +63,24 @@ export const GOOGLE_MAPS_URL = `https://www.google.com/maps/search/?api=1&query=
 
 /**
  * The project's area: the triangle east of El-Nozha Street, between the Cairo–Alexandria desert road
- * and the 26th of July Corridor (corners near Al Ahly club, Hyper One, and the road/corridor junction).
- * Traced from Google Maps and calibrated on the Al Ahly and Hyper One pins (about ±50 m).
+ * and the 26th of July Corridor. The outline follows the three roads on the satellite imagery
+ * (traced at zoom 16): it bends with the desert road near Al Ahly and meets the other two roads at
+ * the El-Nozha/desert-road exit, the desert-road/26th of July interchange and the Hyper One junction.
  */
 export const PROJECT_AREA = {
     polygon: [
-        { lat: 30.080821, lng: 30.976794 },
-        { lat: 30.049976, lng: 31.052547 },
-        { lat: 30.029977, lng: 31.022018 },
+        { lat: 30.087291, lng: 30.973978 }, // El-Nozha meets the desert road
+        { lat: 30.084877, lng: 30.986423 }, // desert road bend
+        { lat: 30.082463, lng: 30.992861 },
+        { lat: 30.046956, lng: 31.051376 }, // desert road meets the 26th of July Corridor
+        { lat: 30.029421, lng: 31.021786 }, // 26th of July Corridor meets El-Nozha (Hyper One)
+        { lat: 30.074293, lng: 30.983419 }, // along El-Nozha
     ],
+    /** Indexes of the three real corners in `polygon` (markers, labels and centring use these). */
+    corners: [0, 3, 4],
     title: "المنطقة الوحيدة المتاحة حاليًا في الشيخ زايد",
     subtitle: "بين شارع النزهة وطريق مصر إسكندرية الصحراوي ومحور 26 يوليو",
-    /** Road along each side: polygon[i] → polygon[i + 1]. */
+    /** Road along each side: corners[i] → corners[i + 1]. */
     sides: ["طريق مصر إسكندرية الصحراوي", "محور 26 يوليو", "شارع النزهة"],
     highlights: [
         "داخل كردون مدينة الشيخ زايد وتحت إشراف جهاز المدينة",

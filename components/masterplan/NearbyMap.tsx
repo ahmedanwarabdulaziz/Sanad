@@ -131,15 +131,16 @@ export default function NearbyMap({ onPlan, onHome }: { onPlan: () => void; onHo
             const reveal = t < OPEN ? 0 : clamp01((t - OPEN - 900) / 1900);
             const areaAlpha = t < OPEN ? 0 : t < P0 ? 1 : t < T_FINALE ? 0.5 : 0.75;
             const dim = t < OPEN ? 0 : t < P0 ? reveal : t < T_FINALE ? 0.3 : 0.45;
-            drawArea(g, areaPts, reveal, areaAlpha, now, dim);
+            drawArea(g, areaPts, reveal, areaAlpha, now, dim, PROJECT_AREA.corners);
             // road names along each side, kept upright
             const sideOn = t < OPEN ? 0 : t < P0 ? clamp01((t - OPEN - 2300) / 500) : t < T_FINALE ? 0 : clamp01((t - T_END) / 600);
-            const cxA = areaPts.reduce((s2, p) => s2 + p[0], 0) / areaPts.length;
-            const cyA = areaPts.reduce((s2, p) => s2 + p[1], 0) / areaPts.length;
-            areaPts.forEach((a, i) => {
+            const cornerPts = PROJECT_AREA.corners.map((i) => areaPts[i]);
+            const cxA = cornerPts.reduce((s2, p) => s2 + p[0], 0) / cornerPts.length;
+            const cyA = cornerPts.reduce((s2, p) => s2 + p[1], 0) / cornerPts.length;
+            cornerPts.forEach((a, i) => {
                 const el = sideLabels.current[i];
                 if (!el) return;
-                const b = areaPts[(i + 1) % areaPts.length];
+                const b = cornerPts[(i + 1) % cornerPts.length];
                 let ang = (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI;
                 if (ang > 90) ang -= 180;
                 if (ang < -90) ang += 180;
