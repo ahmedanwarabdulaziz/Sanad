@@ -84,3 +84,84 @@ export function fitCanvas(cv: HTMLCanvasElement, g: CanvasRenderingContext2D) {
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     return { W, H };
 }
+
+/**
+ * Highlighted area: soft gold fill plus a glowing border that draws itself around the perimeter.
+ * `reveal` 0..1 is how much of the border is drawn; `alpha` scales the whole highlight.
+ */
+export function drawArea(
+    g: CanvasRenderingContext2D,
+    pts: readonly (readonly [number, number])[],
+    reveal: number,
+    alpha: number,
+    now: number,
+    dim = 0
+) {
+    if (alpha <= 0.01 || pts.length < 3) return;
+    const W = g.canvas.width;
+    const H = g.canvas.height;
+    g.save();
+    // spotlight: darken everything outside the area
+    if (dim > 0) {
+        g.save();
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        g.beginPath();
+        g.rect(0, 0, W, H);
+        g.restore();
+        pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
+        g.closePath();
+        g.fillStyle = `rgba(4,9,18,${0.62 * dim * alpha})`;
+        g.fill("evenodd");
+    }
+    g.globalAlpha = alpha;
+    // fill: a warm wash, stronger towards the centre
+    const cx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
+    const cy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+    const r = Math.max(...pts.map(([x, y]) => Math.hypot(x - cx, y - cy)));
+    const k = clamp01(reveal * 1.4 - 0.4);
+    const grad = g.createRadialGradient(cx, cy, 0, cx, cy, r);
+    grad.addColorStop(0, `rgba(229,199,127,${0.28 * k})`);
+    grad.addColorStop(1, `rgba(229,199,127,${0.1 * k})`);
+    g.beginPath();
+    pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
+    g.closePath();
+    g.fillStyle = grad;
+    g.fill();
+    // corner markers
+    if (k > 0) {
+        for (const [x, y] of pts) {
+            g.beginPath();
+            g.arc(x, y, 6, 0, Math.PI * 2);
+            g.fillStyle = `rgba(229,199,127,${k})`;
+            g.fill();
+            g.lineWidth = 2;
+            g.strokeStyle = `rgba(10,20,36,${k})`;
+            g.stroke();
+        }
+    }
+    // border, drawn progressively
+    const segs = pts.map((p, i) => [p, pts[(i + 1) % pts.length]] as const);
+    const lens = segs.map(([a, b]) => Math.hypot(b[0] - a[0], b[1] - a[1]));
+    let left = lens.reduce((s, l) => s + l, 0) * reveal;
+    g.beginPath();
+    g.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 0; i < segs.length && left > 0; i++) {
+        const [a, b] = segs[i];
+        const k = Math.min(1, left / lens[i]);
+        g.lineTo(a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k);
+        left -= lens[i];
+    }
+    g.lineJoin = "round";
+    g.lineCap = "round";
+    g.strokeStyle = "rgba(10,20,36,0.55)";
+    g.lineWidth = 8;
+    g.stroke();
+    g.strokeStyle = "#E5C77F";
+    g.lineWidth = 3.5;
+    g.setLineDash([16, 10]);
+    g.lineDashOffset = -now / 40;
+    g.shadowColor = "rgba(229,199,127,0.9)";
+    g.shadowBlur = 14;
+    g.stroke();
+    g.restore();
+}

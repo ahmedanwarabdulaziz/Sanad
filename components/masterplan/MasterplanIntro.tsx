@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState, type JSX } from "react";
 import s from "./masterplan.module.css";
 import { ALLOCATION_NOTE } from "@/lib/sanad-zayed/masterplan/data";
@@ -208,54 +208,73 @@ export default function MasterplanIntro({ onChoose, startAtMenu = false }: { onC
                 <ellipse cx={W / 2} cy={H / 2} rx={Math.min(560, W * 0.5)} ry={Math.min(300, H * 0.2)} fill="url(#intro-fade)" />
             </motion.svg>
 
-            <motion.div className={s.introCenter} layout transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}>
-                <motion.div layout initial={{ opacity: 0, scale: 0.85, y: 10 }} animate={{ opacity: 1, scale: menu ? 0.82 : 1, y: 0 }} transition={{ delay: startAtMenu ? 0 : 0.35, duration: 1.1, ease: "easeOut" }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={LOGO} alt="سند" className={s.introLogo} />
-                </motion.div>
-                <motion.h1
-                    layout
-                    className={s.introTitle}
-                    style={menu ? { fontSize: "clamp(30px, 5vw, 48px)", marginTop: 14 } : undefined}
-                    initial={{ opacity: 0, letterSpacing: "0.35em", filter: "blur(8px)" }}
-                    animate={{ opacity: 1, letterSpacing: "0em", filter: "blur(0px)" }}
-                    transition={{ delay: startAtMenu ? 0 : 0.8, duration: 1.5, ease: "easeOut" }}
-                >
-                    سند زايد
-                </motion.h1>
-                <motion.div layout className={s.introLine} initial={{ width: 0 }} animate={{ width: 240 }} transition={{ delay: startAtMenu ? 0 : 1.4, duration: 1.1 }} />
-                <motion.p layout className={s.introSub} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: startAtMenu ? 0 : 1.8, duration: 0.8 }}>
-                    الشيخ زايد · المخطط التفاعلي للمشروع
-                </motion.p>
-
-                {menu && (
-                    <motion.div className={s.hub} initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.09, delayChildren: 0.25 } } }}>
-                        <div className={s.hubGrid}>
-                            {OPTIONS.map((o) => (
-                                <motion.button
-                                    key={o.id}
-                                    className={o.primary ? `${s.hubCard} ${s.hubCardPrimary}` : s.hubCard}
-                                    variants={{ hidden: { opacity: 0, y: 24, scale: 0.96 }, show: { opacity: 1, y: 0, scale: 1 } }}
-                                    transition={{ type: "spring", damping: 22, stiffness: 240 }}
-                                    whileHover={{ y: -4 }}
-                                    whileTap={{ scale: 0.97 }}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onChoose(o.id);
-                                    }}
-                                >
-                                    <span className={s.hubIcon}>{o.icon}</span>
-                                    <span className={s.hubTitle}>{o.title}</span>
-                                    <span className={s.hubText}>{o.text}</span>
-                                </motion.button>
-                            ))}
-                        </div>
-                        <motion.div className={s.hubNote} variants={{ hidden: { opacity: 0 }, show: { opacity: 1 } }}>
-                            {ALLOCATION_NOTE}
+            {/* Intro and hub are two separate blocks that crossfade: nothing slides or jumps. */}
+            <AnimatePresence mode="wait">
+                {!menu ? (
+                    <motion.div
+                        key="intro"
+                        className={s.introCenter}
+                        exit={{ opacity: 0, scale: 0.96, filter: "blur(6px)" }}
+                        transition={{ duration: 0.45, ease: "easeIn" }}
+                    >
+                        <motion.div initial={{ opacity: 0, scale: 0.85, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ delay: 0.35, duration: 1.1, ease: "easeOut" }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={LOGO} alt="سند" className={s.introLogo} />
                         </motion.div>
+                        <motion.h1
+                            className={s.introTitle}
+                            initial={{ opacity: 0, letterSpacing: "0.35em", filter: "blur(8px)" }}
+                            animate={{ opacity: 1, letterSpacing: "0em", filter: "blur(0px)" }}
+                            transition={{ delay: 0.8, duration: 1.5, ease: "easeOut" }}
+                        >
+                            سند زايد
+                        </motion.h1>
+                        <motion.div className={s.introLine} initial={{ width: 0 }} animate={{ width: 240 }} transition={{ delay: 1.4, duration: 1.1 }} />
+                        <motion.p className={s.introSub} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.8, duration: 0.8 }}>
+                            الشيخ زايد · المخطط التفاعلي للمشروع
+                        </motion.p>
+                    </motion.div>
+                ) : (
+                    <motion.div
+                        key="hub"
+                        className={s.introCenter}
+                        initial="hidden"
+                        animate="show"
+                        variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { duration: 0.5, staggerChildren: 0.08, delayChildren: 0.1 } } }}
+                    >
+                        <motion.div className={s.hubHead} variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } } }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={LOGO} alt="سند" className={s.hubLogo} />
+                            <div className={s.hubHeadTitle}>سند زايد</div>
+                            <div className={s.hubHeadSub}>الشيخ زايد · المخطط التفاعلي للمشروع</div>
+                        </motion.div>
+                        <div className={s.hub}>
+                            <div className={s.hubGrid}>
+                                {OPTIONS.map((o) => (
+                                    <motion.button
+                                        key={o.id}
+                                        className={o.primary ? `${s.hubCard} ${s.hubCardPrimary}` : s.hubCard}
+                                        variants={{ hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } } }}
+                                        whileHover={{ y: -4 }}
+                                        whileTap={{ scale: 0.97 }}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onChoose(o.id);
+                                        }}
+                                    >
+                                        <span className={s.hubIcon}>{o.icon}</span>
+                                        <span className={s.hubTitle}>{o.title}</span>
+                                        <span className={s.hubText}>{o.text}</span>
+                                    </motion.button>
+                                ))}
+                            </div>
+                            <motion.div className={s.hubNote} variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { duration: 0.6 } } }}>
+                                {ALLOCATION_NOTE}
+                            </motion.div>
+                        </div>
                     </motion.div>
                 )}
-            </motion.div>
+            </AnimatePresence>
 
             {!menu && (
                 <motion.button

@@ -2,8 +2,8 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { NEARBY_PLACES, PROJECT_LOCATION, directionsUrl, distanceKm, type NearbyPlace } from "@/lib/sanad-zayed/masterplan/data";
-import { TILE_CREDIT, clamp01, createTileLayer, easeInOut, fitCanvas, latToY, lonToX, type LatLng } from "./mapTiles";
+import { GOOGLE_MAPS_URL, NEARBY_PLACES, PROJECT_AREA, PROJECT_LOCATION, directionsUrl, distanceKm, type NearbyPlace } from "@/lib/sanad-zayed/masterplan/data";
+import { TILE_CREDIT, clamp01, createTileLayer, drawArea, easeInOut, fitCanvas, latToY, lonToX, type LatLng } from "./mapTiles";
 import s from "./masterplan.module.css";
 import * as J from "./journey";
 
@@ -13,10 +13,12 @@ const N = NEARBY_PLACES.length;
 
 // Movie timeline (ms)
 const OPEN = 2600; // fly onto the project
+const AREA = 9000; // the project's area: border, title, highlights, then the brief about Al-Tharwa Al-Khadraa
+const P0 = OPEN + AREA; // places start
 const PER = 3800; // each place
 const MOVE = 1300; // camera travel inside each place's slot
 const FINAL_MOVE = 1900; // pull back to the overview
-const T_FINALE = OPEN + N * PER;
+const T_FINALE = P0 + N * PER;
 const T_END = T_FINALE + FINAL_MOVE;
 
 type View = { c: LatLng; Z: number; sx: number; sy: number };
@@ -59,11 +61,15 @@ function cameraAt(t: number, W: number, H: number): View {
     const pair = (i: number) => fit([P, NEARBY_PLACES[i]], full, 0.5, 15.3, mobile ? 40 : 30);
     const overview = fit([P, ...NEARBY_PLACES], finaleArea, mobile ? 0.62 : 0.66, 15, mobile ? 0 : 20);
 
+    // the area card sits at the bottom, so frame the triangle in the space above it
+    const areaRegion: Area = mobile ? { x: 12, y: 96, w: W - 24, h: H * 0.4 - 96 } : { x: 16, y: 80, w: W - 32, h: H - 80 - 290 };
+    const area = fit(PROJECT_AREA.polygon, areaRegion, mobile ? 0.9 : 0.85, 15);
     if (t < OPEN) return lerpView(start, hero, easeInOut(t / OPEN), 0);
+    if (t < P0) return lerpView(hero, area, easeInOut(Math.min(1, (t - OPEN) / 1700)), 0.4);
     if (t < T_FINALE) {
-        const i = Math.floor((t - OPEN) / PER);
-        const k = t - OPEN - i * PER;
-        const from = i === 0 ? hero : pair(i - 1);
+        const i = Math.floor((t - P0) / PER);
+        const k = t - P0 - i * PER;
+        const from = i === 0 ? area : pair(i - 1);
         return k < MOVE ? lerpView(from, pair(i), easeInOut(k / MOVE), 0.7) : pair(i);
     }
     if (t < T_END) return lerpView(pair(N - 1), overview, easeInOut((t - T_FINALE) / FINAL_MOVE), 0.5);
@@ -71,12 +77,17 @@ function cameraAt(t: number, W: number, H: number): View {
 }
 
 /** Which place the movie is on: -1 opening, 0..N-1 a place, N finale. */
-const stepAt = (t: number) => (t < OPEN ? -1 : t < T_FINALE ? Math.floor((t - OPEN) / PER) : N);
+/** -1 opening, -2 the project's area, 0..N-1 a place, N finale. */
+const stepAt = (t: number) => (t < OPEN ? -1 : t < P0 ? -2 : t < T_FINALE ? Math.floor((t - P0) / PER) : N);
 
 /** "سند زايد قريبة من إيه؟" — a short film from the project to each nearby place, then all of them together. */
 export default function NearbyMap({ onPlan, onHome }: { onPlan: () => void; onHome: () => void }) {
     const canvas = useRef<HTMLCanvasElement>(null);
     const heroPin = useRef<HTMLDivElement>(null);
+    const areaLabel = useRef<HTMLDivElement>(null);
+    const areaHl = useRef<HTMLUListElement>(null);
+    const areaAbout = useRef<HTMLParagraphElement>(null);
+    const sideLabels = useRef<(HTMLDivElement | null)[]>([]);
     const placePins = useRef<(HTMLButtonElement | null)[]>([]);
     const card = useRef<HTMLDivElement>(null);
     const t0 = useRef(0);
@@ -115,10 +126,41 @@ export default function NearbyMap({ onPlan, onHome }: { onPlan: () => void; onHo
             g.fillStyle = "rgba(6,12,24,0.3)";
             g.fillRect(0, 0, W, H);
 
+            // the project's area (the triangle): draws itself in its own scene, then stays as a soft highlight
+            const areaPts = PROJECT_AREA.polygon.map((p) => tiles.project(p, v.c, Z, v.sx, v.sy));
+            const reveal = t < OPEN ? 0 : clamp01((t - OPEN - 900) / 1900);
+            const areaAlpha = t < OPEN ? 0 : t < P0 ? 1 : t < T_FINALE ? 0.5 : 0.75;
+            const dim = t < OPEN ? 0 : t < P0 ? reveal : t < T_FINALE ? 0.3 : 0.45;
+            drawArea(g, areaPts, reveal, areaAlpha, now, dim);
+            // road names along each side, kept upright
+            const sideOn = t < OPEN ? 0 : t < P0 ? clamp01((t - OPEN - 2300) / 500) : t < T_FINALE ? 0 : clamp01((t - T_END) / 600);
+            const cxA = areaPts.reduce((s2, p) => s2 + p[0], 0) / areaPts.length;
+            const cyA = areaPts.reduce((s2, p) => s2 + p[1], 0) / areaPts.length;
+            areaPts.forEach((a, i) => {
+                const el = sideLabels.current[i];
+                if (!el) return;
+                const b = areaPts[(i + 1) % areaPts.length];
+                let ang = (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI;
+                if (ang > 90) ang -= 180;
+                if (ang < -90) ang += 180;
+                const mx = (a[0] + b[0]) / 2;
+                const my = (a[1] + b[1]) / 2;
+                const d = Math.hypot(mx - cxA, my - cyA) || 1;
+                el.style.transform = `translate(${mx + ((mx - cxA) / d) * 18}px, ${my + ((my - cyA) / d) * 18}px) rotate(${ang}deg)`;
+                el.style.opacity = String(sideOn);
+            });
+            if (areaLabel.current) {
+                const out = 1 - clamp01((t - P0 + 450) / 450);
+                areaLabel.current.style.opacity = String(t < P0 ? clamp01((t - OPEN - 2000) / 600) * out : 0);
+                areaLabel.current.style.pointerEvents = "none";
+                if (areaHl.current) areaHl.current.style.opacity = String(clamp01((t - OPEN - 3500) / 600));
+                if (areaAbout.current) areaAbout.current.style.opacity = String(clamp01((t - OPEN - 5200) / 700));
+            }
+
             const [px, py] = tiles.project(P, v.c, Z, v.sx, v.sy);
             NEARBY_PLACES.forEach((p, i) => {
                 const [qx, qy] = tiles.project(p, v.c, Z, v.sx, v.sy);
-                const slot = OPEN + i * PER;
+                const slot = P0 + i * PER;
                 const current = st === i;
                 const visited = st > i;
                 // line progress: drawn while its place is on screen; all redrawn together in the finale
@@ -208,6 +250,27 @@ export default function NearbyMap({ onPlan, onHome }: { onPlan: () => void; onHo
                 </button>
             ))}
 
+            {PROJECT_AREA.sides.map((name, i) => (
+                <div key={name} className={s.mapMarker} ref={(el) => void (sideLabels.current[i] = el)} aria-hidden="true">
+                    <span className={s.sideLabel}>{name}</span>
+                </div>
+            ))}
+
+            <div className={s.areaPanel} ref={areaLabel} style={{ opacity: 0 }}>
+                <div className={s.areaEyebrow}>موقع المشروع</div>
+                <strong className={s.areaTitle}>{PROJECT_AREA.title}</strong>
+                <span className={s.areaSub}>{PROJECT_AREA.subtitle}</span>
+                <ul className={s.areaHl} ref={areaHl} style={{ opacity: 0 }}>
+                    {PROJECT_AREA.highlights.map((h) => (
+                        <li key={h}>{h}</li>
+                    ))}
+                </ul>
+                <p className={s.areaAbout} ref={areaAbout} style={{ opacity: 0 }}>
+                    <b>{PROJECT_AREA.about.title}</b>
+                    {PROJECT_AREA.about.text}
+                </p>
+            </div>
+
             {/* hero marker: the project */}
             <div className={s.mapMarker} ref={heroPin} aria-hidden="true">
                 <span className={s.heroPulse} />
@@ -261,6 +324,9 @@ export default function NearbyMap({ onPlan, onHome }: { onPlan: () => void; onHo
                 <button className={s.nearHome} onClick={onHome}>
                     → الرئيسية
                 </button>
+                <a className={s.nearHome} href={GOOGLE_MAPS_URL} target="_blank" rel="noopener noreferrer">
+                    📍<span className={s.nearMapsText}> الموقع على Google Maps</span>
+                </a>
                 {!finale && (
                     <button className={s.nearHome} onClick={skip}>
                         تخطي العرض
@@ -282,6 +348,18 @@ export default function NearbyMap({ onPlan, onHome }: { onPlan: () => void; onHo
                         <p className={s.nearLead}>
                             {N} وجهات رئيسية على بُعد {fastest}–{slowest} دقيقة بالسيارة.
                         </p>
+                        <details className={s.nearAbout}>
+                            <summary>
+                                <span>{PROJECT_AREA.about.title}</span>
+                                <small>{PROJECT_AREA.title}</small>
+                            </summary>
+                            <ul>
+                                {PROJECT_AREA.highlights.map((h) => (
+                                    <li key={h}>{h}</li>
+                                ))}
+                            </ul>
+                            <p>{PROJECT_AREA.about.text}</p>
+                        </details>
                         <ul className={s.nearList}>
                             {NEARBY_PLACES.map((p, i) => (
                                 <li key={p.id}>

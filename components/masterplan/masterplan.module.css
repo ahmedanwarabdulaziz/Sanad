@@ -1031,6 +1031,9 @@
     z-index: 3;
 }
 .nearHome {
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
     padding: 9px 16px;
     border-radius: 999px;
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -1237,6 +1240,35 @@
 .placeTagOn b {
     background: #0a1424;
     color: #e5c77f;
+}
+.areaCard {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: max-content;
+    max-width: 78vw;
+    padding: 12px 20px;
+    border-radius: 18px;
+    background: rgba(10, 20, 36, 0.86);
+    border: 1px solid rgba(229, 199, 127, 0.8);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    text-align: center;
+}
+.areaCard strong {
+    color: #f3e3b5;
+    font-size: clamp(15px, 2vw, 20px);
+    font-weight: 800;
+}
+.areaCard span {
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 12px;
 }
 .heroBadge {
     position: absolute;
@@ -1449,5 +1481,231 @@
     .fabCall {
         width: 44px;
         height: 44px;
+    }
+}
+
+.mapsLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+@media (max-width: 720px) {
+    .mapsLinkText {
+        display: none;
+    }
+    .mapsLink {
+        padding: 11px 12px;
+    }
+}
+
+/* project area: road names, summary card, brief */
+.sideLabel {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform: translate(-50%, -50%);
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgba(10, 20, 36, 0.82);
+    border: 1px solid rgba(229, 199, 127, 0.55);
+    color: #f3e3b5;
+    font-size: 11.5px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.areaPanel {
+    position: absolute;
+    left: 50%;
+    bottom: 64px;
+    z-index: 4;
+    transform: translateX(-50%);
+    width: min(680px, calc(100vw - 32px));
+    padding: 18px 22px 16px;
+    border-radius: 22px;
+    background: linear-gradient(160deg, rgba(18, 32, 54, 0.93), rgba(10, 20, 36, 0.93));
+    border: 1px solid rgba(229, 199, 127, 0.6);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: #fff;
+    text-align: center;
+    pointer-events: none;
+}
+.areaEyebrow {
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+    color: #e5c77f;
+}
+.areaTitle {
+    display: block;
+    margin-top: 2px;
+    font-size: clamp(18px, 2.4vw, 24px);
+    font-weight: 800;
+    color: #f3e3b5;
+}
+.areaSub {
+    display: block;
+    margin-top: 2px;
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.72);
+}
+.areaHl {
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    transition: opacity 0.3s;
+}
+.areaHl li {
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: rgba(194, 155, 64, 0.16);
+    border: 1px solid rgba(194, 155, 64, 0.4);
+    font-size: 12px;
+}
+.areaAbout {
+    margin: 12px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 13px;
+    line-height: 1.9;
+    color: rgba(255, 255, 255, 0.86);
+    text-align: right;
+}
+.areaAbout b {
+    display: block;
+    margin-bottom: 2px;
+    color: #e5c77f;
+    font-size: 13.5px;
+}
+.nearAbout {
+    margin: 0 0 14px;
+    padding: 10px 14px;
+    border-radius: 14px;
+    background: rgba(194, 155, 64, 0.1);
+    border: 1px solid rgba(194, 155, 64, 0.4);
+}
+.nearAbout summary {
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    list-style: none;
+}
+.nearAbout summary::-webkit-details-marker {
+    display: none;
+}
+.nearAbout summary span {
+    font-weight: 800;
+    color: #f3e3b5;
+}
+.nearAbout summary span::after {
+    content: " ⌄";
+    color: #e5c77f;
+}
+.nearAbout summary small {
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, 0.65);
+}
+.nearAbout ul {
+    margin: 10px 0 0;
+    padding-inline-start: 18px;
+    font-size: 12.5px;
+    line-height: 1.8;
+}
+.nearAbout p {
+    margin: 8px 0 0;
+    font-size: 12.5px;
+    line-height: 1.85;
+    color: rgba(255, 255, 255, 0.8);
+}
+@media (max-width: 760px) {
+    .areaPanel {
+        bottom: 56px;
+        padding: 14px 16px 12px;
+    }
+    .areaHl li {
+        font-size: 11px;
+        padding: 4px 10px;
+    }
+    .areaAbout {
+        font-size: 12px;
+        line-height: 1.8;
+    }
+    .sideLabel {
+        font-size: 10px;
+        padding: 2px 8px;
+    }
+}
+
+@media (max-width: 760px) {
+    .nearMapsText {
+        display: none;
+    }
+    .areaSub {
+        display: none;
+    }
+    .areaTitle {
+        font-size: 16.5px;
+    }
+    .areaHl {
+        margin-top: 8px;
+        gap: 4px;
+    }
+    .areaHl li {
+        font-size: 10.5px;
+        padding: 3px 9px;
+    }
+    .areaAbout {
+        margin-top: 8px;
+        padding-top: 8px;
+        font-size: 11.5px;
+        line-height: 1.7;
+    }
+    .areaAbout b {
+        font-size: 12.5px;
+    }
+}
+
+/* hub header (replaces the intro title once the options show) */
+.hubHead {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+.hubLogo {
+    height: 46px;
+    width: auto;
+    border-radius: 6px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+.hubHeadTitle {
+    margin-top: 6px;
+    font-size: clamp(30px, 4.6vw, 46px);
+    font-weight: 800;
+    line-height: 1.15;
+    text-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+}
+.hubHeadSub {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.78);
+}
+.hubHeadSub::before {
+    content: "";
+    display: block;
+    width: 180px;
+    height: 1px;
+    margin: 0 auto 8px;
+    background: linear-gradient(to left, transparent, #c29b40, transparent);
+}
+@media (max-width: 720px) {
+    .hubLogo {
+        height: 40px;
+    }
+    .hubHeadSub {
+        font-size: 12.5px;
     }
 }

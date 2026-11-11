@@ -19,6 +19,7 @@ import {
   ROOM_COLORS,
   ROOM_LEGEND,
   SITE,
+  GOOGLE_MAPS_URL,
   UNIT_BY_ID,
   UNITS,
   bbox,
@@ -692,6 +693,16 @@ export default function Masterplan2D() {
           <button className={cx(s.glass, s.backLink)} onClick={goHome}>
             الرئيسية
           </button>
+          <a
+            href={GOOGLE_MAPS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cx(s.glass, s.backLink, s.mapsLink)}
+            aria-label="موقع المشروع على Google Maps"
+          >
+            <span aria-hidden="true">📍</span>
+            <span className={s.mapsLinkText}>الموقع على الخريطة</span>
+          </a>
           <Link
             href="/projects/sanad-zayed"
             className={cx(s.glass, s.backLink, s.hideMobile)}

@@ -58,6 +58,40 @@ export const PROJECT_LOCATION = {
     address: "شارع رقم 6، متفرع من شارع النزهة، الثروة الخضراء، الشيخ زايد",
 };
 
+/** Exact pin of the plot in Google Maps (opens the app on phones). */
+export const GOOGLE_MAPS_URL = `https://www.google.com/maps/search/?api=1&query=${PROJECT_LOCATION.lat},${PROJECT_LOCATION.lng}`;
+
+/**
+ * The project's area: the triangle east of El-Nozha Street, between the Cairo–Alexandria desert road
+ * and the 26th of July Corridor (corners near Al Ahly club, Hyper One, and the road/corridor junction).
+ * Traced from Google Maps and calibrated on the Al Ahly and Hyper One pins (about ±50 m).
+ */
+export const PROJECT_AREA = {
+    polygon: [
+        { lat: 30.080821, lng: 30.976794 },
+        { lat: 30.049976, lng: 31.052547 },
+        { lat: 30.029977, lng: 31.022018 },
+    ],
+    title: "المنطقة الوحيدة المتاحة حاليًا في الشيخ زايد",
+    subtitle: "بين شارع النزهة وطريق مصر إسكندرية الصحراوي ومحور 26 يوليو",
+    /** Road along each side: polygon[i] → polygon[i + 1]. */
+    sides: ["طريق مصر إسكندرية الصحراوي", "محور 26 يوليو", "شارع النزهة"],
+    highlights: [
+        "داخل كردون مدينة الشيخ زايد وتحت إشراف جهاز المدينة",
+        "يحدها ثلاثة محاور رئيسية تربطها بالقاهرة والجيزة والساحل",
+        "دقائق من النادي الأهلي وهايبر وان وأبراج زد والقرية الذكية",
+    ],
+    /**
+     * Sources: news reports on the presidential decree annexing the area to Sheikh Zayed and changing
+     * its use from agricultural to urban (Youm7, Sept 2017), and on regularising plots ahead of
+     * completing utilities (Masrawy, Dec 2023).
+     */
+    about: {
+        title: "عن منطقة الثروة الخضراء",
+        text: "الثروة الخضراء هي الامتداد الشرقي لمدينة الشيخ زايد، ضُمّت إلى كردون المدينة بقرار جمهوري وتحوّل نشاطها من زراعي إلى عمراني، لتدخل ضمن التخطيط الرسمي لجهاز المدينة وهيئة المجتمعات العمرانية الجديدة. تتوسط المنطقة أهم محاور غرب القاهرة، ويجري توفيق أوضاعها واستكمال مرافقها وخدماتها مع انطلاق مشروعات سكنية جديدة، ما يجعلها من أسرع مناطق الشيخ زايد نموًا وأكثرها فرصًا للاستثمار.",
+    },
+};
+
 export interface NearbyPlace {
     id: string;
     name: string;
