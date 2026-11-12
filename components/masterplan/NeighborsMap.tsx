@@ -254,7 +254,8 @@ export default function NeighborsMap({ onPlan, onHome, onNearby }: { onPlan: () 
                 <span className={s.heroTag}>سند زايد</span>
             </div>
 
-            <div className={s.mapMarker} ref={card} aria-live="polite">
+            {/* above the pins (their z-index is 1–3) and below the panels that come later in the DOM */}
+            <div className={s.mapMarker} ref={card} style={{ zIndex: 3 }} aria-live="polite">
                 {cardItem && (
                     <div className={cx(s.distCard, s.nbCard)} key={cardItem.id}>
                         <div className={s.nbCardDev}>{cardItem.developer}</div>
