@@ -186,6 +186,116 @@ export const NEARBY_PLACES: NearbyPlace[] = [
     },
 ];
 
+export interface Neighbor {
+    id: string;
+    /** Project name as marketed. */
+    name: string;
+    developer: string;
+    /** "major": the big developers, visited one by one; "new": the newer boutique projects, shown together. */
+    group: "major" | "new";
+    /** Land area in feddans, as announced (omitted when no figure was published). */
+    feddans?: number;
+    /** Shown instead of the bare number when the figure is approximate. */
+    feddansText?: string;
+    kind: string;
+    icon: string;
+    /** One short fact for the card. */
+    note?: string;
+    /** Has shops, offices or a hotel. */
+    commercial?: boolean;
+    lat: number;
+    lng: number;
+    labelSide?: "down" | "up" | "left" | "right";
+}
+
+/**
+ * "جيرانك في الثروة الخضراء" — developers building inside the same triangle as Sanad Zayed
+ * (between El-Nozha, the desert road and the 26th of July Corridor), in the order the movie visits them.
+ * Pins are the Google Maps place pins (Nov 2026), each checked to fall inside PROJECT_AREA.
+ * Areas are the developers' announced figures as reported by the press and property portals
+ * (Al Mal, Al Borsa, Daily News Egypt, Sada El Balad, Nawy, Aqarmap), Nov 2026.
+ * Left out on purpose: ZED / Ora (across El-Nozha, outside the triangle), Thru Mall (on the Dahshur road),
+ * Safw and Lacury (no reliable location yet).
+ */
+export const NEIGHBORS: Neighbor[] = [
+    {
+        id: "cairo-gate",
+        name: "كايرو جيت",
+        developer: "إعمار مصر",
+        group: "major",
+        feddans: 150,
+        kind: "مجتمع سكني متكامل",
+        icon: "🏙️",
+        note: "على طريق مصر إسكندرية الصحراوي قصاد القرية الذكية",
+        lat: 30.0586792,
+        lng: 31.0312234,
+    },
+    {
+        id: "westrict",
+        name: "ويستريكت",
+        developer: "The Land Developers (TLD)",
+        group: "major",
+        feddans: 9,
+        kind: "تجاري · إداري · فندقي",
+        icon: "🏨",
+        note: "فندق Tribute Portfolio بالشراكة مع ماريوت على الصحراوي",
+        commercial: true,
+        lat: 30.0516691,
+        lng: 31.0428516,
+        labelSide: "up",
+    },
+    {
+        id: "village-west",
+        name: "فيلدج ويست",
+        developer: "درة",
+        group: "major",
+        feddans: 125,
+        kind: "سكني + منطقة تجارية",
+        icon: "🏘️",
+        note: "مرحلتين ومنطقة تجارية حوالي 5 أفدنة",
+        commercial: true,
+        lat: 30.0449235,
+        lng: 31.0246045,
+        labelSide: "right",
+    },
+    {
+        id: "royal-city",
+        name: "رويال سيتي",
+        developer: "مجموعة البابطين",
+        group: "major",
+        feddans: 350,
+        feddansText: "350+",
+        kind: "فيلات",
+        icon: "🏰",
+        note: "أكثر من 700 فيلا و80% مساحات خضراء",
+        lat: 30.0383,
+        lng: 31.0277,
+    },
+    {
+        id: "waterway-west",
+        name: "ووتر واي ويست",
+        developer: "The Waterway",
+        group: "major",
+        feddans: 47,
+        kind: "سكني متكامل",
+        icon: "🌊",
+        note: "جنب فيلدج ويست وورا كايرو جيت",
+        lat: 30.0428693,
+        lng: 31.0192481,
+        labelSide: "left",
+    },
+    { id: "naseem", name: "نسيم", developer: "Golden Land", group: "new", feddans: 8.5, kind: "سكني", icon: "🏢", note: "استثمارات 5 مليار جنيه", lat: 30.0641758, lng: 31.0132418 },
+    { id: "g-west", name: "G West", developer: "المهندسين للتطوير العقاري", group: "new", feddans: 10, kind: "سكني", icon: "🏢", note: "الإنشاءات تخطت 30%", lat: 30.064554, lng: 31.0067069 },
+    { id: "white-residence", name: "وايت ريزيدنس", developer: "Pledge", group: "new", feddans: 9, kind: "سكني", icon: "🏢", note: "قصاد بوابة 1 الربوة", lat: 30.070365, lng: 30.997698 },
+    { id: "the-flow", name: "ذا فلو", developer: "زايا", group: "new", feddans: 3, kind: "سكني", icon: "🏢", lat: 30.0710357, lng: 30.9901501 },
+    { id: "unoia", name: "يونويا", developer: "Voya", group: "new", feddans: 9, kind: "سكني", icon: "🏢", note: "70% مساحات خضراء", lat: 30.0743668, lng: 30.989887 },
+    { id: "genista", name: "جينيستا (روح زايد)", developer: "الأماكن", group: "new", feddans: 10, kind: "سكني", icon: "🏢", lat: 30.0837794, lng: 30.9819372 },
+    { id: "coy", name: "كوي", developer: "Voya", group: "new", feddans: 10, kind: "سكني + تجاري", icon: "🏢", commercial: true, lat: 30.0527186, lng: 31.0114468 },
+    { id: "elysium", name: "إليسيوم", developer: "لاين", group: "new", feddans: 15, kind: "سكني", icon: "🏢", note: "72% مساحات خضراء وبحيرات", lat: 30.0502792, lng: 31.0122722 },
+    { id: "bahja", name: "بهجة", developer: "سيمفوني", group: "new", kind: "سكني", icon: "🏢", lat: 30.0503223, lng: 31.0155825 },
+    { id: "the-harv", name: "ذا هارف", developer: "دال", group: "new", feddans: 10, kind: "سكني", icon: "🏢", note: "قصاد فيلدج ويست", lat: 30.0511486, lng: 31.029416 },
+];
+
 /** Hyper One Sheikh Zayed (kept as its own constant for the location panel). */
 export const HYPER_ONE = NEARBY_PLACES.find((p) => p.id === "hyper-one")!;
 

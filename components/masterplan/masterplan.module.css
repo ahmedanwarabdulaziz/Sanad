@@ -1709,3 +1709,333 @@
         font-size: 12.5px;
     }
 }
+
+/* ---------- neighbours film ("جيرانك في الثروة الخضراء") ---------- */
+.nbLink {
+    margin-top: 14px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(229, 199, 127, 0.7);
+    background: linear-gradient(135deg, rgba(229, 199, 127, 0.18), rgba(194, 155, 64, 0.08));
+    color: #f3e3b5;
+    font: inherit;
+    font-size: 14.5px;
+    font-weight: 800;
+    text-align: right;
+    cursor: pointer;
+}
+.nbLink > span:first-child {
+    font-size: 22px;
+}
+.nbLink > span:nth-child(2) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+.nbLink small {
+    font-size: 11.5px;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.65);
+}
+.nbLink b {
+    color: #e5c77f;
+}
+.nbInvite {
+    position: absolute;
+    z-index: 5;
+    left: calc((100% - 420px) / 2);
+    bottom: 56px;
+    width: min(420px, calc(100vw - 32px));
+    margin-left: calc(min(420px, calc(100vw - 32px)) / -2);
+    padding: 22px 24px 20px;
+    border-radius: 24px;
+    background: linear-gradient(160deg, rgba(24, 40, 66, 0.96), rgba(10, 20, 36, 0.96));
+    border: 1px solid rgba(229, 199, 127, 0.85);
+    box-shadow: 0 0 0 6px rgba(194, 155, 64, 0.14), 0 24px 70px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: #fff;
+    text-align: center;
+}
+.nbInviteClose {
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.75);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+.nbInviteEyebrow {
+    font-size: 12.5px;
+    color: #e5c77f;
+}
+.nbInviteTitle {
+    display: block;
+    margin-top: 2px;
+    font-size: clamp(21px, 2.6vw, 27px);
+    font-weight: 800;
+    color: #f3e3b5;
+}
+.nbInviteText {
+    margin: 8px 0 16px;
+    font-size: 13.5px;
+    line-height: 1.8;
+    color: rgba(255, 255, 255, 0.8);
+}
+.nbInviteGo {
+    width: 100%;
+    padding: 13px 0;
+    border: 0;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #e5c77f, #c29b40);
+    color: #0a1424;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+}
+.nbTitleCard {
+    position: absolute;
+    z-index: 4;
+    left: 50%;
+    bottom: 12%;
+    translate: -50% 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: max-content;
+    max-width: calc(100vw - 32px);
+    padding: 18px 34px;
+    border-radius: 24px;
+    background: linear-gradient(160deg, rgba(24, 40, 66, 0.93), rgba(10, 20, 36, 0.93));
+    border: 1px solid rgba(229, 199, 127, 0.85);
+    box-shadow: 0 0 0 6px rgba(194, 155, 64, 0.14), 0 24px 70px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    text-align: center;
+    pointer-events: none;
+}
+.nbTitleEyebrow {
+    font-size: 12.5px;
+    color: #e5c77f;
+}
+.nbTitleMain {
+    font-size: clamp(24px, 3.6vw, 38px);
+    font-weight: 800;
+    color: #f3e3b5;
+}
+.nbTitleSub {
+    font-size: clamp(13px, 1.6vw, 16px);
+    color: rgba(255, 255, 255, 0.82);
+}
+.nbMajorDot {
+    left: -20px;
+    top: -20px;
+    width: 40px;
+    height: 40px;
+    font-size: 19px;
+    border-width: 3px;
+    box-shadow: 0 0 0 5px rgba(194, 155, 64, 0.25), 0 6px 18px rgba(0, 0, 0, 0.5);
+}
+.nbDot {
+    position: absolute;
+    left: -8px;
+    top: -8px;
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    background: #e5c77f;
+    border: 3px solid #0a1424;
+    box-shadow: 0 0 0 3px rgba(229, 199, 127, 0.35), 0 4px 12px rgba(0, 0, 0, 0.5);
+    transition: transform 0.2s;
+}
+.nbDotOn {
+    transform: scale(1.35);
+    background: #fff;
+}
+.nbTag {
+    top: 14px;
+    opacity: 0;
+    font-size: 11.5px;
+    transition: opacity 0.2s;
+}
+.mapMarkerBtn:hover .nbTag {
+    opacity: 1 !important;
+}
+.nbCard {
+    transform: translate(-50%, 28px);
+}
+.nbCardDev {
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    color: rgba(255, 255, 255, 0.65);
+}
+.nbCardDist {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    font-size: 11.5px;
+    color: #e5c77f;
+}
+.nbNewPanel {
+    position: absolute;
+    left: 50%;
+    bottom: 40px;
+    z-index: 4;
+    translate: -50% 0;
+    width: min(720px, calc(100vw - 32px));
+    padding: 16px 20px 14px;
+    border-radius: 22px;
+    background: linear-gradient(160deg, rgba(18, 32, 54, 0.93), rgba(10, 20, 36, 0.93));
+    border: 1px solid rgba(229, 199, 127, 0.6);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: #fff;
+    text-align: center;
+    pointer-events: none;
+}
+.nbChips {
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+}
+.nbChips li {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: rgba(194, 155, 64, 0.16);
+    border: 1px solid rgba(194, 155, 64, 0.4);
+    font-size: 12.5px;
+    font-weight: 700;
+}
+.nbChips small {
+    font-size: 10.5px;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.62);
+}
+.nbStats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 6px 0 4px;
+}
+.nbStats div {
+    display: flex;
+    flex-direction: column;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(194, 155, 64, 0.12);
+    border: 1px solid rgba(194, 155, 64, 0.35);
+}
+.nbStats strong {
+    font-size: 24px;
+    line-height: 1.1;
+    color: #e5c77f;
+}
+.nbStats span {
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, 0.7);
+}
+.nbGroup {
+    margin: 16px 0 8px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #e5c77f;
+}
+.nbNewList {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+.nbNewItem {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    color: #fff;
+    font: inherit;
+    text-align: right;
+    cursor: pointer;
+}
+.nbNewName {
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+    font-weight: 700;
+}
+.nbNewName small {
+    font-size: 10.5px;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.6);
+}
+.nbNewName i {
+    align-self: flex-start;
+    margin-top: 2px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: rgba(229, 199, 127, 0.2);
+    color: #e5c77f;
+    font-size: 9.5px;
+    font-style: normal;
+}
+.nbNewArea {
+    flex: none;
+    font-size: 11px;
+    color: #e5c77f;
+}
+.nbActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+@media (max-width: 760px) {
+    .nbInvite {
+        left: 50%;
+        top: 64px;
+        bottom: auto;
+        padding: 18px 18px 16px;
+    }
+    .nbTitleCard {
+        bottom: auto;
+        top: 58%;
+        padding: 14px 20px;
+    }
+    .nbNewPanel {
+        bottom: 16px;
+        padding: 12px 12px 10px;
+    }
+    .nbChips li {
+        font-size: 11.5px;
+        padding: 4px 9px;
+    }
+    .nbChips small {
+        display: none;
+    }
+}

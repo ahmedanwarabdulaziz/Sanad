@@ -32,6 +32,7 @@ import { LOGO, UnitDetails, UnitSummary, cx } from "./UnitPanels";
 import { SalesMenu, SalesPanels, useSales } from "./SalesKit";
 import MasterplanIntro, { type HubChoice } from "./MasterplanIntro";
 import NearbyMap from "./NearbyMap";
+import NeighborsMap from "./NeighborsMap";
 import ContactFab from "./ContactFab";
 import MetaPixel from "./MetaPixel";
 import * as J from "./journey";
@@ -283,9 +284,11 @@ function UnitOnSite({
 
 export default function Masterplan2D() {
   const [stage, setStage] = useState(0); // 0 hidden, 1 colour reveal, 2 ready
-  const [phase, setPhase] = useState<"intro" | "nearby" | "map" | "site">("intro");
+  const [phase, setPhase] = useState<"intro" | "nearby" | "neighbors" | "map" | "site">("intro");
   const [returning, setReturning] = useState(false);
   const flown = useRef(false);
+  /** Back from the neighbours film, the nearby map opens on its finished overview. */
+  const [nearbyDone, setNearbyDone] = useState(false);
   const [portrait, setPortrait] = useState(false);
   const [uiHidden, setUiHidden] = useState(false);
   useEffect(() => {
@@ -332,6 +335,7 @@ export default function Masterplan2D() {
       const q = new URLSearchParams(window.location.search);
       if (q.get("view") === "3d") setMode("3d");
       if (q.get("view") === "nearby") setPhase("nearby");
+      if (q.get("view") === "neighbors") setPhase("neighbors");
       const id = q.get("unit");
       if (id && UNIT_BY_ID[id]) {
         // Shared unit links skip the intro and the fly-in.
@@ -379,6 +383,7 @@ export default function Masterplan2D() {
       setFloor(null);
       goPlan();
     } else if (c === "nearby") {
+      setNearbyDone(false);
       setPhase("nearby");
     } else {
       flown.current = true;
@@ -631,6 +636,23 @@ export default function Masterplan2D() {
               setMode("2d");
               if (floor === null) setFloor(0);
               goPlan();
+            }}
+            onNeighbors={() => setPhase("neighbors")}
+            startAtEnd={nearbyDone}
+          />
+        )}
+        {phase === "neighbors" && (
+          <NeighborsMap
+            key="neighbors"
+            onHome={goHome}
+            onPlan={() => {
+              setMode("2d");
+              if (floor === null) setFloor(0);
+              goPlan();
+            }}
+            onNearby={() => {
+              setNearbyDone(true);
+              setPhase("nearby");
             }}
           />
         )}

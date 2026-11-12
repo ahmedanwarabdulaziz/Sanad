@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GOOGLE_MAPS_URL, NEARBY_PLACES, PROJECT_AREA, PROJECT_LOCATION, directionsUrl, distanceKm, type NearbyPlace } from "@/lib/sanad-zayed/masterplan/data";
-import { TILE_CREDIT, clamp01, createTileLayer, drawArea, easeInOut, fitCanvas, latToY, lonToX, type LatLng } from "./mapTiles";
+import { TILE_CREDIT, clamp01, createTileLayer, drawArea, easeInOut, fitCanvas, fitView as fit, lerpView, type LatLng, type Rect as Area, type View } from "./mapTiles";
 import s from "./masterplan.module.css";
 import * as J from "./journey";
 
@@ -20,36 +20,6 @@ const MOVE = 1300; // camera travel inside each place's slot
 const FINAL_MOVE = 1900; // pull back to the overview
 const T_FINALE = P0 + N * PER;
 const T_END = T_FINALE + FINAL_MOVE;
-
-type View = { c: LatLng; Z: number; sx: number; sy: number };
-type Area = { x: number; y: number; w: number; h: number };
-
-/** Zoom/centre that fit some points inside a screen rectangle. */
-function fit(points: LatLng[], area: Area, fill: number, maxZ = 15.3, lift = 0): View {
-    const z0 = 10;
-    const xs = points.map((p) => lonToX(p.lng, z0));
-    const ys = points.map((p) => latToY(p.lat, z0));
-    const spanX = Math.max(1, Math.max(...xs) - Math.min(...xs));
-    const spanY = Math.max(1, Math.max(...ys) - Math.min(...ys));
-    const Z = Math.min(maxZ, z0 + Math.log2(Math.min((area.w * fill) / spanX, (area.h * fill) / spanY)));
-    const lats = points.map((p) => p.lat);
-    const lngs = points.map((p) => p.lng);
-    return {
-        c: { lat: (Math.max(...lats) + Math.min(...lats)) / 2, lng: (Math.max(...lngs) + Math.min(...lngs)) / 2 },
-        Z,
-        sx: area.x + area.w / 2,
-        sy: area.y + area.h / 2 - lift,
-    };
-}
-
-function lerpView(a: View, b: View, e: number, dip: number): View {
-    return {
-        c: { lat: a.c.lat + (b.c.lat - a.c.lat) * e, lng: a.c.lng + (b.c.lng - a.c.lng) * e },
-        Z: a.Z + (b.Z - a.Z) * e - dip * Math.sin(Math.PI * e),
-        sx: a.sx + (b.sx - a.sx) * e,
-        sy: a.sy + (b.sy - a.sy) * e,
-    };
-}
 
 /** Camera position at time t (ms since the movie started). */
 function cameraAt(t: number, W: number, H: number): View {
@@ -81,7 +51,19 @@ function cameraAt(t: number, W: number, H: number): View {
 const stepAt = (t: number) => (t < OPEN ? -1 : t < P0 ? -2 : t < T_FINALE ? Math.floor((t - P0) / PER) : N);
 
 /** "سند زايد قريبة من إيه؟" — a short film from the project to each nearby place, then all of them together. */
-export default function NearbyMap({ onPlan, onHome }: { onPlan: () => void; onHome: () => void }) {
+export default function NearbyMap({
+    onPlan,
+    onHome,
+    onNeighbors,
+    startAtEnd = false,
+}: {
+    onPlan: () => void;
+    onHome: () => void;
+    /** Opens "جيرانك في الثروة الخضراء". */
+    onNeighbors: () => void;
+    /** Back from the neighbours film: open on the finished overview, without the invitation. */
+    startAtEnd?: boolean;
+}) {
     const canvas = useRef<HTMLCanvasElement>(null);
     const heroPin = useRef<HTMLDivElement>(null);
     const areaLabel = useRef<HTMLDivElement>(null);
@@ -111,7 +93,7 @@ export default function NearbyMap({ onPlan, onHome }: { onPlan: () => void; onHo
         const tiles = createTileLayer();
         [P, ...NEARBY_PLACES].forEach((p) => tiles.warm(p, 12, 15, 2, 2));
         let raf = 0;
-        t0.current = performance.now();
+        t0.current = performance.now() - (startAtEnd ? T_END : 0);
         const draw = (now: number) => {
             const { W, H } = fitCanvas(cv, g);
             const t = now - t0.current;
@@ -215,7 +197,20 @@ export default function NearbyMap({ onPlan, onHome }: { onPlan: () => void; onHo
         };
         raf = requestAnimationFrame(draw);
         return () => cancelAnimationFrame(raf);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- the film starts once; startAtEnd only sets where
     }, []);
+
+    // the invitation to the neighbours film: a moment after the overview settles
+    const [invite, setInvite] = useState(false);
+    const invited = useRef(startAtEnd);
+    useEffect(() => {
+        if (step !== N || invited.current) return;
+        const id = setTimeout(() => {
+            invited.current = true;
+            setInvite(true);
+        }, FINAL_MOVE + 900);
+        return () => clearTimeout(id);
+    }, [step]);
 
     const skip = useCallback(() => {
         t0.current = performance.now() - T_FINALE;
@@ -383,6 +378,14 @@ export default function NearbyMap({ onPlan, onHome }: { onPlan: () => void; onHo
                                 عرض المسار إلى {NEARBY_PLACES[selected].name} في Google Maps ←
                             </a>
                         )}
+                        <button className={s.nbLink} onClick={onNeighbors}>
+                            <span>🏘️</span>
+                            <span>
+                                جيرانك في الثروة الخضراء
+                                <small>كبار المطورين اللي بيبنوا حوالين سند زايد</small>
+                            </span>
+                            <b>←</b>
+                        </button>
                         <button className={s.nearReplay} onClick={replay}>
                             ↻ إعادة العرض
                         </button>
@@ -391,6 +394,36 @@ export default function NearbyMap({ onPlan, onHome }: { onPlan: () => void; onHo
                             استكشف الوحدات
                         </button>
                     </motion.aside>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {finale && invite && (
+                    <motion.div
+                        className={s.nbInvite}
+                        role="dialog"
+                        aria-label="جيرانك في الثروة الخضراء"
+                        initial={{ opacity: 0, y: 24, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 16 }}
+                        transition={{ type: "spring", damping: 24, stiffness: 220 }}
+                    >
+                        <button className={s.nbInviteClose} onClick={() => setInvite(false)} aria-label="إغلاق">
+                            ✕
+                        </button>
+                        <div className={s.nbInviteEyebrow}>وكمان…</div>
+                        <strong className={s.nbInviteTitle}>جيرانك في الثروة الخضراء</strong>
+                        <p className={s.nbInviteText}>إعمار ودرة والبابطين وغيرهم اختاروا نفس المثلث. شوف مين بيبني حواليك.</p>
+                        <button
+                            className={s.nbInviteGo}
+                            onClick={() => {
+                                setInvite(false);
+                                onNeighbors();
+                            }}
+                        >
+                            شوف جيرانك ←
+                        </button>
+                    </motion.div>
                 )}
             </AnimatePresence>
 

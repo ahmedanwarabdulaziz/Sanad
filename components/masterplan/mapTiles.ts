@@ -72,6 +72,39 @@ export function createTileLayer() {
     return { get, warm, draw, project };
 }
 
+/** A camera: `c` drawn at screen point (sx, sy) with fractional zoom Z. */
+export type View = { c: LatLng; Z: number; sx: number; sy: number };
+/** A screen rectangle. */
+export type Rect = { x: number; y: number; w: number; h: number };
+
+/** Zoom/centre that fit some points inside a screen rectangle (`lift` raises the centre a little). */
+export function fitView(points: LatLng[], area: Rect, fill: number, maxZ = 15.3, lift = 0): View {
+    const z0 = 10;
+    const xs = points.map((p) => lonToX(p.lng, z0));
+    const ys = points.map((p) => latToY(p.lat, z0));
+    const spanX = Math.max(1, Math.max(...xs) - Math.min(...xs));
+    const spanY = Math.max(1, Math.max(...ys) - Math.min(...ys));
+    const Z = Math.min(maxZ, z0 + Math.log2(Math.min((area.w * fill) / spanX, (area.h * fill) / spanY)));
+    const lats = points.map((p) => p.lat);
+    const lngs = points.map((p) => p.lng);
+    return {
+        c: { lat: (Math.max(...lats) + Math.min(...lats)) / 2, lng: (Math.max(...lngs) + Math.min(...lngs)) / 2 },
+        Z,
+        sx: area.x + area.w / 2,
+        sy: area.y + area.h / 2 - lift,
+    };
+}
+
+/** Camera halfway between two views; `dip` zooms out mid-flight so long moves feel like a hop. */
+export function lerpView(a: View, b: View, e: number, dip: number): View {
+    return {
+        c: { lat: a.c.lat + (b.c.lat - a.c.lat) * e, lng: a.c.lng + (b.c.lng - a.c.lng) * e },
+        Z: a.Z + (b.Z - a.Z) * e - dip * Math.sin(Math.PI * e),
+        sx: a.sx + (b.sx - a.sx) * e,
+        sy: a.sy + (b.sy - a.sy) * e,
+    };
+}
+
 /** Sizes the canvas backing store for the device pixel ratio; returns CSS width/height. */
 export function fitCanvas(cv: HTMLCanvasElement, g: CanvasRenderingContext2D) {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
