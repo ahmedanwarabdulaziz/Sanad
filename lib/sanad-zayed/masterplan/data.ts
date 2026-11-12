@@ -50,10 +50,10 @@ export interface Plan {
 
 // ---------------------------------------------------------------- project & sales facts
 
-/** The plot: 30°04'00.5"N 31°00'30.7"E. */
+/** The plot: 30°03'56.9"N 31°00'38.1"E (corrected by the owner, Nov 2026). */
 export const PROJECT_LOCATION = {
-    lat: 30.0668056,
-    lng: 31.0085278,
+    lat: 30.0658056,
+    lng: 31.0105833,
     name: "مشروع سند زايد",
     address: "شارع رقم 6، متفرع من شارع النزهة، الثروة الخضراء، الشيخ زايد",
 };

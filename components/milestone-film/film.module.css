@@ -1,0 +1,2352 @@
+.root {
+    --gold: #c29b40;
+    --gold-soft: #e5c77f;
+    --cream: #f3e3b5;
+    position: relative;
+    width: 100%;
+    height: 100svh;
+    /* clip, not hidden: a hidden box can still be scrolled by focus or by content placed outside it */
+    overflow: clip;
+    background: radial-gradient(ellipse at 50% 45%, #13284a, #060c18 78%);
+    color: #fff;
+    font-family: var(--font-tajawal), var(--font-cairo), sans-serif;
+    direction: rtl;
+    user-select: none;
+}
+
+.letterTop,
+.letterBottom {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 6svh;
+    background: #000;
+    z-index: 20;
+    pointer-events: none;
+}
+.letterTop {
+    top: 0;
+}
+.letterBottom {
+    bottom: 0;
+}
+
+.glow {
+    position: absolute;
+    left: 50%;
+    top: 45%;
+    width: 90vmax;
+    height: 90vmax;
+    margin: -45vmax 0 0 -45vmax;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(194, 155, 64, 0.13), rgba(194, 155, 64, 0.04) 35%, transparent 62%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.logo {
+    position: absolute;
+    top: calc(6svh + clamp(18px, 3.5vh, 34px));
+    left: 50%;
+    margin-left: calc(clamp(30px, 4vw, 40px) / -2);
+    width: clamp(30px, 4vw, 40px);
+    aspect-ratio: 391 / 623;
+    z-index: 15;
+    background: linear-gradient(160deg, #f6e7bb, #c29b40 70%);
+    -webkit-mask: url("/images/logo-mark.png") center / contain no-repeat;
+    mask: url("/images/logo-mark.png") center / contain no-repeat;
+    filter: drop-shadow(0 0 14px rgba(229, 199, 127, 0.25));
+}
+
+.vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(3, 6, 14, 0.7));
+    z-index: 2;
+}
+
+/* ---------- backdrop: blueprint grid, architectural drawings, dust ---------- */
+.backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+}
+.blueprint {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(150, 180, 230, 0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(150, 180, 230, 0.07) 1px, transparent 1px),
+        linear-gradient(rgba(150, 180, 230, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(150, 180, 230, 0.035) 1px, transparent 1px);
+    background-size: 120px 120px, 120px 120px, 24px 24px, 24px 24px;
+    background-position: center;
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, #000 10%, transparent 75%);
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, #000 10%, transparent 75%);
+}
+.drawings {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+}
+.lnMain,
+.lnThin,
+.lnDash {
+    fill: none;
+    vector-effect: non-scaling-stroke;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.lnMain {
+    stroke: rgba(229, 199, 127, 0.4);
+    stroke-width: 1.1;
+}
+.lnThin {
+    stroke: rgba(229, 199, 127, 0.2);
+    stroke-width: 0.9;
+}
+.lnDash {
+    stroke: rgba(229, 199, 127, 0.16);
+    stroke-width: 0.9;
+    stroke-dasharray: 4 4;
+}
+.lnDot {
+    fill: rgba(229, 199, 127, 0.5);
+    stroke: none;
+}
+.lnText,
+.lnTextStrong {
+    font-family: ui-monospace, "SFMono-Regular", Consolas, "Courier New", monospace;
+    direction: ltr;
+    unicode-bidi: plaintext;
+    letter-spacing: 0.02em;
+}
+.lnText {
+    fill: rgba(229, 199, 127, 0.38);
+}
+.lnTextStrong {
+    fill: rgba(229, 199, 127, 0.6);
+    font-weight: 600;
+}
+.dust {
+    position: absolute;
+    border-radius: 50%;
+    background: #f3e3b5;
+    box-shadow: 0 0 6px rgba(243, 227, 181, 0.8);
+    opacity: 0;
+}
+
+/* ---------- scene 0: the questions ---------- */
+.stage {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    z-index: 5;
+    padding: 0 16px;
+}
+.questions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(10px, 2vh, 20px);
+    text-align: center;
+}
+.question {
+    font-size: clamp(26px, 5vw, 52px);
+    font-weight: 800;
+    line-height: 1.35;
+    color: #fff;
+}
+.question {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    column-gap: 0.28em;
+}
+/* each word rises from behind an invisible edge; the padding keeps diacritics from being clipped */
+.mask {
+    display: inline-block;
+    overflow: hidden;
+    padding: 0.12em 0.04em 0.2em;
+    margin: -0.12em 0 -0.2em;
+    vertical-align: bottom;
+}
+.word,
+.goldGroup {
+    display: inline-flex;
+    column-gap: 0.28em;
+    white-space: nowrap;
+}
+.goldWord {
+    position: relative;
+    display: inline-block;
+}
+.goldWord {
+    color: var(--gold-soft);
+}
+.underline {
+    position: absolute;
+    right: 0;
+    left: 0;
+    bottom: -0.04em;
+    height: 2px;
+    border-radius: 2px;
+    background: linear-gradient(270deg, var(--gold-soft), rgba(194, 155, 64, 0.2));
+    transform-origin: right;
+}
+
+/* ---------- scene 0: the title ---------- */
+.title {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+.titleMask {
+    display: block;
+    overflow: hidden;
+    padding: 0.18em 0.1em 0.12em;
+}
+.titleAr {
+    display: block;
+    font-size: clamp(54px, 11vw, 120px);
+    font-weight: 800;
+    line-height: 1.1;
+    /* gold, with a bright band parked off to the side; sliding the background sweeps it across once */
+    background: linear-gradient(105deg, #c29b40 0%, #e5c77f 30%, #c29b40 42%, #fff4d2 50%, #c29b40 58%, #e5c77f 70%, #c29b40 100%);
+    background-size: 250% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+.rule {
+    height: 1.5px;
+    width: min(420px, 70vw);
+    margin: clamp(10px, 2vh, 18px) 0;
+    background: linear-gradient(90deg, transparent, var(--gold-soft), transparent);
+    transform-origin: center;
+}
+.titleEn {
+    white-space: nowrap;
+}
+.titleEn {
+    direction: ltr;
+    font-family: var(--font-playfair-display), serif;
+    font-size: clamp(22px, 3.6vw, 38px);
+    letter-spacing: 0.06em;
+    color: var(--cream);
+}
+.brand {
+    margin-top: clamp(14px, 3vh, 26px);
+    font-size: clamp(13px, 1.6vw, 15px);
+    letter-spacing: 0.04em;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* ---------- end-of-draft controls ---------- */
+.endBar {
+    position: absolute;
+    left: 50%;
+    bottom: calc(6svh + 20px);
+    translate: -50% 0;
+    z-index: 10;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    white-space: nowrap;
+}
+.btn {
+    padding: 10px 20px;
+    border-radius: 999px;
+    border: 1px solid rgba(229, 199, 127, 0.6);
+    background: rgba(10, 20, 36, 0.7);
+    color: var(--cream);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.btn:hover {
+    background: rgba(194, 155, 64, 0.2);
+}
+.note {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+/* ---------- review sheet: every drawing in the library ---------- */
+.gallery {
+    min-height: 100svh;
+    padding: 24px 16px 60px;
+    background: radial-gradient(ellipse at 50% 0%, #13284a, #060c18 70%);
+    color: #fff;
+    font-family: var(--font-tajawal), var(--font-cairo), sans-serif;
+    direction: rtl;
+}
+.galleryHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    max-width: 1200px;
+    margin: 0 auto 20px;
+}
+.galleryHead h1 {
+    font-size: clamp(20px, 3vw, 28px);
+    font-weight: 800;
+    color: var(--cream);
+}
+.galleryGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+    gap: 14px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+.galleryCard {
+    margin: 0;
+    padding: 14px;
+    border: 1px solid rgba(229, 199, 127, 0.15);
+    border-radius: 14px;
+    background: rgba(10, 20, 36, 0.55);
+}
+.galleryCard svg {
+    display: block;
+    width: 100%;
+    height: 220px;
+    overflow: visible;
+}
+.galleryCard figcaption {
+    margin-top: 8px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.8);
+}
+.galleryCard code {
+    font-size: 11px;
+    color: rgba(229, 199, 127, 0.6);
+}
+
+/* ---------- a lit drawing in the backdrop ---------- */
+.focused {
+    filter: drop-shadow(0 0 6px rgba(229, 199, 127, 0.55));
+}
+
+/* ---------- scene 1: Sanad and its people ---------- */
+.scene {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+}
+.net {
+    position: absolute;
+    left: 50%;
+    top: 44%;
+    width: min(92vw, 56svh);
+    aspect-ratio: 1;
+    translate: -50% -50%;
+    overflow: visible;
+}
+.link,
+.linkOn {
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+    transition: stroke 1.2s ease;
+}
+.link {
+    stroke: rgba(229, 199, 127, 0.22);
+}
+.linkOn {
+    stroke: rgba(229, 199, 127, 0.42);
+}
+.message {
+    fill: #fff4d2;
+    filter: drop-shadow(0 0 4px rgba(255, 236, 180, 0.9));
+}
+.personPartner {
+    fill: #e5c77f;
+    filter: drop-shadow(0 0 8px rgba(229, 199, 127, 0.45));
+}
+.personClient {
+    fill: rgba(10, 20, 36, 0.9);
+    stroke: rgba(229, 199, 127, 0.85);
+    stroke-width: 1.3;
+    vector-effect: non-scaling-stroke;
+}
+.glyphDark {
+    fill: #0a1424;
+}
+.glyphGold {
+    fill: #e5c77f;
+}
+.hub {
+    fill: rgba(12, 24, 44, 0.95);
+    stroke: #e5c77f;
+    stroke-width: 1.6;
+    vector-effect: non-scaling-stroke;
+    filter: drop-shadow(0 0 18px rgba(229, 199, 127, 0.35));
+}
+.hubRing {
+    fill: none;
+    stroke: rgba(229, 199, 127, 0.45);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+}
+.hubPulse {
+    fill: none;
+    stroke: rgba(229, 199, 127, 0.6);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+}
+.hubText {
+    fill: #f3e3b5;
+    font-family: var(--font-tajawal), var(--font-cairo), sans-serif;
+    font-size: 30px;
+    font-weight: 800;
+}
+.caption {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    /* anchored at the screen centre; the film slides it down to the caption position */
+    top: 50%;
+    translate: 0 -50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    text-align: center;
+}
+.captionLine {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    column-gap: 0.28em;
+    font-size: clamp(22px, 3.6vw, 40px);
+    font-weight: 800;
+    line-height: 1.35;
+}
+/* under the settled caption line */
+.legendSpot {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    top: calc(81svh + clamp(28px, 4.5vw, 46px));
+    display: flex;
+    justify-content: center;
+}
+.legend {
+    display: flex;
+    gap: 22px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.75);
+}
+.legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+.swatchPartner,
+.swatchClient {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+.swatchPartner {
+    background: #e5c77f;
+}
+.swatchClient {
+    border: 1.3px solid #e5c77f;
+}
+
+/* ---------- scene 2: partners' messages merging into one goal ---------- */
+.wishStage {
+    position: absolute;
+    left: 50%;
+    top: 42%;
+    width: 0;
+    height: 0;
+}
+.wish {
+    position: absolute;
+    left: 0;
+    top: 0;
+    translate: -50% -50%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px 10px 12px;
+    border-radius: 20px 20px 20px 6px;
+    background: linear-gradient(160deg, rgba(24, 40, 66, 0.92), rgba(12, 22, 40, 0.92));
+    border: 1px solid rgba(229, 199, 127, 0.35);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.4);
+    white-space: nowrap;
+}
+.wishAvatar {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #e5c77f;
+}
+.wishAvatar svg {
+    width: 22px;
+    height: 22px;
+    fill: #0a1424;
+}
+.wishText {
+    font-size: clamp(14px, 1.5vw, 17px);
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.92);
+}
+.wishDots {
+    display: inline-flex;
+    gap: 5px;
+    padding: 0 6px;
+}
+.wishDots i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #e5c77f;
+}
+.wishGold {
+    position: absolute;
+    left: 0;
+    top: 0;
+    translate: -50% -50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 18px 34px;
+    border-radius: 22px;
+    background: linear-gradient(160deg, rgba(30, 46, 72, 0.96), rgba(14, 26, 46, 0.96));
+    border: 1px solid rgba(243, 227, 181, 0.85);
+    box-shadow: 0 0 0 6px rgba(194, 155, 64, 0.14), 0 0 60px rgba(229, 199, 127, 0.25), 0 24px 70px rgba(0, 0, 0, 0.55);
+    white-space: nowrap;
+    text-align: center;
+}
+.wishGoldMain {
+    font-size: clamp(24px, 3.4vw, 38px);
+    font-weight: 800;
+    line-height: 1.3;
+    background: linear-gradient(105deg, #c29b40 0%, #e5c77f 30%, #c29b40 42%, #fff4d2 50%, #c29b40 58%, #e5c77f 70%, #c29b40 100%);
+    background-size: 250% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+.wishGoldSub {
+    font-size: clamp(14px, 1.6vw, 17px);
+    color: rgba(255, 255, 255, 0.8);
+}
+.wishFrom {
+    position: absolute;
+    left: 0;
+    top: clamp(70px, 9vw, 92px);
+    translate: -50% 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.75);
+}
+.wishFromFaces {
+    display: flex;
+}
+.wishFace {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    margin-inline-start: -7px;
+    border-radius: 50%;
+    background: #e5c77f;
+    border: 2px solid #0e1a2e;
+}
+.wishFace:first-child {
+    margin-inline-start: 0;
+}
+.wishFace svg {
+    width: 18px;
+    height: 18px;
+    fill: #0a1424;
+}
+
+/* ---------- scene 3: the map of new cities ---------- */
+.mapBox {
+    position: absolute;
+    left: 50%;
+    top: 46%;
+    width: min(94vw, 700px);
+    aspect-ratio: 660 / 380;
+    translate: -50% -50%;
+}
+@media (max-width: 699px) {
+    .mapBox {
+        width: 92vw;
+        aspect-ratio: 1 / 1.05;
+    }
+}
+/* the real map, framed; the film's backdrop stays visible around it */
+.mapFrame {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    border-radius: 22px;
+    border: 1px solid rgba(229, 199, 127, 0.45);
+    box-shadow: 0 0 0 6px rgba(194, 155, 64, 0.08), 0 30px 80px rgba(0, 0, 0, 0.55);
+    background: #0b1322;
+}
+.mapFrame::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(6, 12, 26, 0.6));
+}
+.mapCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+.mapPins {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    overflow: clip;
+    border-radius: 22px;
+}
+.mapCredit {
+    position: absolute;
+    z-index: 1;
+    left: 10px;
+    bottom: 6px;
+    font-size: 9.5px;
+    color: rgba(255, 255, 255, 0.45);
+}
+.mapCentreMark {
+    position: absolute;
+    translate: -50% -50%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.8);
+    white-space: nowrap;
+    pointer-events: none;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+.mapCentreMark i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+}
+
+.pin {
+    position: absolute;
+    z-index: 2;
+    left: -999px;
+    translate: -50% -11px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    transition: opacity 0.8s ease, filter 0.8s ease;
+}
+.pinDot {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #0e1a2e;
+    border: 2px solid #e5c77f;
+    color: #0a1424;
+    font-size: 12px;
+    font-weight: 800;
+    box-shadow: 0 0 14px rgba(229, 199, 127, 0.4);
+    transition: background 0.4s ease, transform 0.6s ease;
+}
+.pinLabel {
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgba(10, 20, 36, 0.8);
+    border: 1px solid rgba(229, 199, 127, 0.25);
+    font-size: clamp(12px, 1.4vw, 15px);
+    font-weight: 700;
+    white-space: nowrap;
+    transition: background 0.4s ease, color 0.4s ease, border-color 0.4s ease;
+}
+.pinOpen .pinLabel {
+    background: #e5c77f;
+    color: #0a1424;
+}
+/* set aside in a sift: faded, marked with ✕ */
+.pinOut {
+    opacity: 0.38;
+    filter: grayscale(1);
+}
+.pinOut .pinDot {
+    background: rgba(10, 20, 36, 0.9);
+    border-color: rgba(255, 255, 255, 0.4);
+    color: rgba(255, 255, 255, 0.7);
+    box-shadow: none;
+    transform: scale(0.85);
+}
+.pinOut .pinLabel {
+    text-decoration: line-through;
+    text-decoration-color: rgba(255, 255, 255, 0.5);
+}
+.pinDim {
+    opacity: 0.3;
+    filter: grayscale(0.6);
+}
+.pinHero .pinDot {
+    background: #f3e3b5;
+    transform: scale(1.5);
+    box-shadow: 0 0 30px rgba(243, 227, 181, 0.9);
+}
+.pinHero .pinLabel {
+    background: linear-gradient(135deg, #e5c77f, #c29b40);
+    color: #0a1424;
+    font-size: clamp(14px, 1.8vw, 19px);
+}
+.pinScan {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 22px;
+    height: 22px;
+    margin-left: -11px;
+    border-radius: 50%;
+    border: 1.5px solid #f3e3b5;
+    pointer-events: none;
+}
+
+.chips {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 12px);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+/* phones: the study card lists the same criteria, so the chips would only crowd the caption */
+@media (max-width: 699px) {
+    .chips {
+        display: none;
+    }
+}
+.chips li {
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(229, 199, 127, 0.35);
+    background: rgba(10, 20, 36, 0.7);
+    font-size: clamp(12px, 1.3vw, 14px);
+    color: rgba(255, 255, 255, 0.85);
+}
+
+/* over the middle of the map, between the western and eastern pins; a tap closes it */
+.areaCard {
+    position: absolute;
+    z-index: 3;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    width: min(290px, 86vw);
+    padding: 16px 18px;
+    border-radius: 18px;
+    background: linear-gradient(160deg, rgba(24, 40, 66, 0.96), rgba(12, 22, 40, 0.96));
+    border: 1px solid rgba(229, 199, 127, 0.45);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+
+.areaCardHead {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 10px;
+}
+.areaCardHead strong {
+    font-size: 20px;
+    color: #f3e3b5;
+}
+.areaCardHead span {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.65);
+}
+.areaCardList {
+    display: grid;
+    gap: 7px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 15px;
+}
+.areaCardList li {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+.areaCheck {
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #e5c77f;
+    color: #0a1424;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 800;
+}
+.areaCardFoot {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(229, 199, 127, 0.18);
+    font-size: 13px;
+    color: rgba(229, 199, 127, 0.8);
+}
+
+/* ---------- the pause: the film waits for the viewer ---------- */
+.ask {
+    position: absolute;
+    left: 50%;
+    bottom: calc(6svh + 22px);
+    translate: -50% 0;
+    z-index: 12;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: max-content;
+    max-width: calc(100vw - 32px);
+}
+.askActions {
+    display: flex;
+    gap: 10px;
+}
+.btnGold {
+    padding: 10px 28px;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #e5c77f, #c29b40);
+    color: #0a1424;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 0 24px rgba(229, 199, 127, 0.35);
+}
+
+/* ---------- «اشرحلي أكتر» ---------- */
+.more {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    background: rgba(3, 7, 15, 0.55);
+}
+.moreSheet {
+    width: min(520px, 100%);
+    max-height: calc(100svh - 32px);
+    overflow-y: auto;
+    padding: 24px;
+    border-radius: 22px;
+    background: linear-gradient(160deg, rgba(24, 40, 66, 0.98), rgba(12, 22, 40, 0.98));
+    border: 1px solid rgba(229, 199, 127, 0.45);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+}
+.moreSheet h3 {
+    margin: 0 0 6px;
+    font-size: 22px;
+    font-weight: 800;
+    color: #f3e3b5;
+}
+.moreSheet p {
+    margin: 0 0 14px;
+    color: rgba(255, 255, 255, 0.75);
+}
+.moreSheet ol {
+    display: grid;
+    gap: 12px;
+    margin: 0 0 18px;
+    padding: 0 20px 0 0;
+}
+.moreSheet li strong {
+    display: block;
+    color: #e5c77f;
+}
+.moreSheet li span {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* ---------- scene 4: Al-Tharwa Al-Khadraa ---------- */
+.areaName {
+    position: absolute;
+    left: 50%;
+    top: 46%;
+    translate: -50% -50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    pointer-events: none;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.85);
+}
+.areaName strong {
+    font-size: clamp(22px, 3.2vw, 34px);
+    font-weight: 800;
+    color: #f3e3b5;
+}
+.areaName span {
+    font-size: clamp(12px, 1.4vw, 15px);
+    color: rgba(255, 255, 255, 0.85);
+}
+.roadLabel {
+    position: absolute;
+    left: 0;
+    top: 0;
+    padding: 3px 12px;
+    border-radius: 999px;
+    background: rgba(10, 20, 36, 0.85);
+    border: 1px solid rgba(229, 199, 127, 0.6);
+    color: #f3e3b5;
+    font-size: clamp(11px, 1.3vw, 14px);
+    font-weight: 700;
+    white-space: nowrap;
+    pointer-events: none;
+}
+.devPin,
+.servicePin {
+    position: absolute;
+    left: -999px;
+    translate: -50% -50%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    pointer-events: none;
+    white-space: nowrap;
+}
+.devPin i {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #e5c77f;
+    border: 2px solid #0e1a2e;
+    box-shadow: 0 0 12px rgba(229, 199, 127, 0.7);
+}
+.devPin span,
+.servicePin span {
+    display: flex;
+    flex-direction: column;
+    padding: 3px 9px;
+    border-radius: 9px;
+    background: rgba(10, 20, 36, 0.85);
+    border: 1px solid rgba(229, 199, 127, 0.3);
+    line-height: 1.25;
+}
+.devPin b,
+.servicePin b {
+    font-size: clamp(11px, 1.2vw, 13px);
+    color: #fff;
+}
+.devPin small,
+.servicePin small {
+    font-size: 10.5px;
+    color: rgba(229, 199, 127, 0.9);
+}
+.servicePin i {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(243, 227, 181, 0.95);
+    font-size: 14px;
+    font-style: normal;
+    box-shadow: 0 0 14px rgba(243, 227, 181, 0.6);
+}
+.moreLinks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.moreLinks a {
+    text-decoration: none;
+}
+.btnText {
+    padding: 6px 4px;
+    border: 0;
+    background: none;
+    color: rgba(255, 255, 255, 0.7);
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.devName {
+    color: #f3e3b5;
+}
+@media (max-width: 699px) {
+    .chips.devList {
+        display: flex;
+        gap: 5px;
+    }
+    .chips.devList li {
+        padding: 3px 8px;
+        font-size: 11px;
+    }
+}
+
+/* ---------- scene 5: the study, and the partners' approval ---------- */
+.studyStage {
+    position: absolute;
+    left: 50%;
+    top: 47%;
+    translate: -50% -50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(18px, 3vh, 28px);
+}
+.study {
+    position: relative;
+    width: clamp(230px, 24vw, 290px);
+}
+.studyPage {
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    background: rgba(18, 32, 54, 0.85);
+    border: 1px solid rgba(229, 199, 127, 0.25);
+    transform-origin: 50% 100%;
+}
+.studyCover {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 18px 22px 16px;
+    border-radius: 16px;
+    background: linear-gradient(165deg, #1b2e4d, #0d1a2f);
+    border: 1px solid rgba(229, 199, 127, 0.55);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+    text-align: center;
+    transition: box-shadow 1s ease, border-color 1s ease;
+}
+.studyCoverOk {
+    border-color: #f3e3b5;
+    box-shadow: 0 0 0 6px rgba(194, 155, 64, 0.14), 0 0 60px rgba(229, 199, 127, 0.3), 0 30px 80px rgba(0, 0, 0, 0.55);
+}
+.studyKicker {
+    font-size: 12.5px;
+    color: rgba(229, 199, 127, 0.85);
+}
+.studyTitle {
+    font-size: clamp(22px, 2.4vw, 27px);
+    font-weight: 800;
+    color: #f3e3b5;
+    line-height: 1.25;
+}
+.studySub {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.7);
+}
+.studyMap {
+    width: 42%;
+    margin: 8px 0 6px;
+    overflow: visible;
+}
+.studyMap path {
+    fill: rgba(229, 199, 127, 0.1);
+    stroke: #e5c77f;
+    stroke-width: 1.5;
+    stroke-dasharray: 0;
+    vector-effect: non-scaling-stroke;
+}
+.studyList {
+    display: grid;
+    gap: 6px;
+    width: 100%;
+    margin: 0;
+    padding: 12px 0 0;
+    border-top: 1px solid rgba(229, 199, 127, 0.2);
+    list-style: none;
+    font-size: 13.5px;
+    text-align: start;
+    color: rgba(255, 255, 255, 0.85);
+}
+.studyList li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.studyList i {
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1px solid rgba(229, 199, 127, 0.6);
+    color: #e5c77f;
+    font-size: 10px;
+    font-style: normal;
+}
+.approvers {
+    display: flex;
+    gap: clamp(6px, 1.2vw, 12px);
+}
+.approver {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: clamp(32px, 3.6vw, 42px);
+    height: clamp(32px, 3.6vw, 42px);
+    border-radius: 50%;
+    background: #e5c77f;
+    box-shadow: 0 0 16px rgba(229, 199, 127, 0.35);
+}
+.approver svg {
+    width: 70%;
+    height: 70%;
+    fill: #0a1424;
+}
+.approverOk {
+    position: absolute;
+    right: -4px;
+    bottom: -4px;
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #0e1a2e;
+    border: 1.5px solid #f3e3b5;
+    color: #f3e3b5;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+/* ---------- scene 6: the plots on offer, and ours ---------- */
+.plot {
+    position: absolute;
+    left: -999px;
+    translate: -50% -50%;
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    border: 2px solid #e5c77f;
+    border-radius: 3px;
+    background: rgba(229, 199, 127, 0.18);
+    box-shadow: 0 0 10px rgba(229, 199, 127, 0.35);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    transition: background 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease, filter 0.5s ease, width 1s ease, height 1s ease;
+}
+.plotOut {
+    border-color: rgba(255, 255, 255, 0.45);
+    background: rgba(10, 20, 36, 0.85);
+    box-shadow: none;
+    filter: grayscale(1);
+}
+.plotOurs {
+    width: 34px;
+    height: 34px;
+    border-width: 2.5px;
+    border-color: #f3e3b5;
+    background: rgba(243, 227, 181, 0.3);
+    box-shadow: 0 0 0 6px rgba(229, 199, 127, 0.18), 0 0 34px rgba(243, 227, 181, 0.85);
+}
+.plotLabel {
+    position: absolute;
+    left: -999px;
+    translate: -50% 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 6px 14px;
+    border-radius: 12px;
+    background: rgba(10, 20, 36, 0.88);
+    border: 1px solid rgba(229, 199, 127, 0.6);
+    white-space: nowrap;
+    pointer-events: none;
+}
+.plotLabel strong {
+    font-size: clamp(14px, 1.6vw, 17px);
+    color: #f3e3b5;
+}
+.plotLabel span {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.8);
+}
+.chips li.chipOn {
+    background: linear-gradient(135deg, #e5c77f, #c29b40);
+    border-color: transparent;
+    color: #0a1424;
+    font-weight: 700;
+    transition: background 0.4s ease, color 0.4s ease;
+}
+
+/* ================= chapter 2 ================= */
+
+/* ---------- scene 7: the preliminary contract ---------- */
+.contract {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: clamp(260px, 26vw, 320px);
+    padding: 20px 22px 16px;
+    border-radius: 16px;
+    background: linear-gradient(165deg, #1b2e4d, #0d1a2f);
+    border: 1px solid rgba(229, 199, 127, 0.55);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+    text-align: center;
+    transition: box-shadow 1s ease, border-color 1s ease;
+}
+.contractSigned {
+    border-color: #f3e3b5;
+    box-shadow: 0 0 0 6px rgba(194, 155, 64, 0.14), 0 0 60px rgba(229, 199, 127, 0.28), 0 30px 80px rgba(0, 0, 0, 0.55);
+}
+.contractKicker {
+    font-size: 12.5px;
+    color: rgba(229, 199, 127, 0.85);
+}
+.contractTitle {
+    font-size: clamp(21px, 2.3vw, 26px);
+    font-weight: 800;
+    color: #f3e3b5;
+    line-height: 1.3;
+}
+.contractSub {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.7);
+}
+.contractParties {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    margin: 14px 0 10px;
+    padding: 10px 0;
+    border-block: 1px solid rgba(229, 199, 127, 0.18);
+}
+.contractParties span {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+}
+.contractParties small {
+    font-size: 11.5px;
+    font-weight: 400;
+    color: rgba(229, 199, 127, 0.8);
+}
+.contractLines {
+    width: 100%;
+    height: 44px;
+}
+.contractLines path {
+    stroke: rgba(255, 255, 255, 0.18);
+    stroke-width: 1.4;
+    vector-effect: non-scaling-stroke;
+}
+.deposit {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #e5c77f, #c29b40);
+    color: #0a1424;
+    font-size: 13.5px;
+    font-weight: 800;
+}
+.deposit i {
+    font-style: normal;
+}
+.contractSign {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 60%;
+    margin-top: 10px;
+}
+.contractSign svg {
+    width: 100%;
+    height: 38px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    overflow: visible;
+}
+.contractSign path {
+    fill: none;
+    stroke: #f3e3b5;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+}
+.contractSign span {
+    margin-top: 4px;
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, 0.55);
+}
+.owes {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.owes li {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 18px;
+    border-radius: 14px;
+    border: 1px solid rgba(229, 199, 127, 0.45);
+    background: rgba(10, 20, 36, 0.8);
+}
+.owes b {
+    font-size: 15px;
+    color: #f3e3b5;
+}
+.owes span {
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+/* ---------- scene 8: the share, worked out ---------- */
+.shareStage {
+    position: absolute;
+    left: 50%;
+    top: 46%;
+    translate: -50% -50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(14px, 2.4vh, 24px);
+    width: min(92vw, 560px);
+}
+.building {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+.buildingRoof {
+    width: 92%;
+    height: 10px;
+    border: 1.5px solid rgba(229, 199, 127, 0.6);
+    border-bottom: 0;
+    border-radius: 6px 6px 0 0;
+}
+.buildingGrid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: clamp(3px, 0.6vw, 6px);
+    width: 96%;
+    padding: clamp(6px, 1vw, 10px);
+    border: 1.5px solid rgba(229, 199, 127, 0.6);
+    background: rgba(10, 20, 36, 0.6);
+}
+.unit {
+    position: relative;
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1.15;
+    border-radius: 3px;
+    border: 1px solid rgba(229, 199, 127, 0.3);
+    background: rgba(229, 199, 127, 0.05);
+    transition: background 0.6s ease, border-color 0.6s ease, box-shadow 0.6s ease;
+}
+.unitExample {
+    background: rgba(243, 227, 181, 0.85);
+    border-color: #fff4d2;
+    box-shadow: 0 0 18px rgba(243, 227, 181, 0.8);
+}
+.unitPartner {
+    background: linear-gradient(135deg, #e5c77f, #c29b40);
+    border-color: #f3e3b5;
+    box-shadow: 0 0 10px rgba(229, 199, 127, 0.5);
+}
+.unitSanad {
+    background: #1d3459;
+    border-color: rgba(120, 160, 220, 0.75);
+}
+.buildingGround {
+    width: 100%;
+    height: 1.5px;
+    background: linear-gradient(90deg, transparent, rgba(229, 199, 127, 0.8), transparent);
+}
+.calc {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-height: clamp(70px, 11vh, 96px);
+}
+.calcStep {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-align: center;
+}
+.calcLabel {
+    font-size: clamp(13px, 1.4vw, 15px);
+    color: rgba(255, 255, 255, 0.75);
+}
+.calcBig {
+    font-size: clamp(30px, 4vw, 44px);
+    font-weight: 800;
+    color: #f3e3b5;
+    line-height: 1.15;
+}
+.calcEq {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: center;
+    gap: 10px;
+    font-size: clamp(20px, 2.6vw, 30px);
+    font-weight: 700;
+    color: #fff;
+}
+.calcEq i {
+    font-style: normal;
+    color: rgba(229, 199, 127, 0.8);
+}
+.calcEq b {
+    font-size: 1.5em;
+    color: #f3e3b5;
+}
+.calcEq small {
+    font-size: 0.55em;
+    color: rgba(255, 255, 255, 0.7);
+}
+.calcLegend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    font-size: clamp(15px, 1.7vw, 18px);
+    font-weight: 700;
+}
+.calcLegend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.calcLegend i {
+    display: inline-block;
+    width: 18px;
+    height: 16px;
+    border-radius: 3px;
+    border-width: 1px;
+    border-style: solid;
+}
+.calcNote {
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.buildingWrap {
+    width: 100%;
+    overflow: hidden;
+}
+/* the first stage's cost sheet */
+.costSheet {
+    display: flex;
+    flex-direction: column;
+    width: min(88vw, 400px);
+    padding: 18px 22px 16px;
+    border-radius: 18px;
+    background: linear-gradient(165deg, rgba(27, 46, 77, 0.95), rgba(13, 26, 47, 0.95));
+    border: 1px solid rgba(229, 199, 127, 0.45);
+    box-shadow: 0 26px 70px rgba(0, 0, 0, 0.5);
+}
+.costKicker {
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(229, 199, 127, 0.9);
+}
+.costRows {
+    display: grid;
+    gap: 9px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.costRows li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.costIcon {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: rgba(229, 199, 127, 0.1);
+    border: 1px solid rgba(229, 199, 127, 0.35);
+}
+.costIcon svg {
+    width: 20px;
+    height: 20px;
+    overflow: visible;
+}
+.costIcon path {
+    fill: none;
+    stroke: #e5c77f;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.costName {
+    font-size: clamp(15px, 1.6vw, 17px);
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+}
+.costLeader {
+    flex: 1;
+    height: 0;
+    border-bottom: 1.5px dotted rgba(229, 199, 127, 0.35);
+}
+.costTick {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #e5c77f;
+    color: #0a1424;
+    font-size: 12px;
+    font-weight: 800;
+}
+.costRule {
+    display: block;
+    height: 1.5px;
+    margin: 14px 0 10px;
+    background: linear-gradient(90deg, transparent, #e5c77f, transparent);
+    transform-origin: center;
+}
+.costTotal {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+}
+.costTotal span {
+    font-size: 16px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.85);
+}
+.costTotal strong {
+    font-size: clamp(32px, 4vw, 42px);
+    font-weight: 800;
+    line-height: 1.1;
+    background: linear-gradient(180deg, #f6e7bb, #c29b40);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-variant-numeric: tabular-nums;
+}
+
+/* unit numbers, 1–50 */
+.unitNo {
+    font-size: clamp(7.5px, 0.85vw, 10px);
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.45);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    transition: color 0.6s ease;
+}
+.unitPartner .unitNo,
+.unitExample .unitNo,
+.unitResold .unitNo {
+    color: rgba(10, 20, 36, 0.8);
+}
+.unitSanad .unitNo {
+    color: rgba(190, 210, 245, 0.7);
+}
+.unitResold {
+    background: linear-gradient(135deg, #f6efe0, #d9c8a3);
+    border-color: #fff4d2;
+    box-shadow: 0 0 12px rgba(246, 239, 224, 0.6);
+}
+
+/* ================= chapter 3 ================= */
+.stageRight {
+    position: absolute;
+    left: 50%;
+    /* anchored from the top, under the logo: content that grows (a new row, a formula) extends downwards only */
+    top: calc(6svh + clamp(96px, 14vh, 120px));
+    translate: -50% 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(18px, 3vh, 30px);
+    width: min(92vw, 640px);
+}
+/* the milestone track */
+.track {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    width: 100%;
+}
+.trackLine,
+.trackFill {
+    position: absolute;
+    top: 11px;
+    right: 8.33%;
+    left: 8.33%;
+    height: 2px;
+    transform-origin: right;
+}
+.trackLine {
+    background: rgba(229, 199, 127, 0.25);
+}
+.trackFill {
+    background: linear-gradient(270deg, #f3e3b5, #c29b40);
+    box-shadow: 0 0 10px rgba(229, 199, 127, 0.6);
+}
+.trackNode {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+}
+.trackDot {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #0e1a2e;
+    border: 2px solid rgba(229, 199, 127, 0.45);
+    color: #0a1424;
+    font-size: 12px;
+    font-weight: 800;
+}
+.trackName {
+    font-size: clamp(10.5px, 1.2vw, 13px);
+    color: rgba(255, 255, 255, 0.6);
+    line-height: 1.3;
+}
+.trackDone .trackDot {
+    background: #e5c77f;
+    border-color: #f3e3b5;
+}
+.trackDone .trackName {
+    color: #fff;
+}
+.trackNow .trackDot {
+    border-color: #f3e3b5;
+    box-shadow: 0 0 0 5px rgba(229, 199, 127, 0.18), 0 0 18px rgba(229, 199, 127, 0.7);
+    animation: trackPulse 1.6s ease-in-out infinite;
+}
+.trackNow .trackName {
+    color: #f3e3b5;
+    font-weight: 700;
+}
+@keyframes trackPulse {
+    50% {
+        box-shadow: 0 0 0 9px rgba(229, 199, 127, 0.06), 0 0 26px rgba(229, 199, 127, 0.9);
+    }
+}
+/* why the price rises: the risk bar and the price bars, side by side */
+.stageWhy {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: center;
+    gap: clamp(20px, 4vw, 48px);
+    width: 100%;
+}
+.risk {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: min(260px, 80vw);
+}
+.riskLabel {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+}
+.riskTrack {
+    display: block;
+    height: 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    overflow: hidden;
+}
+.riskTrack i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(270deg, #d98a5b, #e5c77f);
+}
+.riskEnds {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, 0.55);
+}
+.prices {
+    display: flex;
+    align-items: flex-end;
+    gap: clamp(18px, 3vw, 34px);
+}
+.priceCol {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+.priceValue {
+    font-size: clamp(20px, 2.4vw, 26px);
+    font-weight: 800;
+    color: #f3e3b5;
+}
+.priceValue small {
+    font-size: 0.5em;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.65);
+}
+.priceBarBox {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    width: clamp(54px, 6vw, 70px);
+    height: clamp(110px, 17vh, 150px);
+}
+.priceBar {
+    position: relative;
+    width: 100%;
+    border-radius: 8px 8px 2px 2px;
+    background: linear-gradient(180deg, rgba(229, 199, 127, 0.55), rgba(194, 155, 64, 0.25));
+    border: 1px solid rgba(229, 199, 127, 0.6);
+    overflow: hidden;
+}
+.priceRight {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    border-bottom: 1.5px dashed rgba(255, 255, 255, 0.5);
+    transition: background 0.8s ease, box-shadow 0.8s ease;
+}
+.priceRightOn {
+    background: linear-gradient(180deg, #fff4d2, #e5c77f);
+    box-shadow: 0 0 20px rgba(243, 227, 181, 0.8);
+}
+.priceRightTag {
+    position: absolute;
+    right: calc(100% + 10px);
+    display: flex;
+    align-items: center;
+    padding-inline-end: 10px;
+    border-inline-end: 2px solid #f3e3b5;
+    font-size: clamp(12.5px, 1.4vw, 15px);
+    font-weight: 800;
+    color: #f3e3b5;
+    white-space: nowrap;
+}
+.priceLabel {
+    font-size: clamp(11.5px, 1.3vw, 13.5px);
+    color: rgba(255, 255, 255, 0.75);
+    text-align: center;
+}
+.stageSell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    width: min(100%, 560px);
+}
+
+/* ---------- scene 10: the consultant's bill of quantities and schedule ---------- */
+.boq {
+    width: min(92vw, 600px);
+    padding: 16px 20px 14px;
+    border-radius: 18px;
+    background: linear-gradient(165deg, rgba(27, 46, 77, 0.95), rgba(13, 26, 47, 0.95));
+    border: 1px solid rgba(229, 199, 127, 0.45);
+    box-shadow: 0 26px 70px rgba(0, 0, 0, 0.5);
+}
+.boqHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(229, 199, 127, 0.18);
+}
+.boqHead span {
+    display: flex;
+    flex-direction: column;
+}
+.boqHead small {
+    font-size: 12px;
+    color: rgba(229, 199, 127, 0.85);
+}
+.boqHead strong {
+    font-size: clamp(17px, 2vw, 21px);
+    font-weight: 800;
+    color: #f3e3b5;
+}
+.boqSeal {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1.5px solid #e5c77f;
+    color: #e5c77f;
+    font-size: 15px;
+    font-style: normal;
+    font-weight: 800;
+    box-shadow: 0 0 0 4px rgba(229, 199, 127, 0.12);
+}
+.gantt {
+    position: relative;
+    display: grid;
+    gap: 7px;
+    padding-top: 18px;
+}
+.ganttAxis {
+    position: absolute;
+    top: 0;
+    inset-inline-start: calc(clamp(96px, 14vw, 128px) + 10px);
+    inset-inline-end: 0;
+    height: 14px;
+}
+.ganttAxis span {
+    position: absolute;
+    translate: 50% 0;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.45);
+    font-variant-numeric: tabular-nums;
+}
+.ganttRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: opacity 0.6s ease;
+}
+.ganttRowDim {
+    opacity: 0.35;
+}
+.ganttName {
+    flex: none;
+    width: clamp(96px, 14vw, 128px);
+    font-size: clamp(12px, 1.35vw, 14px);
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+    white-space: nowrap;
+}
+.ganttLane {
+    position: relative;
+    flex: 1;
+    height: 16px;
+    border-radius: 4px;
+    background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0 calc(12.5% - 1px), rgba(255, 255, 255, 0.1) calc(12.5% - 1px) 12.5%);
+}
+.ganttBar {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    border-radius: 3px;
+    background: linear-gradient(270deg, rgba(229, 199, 127, 0.75), rgba(194, 155, 64, 0.55));
+    transform-origin: right;
+    transition: background 0.6s ease, box-shadow 0.6s ease;
+}
+.ganttBarOn {
+    background: linear-gradient(270deg, #fff4d2, #e5c77f);
+    box-shadow: 0 0 14px rgba(243, 227, 181, 0.8);
+}
+.ganttCost {
+    position: absolute;
+    top: 50%;
+    translate: 0 -50%;
+    margin-inline-start: 8px;
+    padding: 1px 9px;
+    border-radius: 999px;
+    background: #e5c77f;
+    color: #0a1424;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+.ganttFoot {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.4);
+}
+.boqOwner {
+    overflow: hidden;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(229, 199, 127, 0.18);
+    display: flex;
+    justify-content: center;
+}
+.boqOwner .calcEq {
+    font-size: clamp(16px, 2vw, 22px);
+}
+
+/* ---------- scene 11: a metre's cost, built up stage by stage ---------- */
+.costBars {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: clamp(22px, 4vw, 48px);
+}
+.costBarCol {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: clamp(70px, 9vw, 96px);
+}
+.stackBox {
+    display: flex;
+    align-items: flex-end;
+    width: clamp(48px, 5.4vw, 64px);
+    height: clamp(150px, 24vh, 210px);
+}
+.stack {
+    display: flex;
+    flex-direction: column-reverse;
+    width: 100%;
+    gap: 2px;
+}
+.seg {
+    position: relative;
+    flex: 1 1 0;
+    display: grid;
+    place-items: center;
+    min-height: 0;
+    border-radius: 4px;
+    transform-origin: bottom;
+}
+.seg span {
+    font-size: 12px;
+    font-weight: 800;
+    color: #0a1424;
+}
+.segBase {
+    background: linear-gradient(180deg, #e5c77f, #c29b40);
+}
+.segBuild {
+    background: linear-gradient(180deg, #6f97d6, #3d5f99);
+}
+.segBuild span {
+    color: #fff;
+}
+.segRight {
+    background: linear-gradient(180deg, #fff4d2, #f1dfae);
+    box-shadow: 0 0 14px rgba(243, 227, 181, 0.7);
+}
+.calcLegend i.segBase,
+.calcLegend i.segBuild,
+.calcLegend i.segRight {
+    border-color: transparent;
+}
+
+/* ---------- the key moment: «مرحلة ورا مرحلة لحد التسليم» ---------- */
+.captionLineStrong {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    column-gap: 0.28em;
+    font-size: clamp(28px, 4.6vw, 54px);
+    font-weight: 800;
+    line-height: 1.3;
+}
+.finale {
+    position: absolute;
+    left: 50%;
+    top: 44%;
+    translate: -50% -50%;
+    width: min(94vw, 980px);
+}
+.trackBig .trackLine,
+.trackBig .trackFill {
+    top: 22px;
+    height: 4px;
+    border-radius: 4px;
+}
+.trackBig .trackFill {
+    box-shadow: 0 0 18px rgba(229, 199, 127, 0.8);
+}
+.trackBig .trackNode {
+    gap: 12px;
+}
+.trackBig .trackDot {
+    position: relative;
+    width: 46px;
+    height: 46px;
+    border-width: 2.5px;
+    font-size: 20px;
+}
+.trackBig .trackName {
+    font-size: clamp(13px, 1.8vw, 20px);
+    font-weight: 700;
+}
+.trackDot b {
+    display: block;
+}
+.trackWave {
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    border: 2px solid #f3e3b5;
+    pointer-events: none;
+}
+.trackFinal .trackDot {
+    background: linear-gradient(135deg, #fff4d2, #e5c77f);
+    box-shadow: 0 0 0 8px rgba(229, 199, 127, 0.18), 0 0 40px rgba(243, 227, 181, 0.9);
+    transform: scale(1.15);
+    transition: transform 0.6s ease, box-shadow 0.6s ease;
+}
+.trackFinal .trackName {
+    color: #f3e3b5;
+}
+@media (max-width: 699px) {
+    .trackBig .trackLine,
+    .trackBig .trackFill {
+        top: 16px;
+        height: 3px;
+    }
+    .trackBig .trackDot {
+        width: 34px;
+        height: 34px;
+        font-size: 15px;
+    }
+}
+
+/* ================= chapter 5 ================= */
+
+/* ---------- scene 12: price alone vs price with Sanad ---------- */
+.compare {
+    position: absolute;
+    left: 50%;
+    top: calc(6svh + clamp(96px, 14vh, 120px));
+    translate: -50% 0;
+    display: flex;
+    justify-content: center;
+    gap: clamp(16px, 4vw, 48px);
+    width: min(94vw, 720px);
+}
+.box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    max-width: 300px;
+    padding: 16px;
+    border-radius: 18px;
+    text-align: center;
+    transition: border-color 0.8s ease, box-shadow 0.8s ease, background 0.8s ease;
+}
+.boxClosed {
+    background: linear-gradient(165deg, #141c2b, #0b111c);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+.boxOpen {
+    background: linear-gradient(165deg, rgba(27, 46, 77, 0.9), rgba(13, 26, 47, 0.9));
+    border: 1px solid rgba(229, 199, 127, 0.45);
+}
+.boxOpened {
+    background: linear-gradient(165deg, rgba(229, 199, 127, 0.1), rgba(13, 26, 47, 0.75));
+    border-color: #f3e3b5;
+    box-shadow: 0 0 0 6px rgba(194, 155, 64, 0.12), 0 0 50px rgba(229, 199, 127, 0.25);
+}
+.boxTitle {
+    font-size: clamp(15px, 1.8vw, 19px);
+    font-weight: 800;
+    color: #fff;
+}
+.boxBody {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    min-height: clamp(150px, 22vh, 190px);
+    border-radius: 12px;
+    border: 1px dashed rgba(255, 255, 255, 0.15);
+}
+.boxQ {
+    font-size: clamp(56px, 8vw, 84px);
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.35);
+    line-height: 1;
+}
+.boxParts {
+    display: grid;
+    gap: 8px;
+    width: 100%;
+    margin: 0;
+    padding: 10px;
+    list-style: none;
+}
+.boxParts li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 7px 12px;
+    border-radius: 9px;
+    background: rgba(229, 199, 127, 0.1);
+    border: 1px solid rgba(229, 199, 127, 0.3);
+    font-size: clamp(13px, 1.5vw, 15px);
+    font-weight: 700;
+    color: #fff;
+    transition: background 0.5s ease, border-color 0.5s ease;
+}
+.boxParts i {
+    font-style: normal;
+    font-weight: 800;
+}
+.partDone {
+    background: rgba(229, 199, 127, 0.22) !important;
+    border-color: #e5c77f !important;
+}
+.partDone i {
+    color: #f3e3b5;
+}
+.partNext {
+    border-style: dashed !important;
+}
+.partNext i {
+    color: rgba(255, 255, 255, 0.6);
+}
+.boxFoot {
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.65);
+}
+
+/* ---------- scene 13: who guarantees quality ---------- */
+.questionsCloud {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 14px 18px;
+    max-width: 620px;
+    margin: clamp(30px, 6vh, 60px) 0 0;
+    padding: 0;
+    list-style: none;
+}
+.questionsCloud li {
+    padding: 12px 22px;
+    border-radius: 18px 18px 18px 6px;
+    background: rgba(18, 32, 54, 0.92);
+    border: 1px solid rgba(229, 199, 127, 0.4);
+    font-size: clamp(17px, 2.2vw, 24px);
+    font-weight: 800;
+    color: #f3e3b5;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.4);
+}
+.guarantees {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(10px, 2vw, 20px);
+    width: 100%;
+}
+@media (max-width: 699px) {
+    .guarantees {
+        grid-template-columns: 1fr;
+    }
+}
+.guarantee {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 18px 14px 16px;
+    border-radius: 16px;
+    background: rgba(18, 32, 54, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: center;
+    opacity: 0.45;
+    transition: opacity 0.6s ease, border-color 0.6s ease, box-shadow 0.6s ease, background 0.6s ease;
+}
+.guaranteeOn {
+    opacity: 1;
+    background: linear-gradient(165deg, rgba(27, 46, 77, 0.95), rgba(13, 26, 47, 0.95));
+    border-color: #e5c77f;
+    box-shadow: 0 0 40px rgba(229, 199, 127, 0.18);
+}
+.guaranteeIcon {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(229, 199, 127, 0.5);
+    background: rgba(229, 199, 127, 0.08);
+}
+.guaranteeIcon svg {
+    width: 28px;
+    height: 28px;
+    overflow: visible;
+}
+.guaranteeIcon path {
+    fill: none;
+    stroke: #f3e3b5;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.guarantee strong {
+    font-size: clamp(15px, 1.7vw, 18px);
+    color: #f3e3b5;
+}
+.guarantee > span:not(.guaranteeIcon) {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.75);
+}
+.guaranteeNo {
+    position: absolute;
+    top: 10px;
+    inset-inline-start: 12px;
+    font-size: 12px;
+    color: rgba(229, 199, 127, 0.7);
+}
+.unitSanadGlow {
+    border-color: #9cc0ff;
+    box-shadow: 0 0 12px rgba(120, 170, 255, 0.55);
+    animation: sanadGlow 2.2s ease-in-out infinite;
+}
+@keyframes sanadGlow {
+    50% {
+        box-shadow: 0 0 4px rgba(120, 170, 255, 0.2);
+    }
+}
+.valueTags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: clamp(14px, 1.7vw, 17px);
+    font-weight: 700;
+}
+.valueTags span {
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(156, 192, 255, 0.6);
+    background: rgba(29, 52, 89, 0.85);
+}
+.valueTags b {
+    font-size: 1.25em;
+    color: #f3e3b5;
+}
+.valueTags i {
+    font-style: normal;
+    color: rgba(229, 199, 127, 0.8);
+}
+.valueYours {
+    border-color: #e5c77f !important;
+    background: linear-gradient(135deg, rgba(229, 199, 127, 0.25), rgba(194, 155, 64, 0.15)) !important;
+}
+
+/* ================= the close ================= */
+.segDim {
+    opacity: 0.22;
+    filter: grayscale(0.7);
+    transition: opacity 0.7s ease, filter 0.7s ease, box-shadow 0.7s ease;
+}
+.segLit {
+    box-shadow: 0 0 16px rgba(243, 227, 181, 0.75);
+    transition: opacity 0.7s ease, filter 0.7s ease, box-shadow 0.7s ease;
+}
+.endCard {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    z-index: 6;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: min(92vw, 560px);
+    text-align: center;
+}
+.endTitle {
+    font-size: clamp(48px, 9vw, 96px);
+    font-weight: 800;
+    line-height: 1.15;
+    background: linear-gradient(180deg, #f6e7bb, #c29b40);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+.endEn {
+    direction: ltr;
+    font-family: var(--font-playfair-display), serif;
+    font-size: clamp(20px, 3vw, 32px);
+    letter-spacing: 0.08em;
+    color: #f3e3b5;
+}
+.endLine {
+    margin: clamp(14px, 3vh, 24px) 0 clamp(18px, 3.5vh, 28px);
+    font-size: clamp(17px, 2.2vw, 22px);
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.85);
+}
+.endActions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+.endActions a {
+    text-decoration: none;
+}

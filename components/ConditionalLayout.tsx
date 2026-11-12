@@ -18,8 +18,10 @@ export default function ConditionalLayout({
 
   // The interactive master plan is a full-screen experience with its own header.
   const isMasterplan = pathname?.includes("/masterplan");
+  // So is the «حقّ المرحلة» film.
+  const isFilm = pathname?.includes("/milestone-right/film");
 
-  if (isNAdmin || isErpAdmin || isMasterplan) {
+  if (isNAdmin || isErpAdmin || isMasterplan || isFilm) {
     return <>{children}</>;
   }
 
