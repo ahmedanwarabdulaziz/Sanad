@@ -28,6 +28,8 @@ import {
   type Unit,
 } from "@/lib/sanad-zayed/masterplan/data";
 import { NorthArrow, PlanLayers } from "./UnitPlan";
+import { SoundToggle, StartGate, useFilmMusic } from "@/components/film-sound/FilmSound";
+import { filmMusic } from "@/lib/filmMusic";
 import { LOGO, UnitDetails, UnitSummary, cx } from "./UnitPanels";
 import { SalesMenu, SalesPanels, useSales } from "./SalesKit";
 import MasterplanIntro, { type HubChoice } from "./MasterplanIntro";
@@ -296,6 +298,11 @@ export default function Masterplan2D() {
   }, []);
   const [floor, setFloor] = useState<number | null>(0);
   const [mode, setMode] = useState<"2d" | "3d">("2d");
+  /** The «ابدأ» screen before the films (shared unit links skip it and go straight to the unit). */
+  const [gated, setGated] = useState(true);
+  // music plays in every film (entrance, fly-in, nearby, neighbours, 3D) and fades out while browsing the 2D plan
+  const musicOn = !gated && (phase !== "site" || mode === "3d");
+  useFilmMusic(musicOn);
   const [night, setNight] = useState(false);
   const [building, setBuilding] = useState<"A" | "B" | null>(null);
   const [hover, setHover] = useState<{
@@ -338,7 +345,8 @@ export default function Masterplan2D() {
       if (q.get("view") === "neighbors") setPhase("neighbors");
       const id = q.get("unit");
       if (id && UNIT_BY_ID[id]) {
-        // Shared unit links skip the intro and the fly-in.
+        // Shared unit links skip the intro, the fly-in and the start screen.
+        setGated(false);
         setPhase("site");
         setStage(1);
         setFloor(UNIT_BY_ID[id].floor);
@@ -373,6 +381,8 @@ export default function Masterplan2D() {
     }
   };
   const onChoose = (c: HubChoice) => {
+    // a hub choice is a gesture too: it starts the music if the start screen was skipped
+    void filmMusic.start();
     if (c === "plan") {
       setMode("2d");
       if (floor === null) setFloor(0);
@@ -627,8 +637,8 @@ export default function Masterplan2D() {
       <div className={s.vignette} />
 
       <AnimatePresence>
-        {phase === "intro" && <MasterplanIntro key="intro" onChoose={onChoose} startAtMenu={returning} />}
-        {phase === "nearby" && (
+        {!gated && phase === "intro" && <MasterplanIntro key="intro" onChoose={onChoose} startAtMenu={returning} />}
+        {!gated && phase === "nearby" && (
           <NearbyMap
             key="nearby"
             onHome={goHome}
@@ -641,7 +651,7 @@ export default function Masterplan2D() {
             startAtEnd={nearbyDone}
           />
         )}
-        {phase === "neighbors" && (
+        {!gated && phase === "neighbors" && (
           <NeighborsMap
             key="neighbors"
             onHome={goHome}
@@ -656,8 +666,11 @@ export default function Masterplan2D() {
             }}
           />
         )}
-        {phase === "map" && <MapZoom key="map" onDone={finishMap} />}
+        {!gated && phase === "map" && <MapZoom key="map" onDone={finishMap} />}
       </AnimatePresence>
+
+      <StartGate open={gated} title="سند زايد" subtitle="مشروع سكني في قلب الشيخ زايد" onStart={() => setGated(false)} />
+      <SoundToggle visible={musicOn && phase !== "site"} />
 
       <motion.header
         className={s.header}

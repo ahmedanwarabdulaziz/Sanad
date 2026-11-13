@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { TILE_CREDIT, clamp01, createTileLayer, drawArea, easeInOut, fitCanvas, fitView, lerpView } from "@/components/masterplan/mapTiles";
 import { NEARBY_PLACES, NEIGHBORS, PROJECT_AREA, PROJECT_LOCATION, whatsappUrl } from "@/lib/sanad-zayed/masterplan/data";
 import s from "./film.module.css";
+import { SoundToggle, StartGate, useFilmMusic } from "@/components/film-sound/FilmSound";
 import { DRAWINGS, DrawingStrokes, type Drawing, type DrawingId } from "./drawings";
 
 /**
@@ -3127,6 +3128,9 @@ export default function MilestoneFilm({ startScene = 0 }: { startScene?: number 
         dim: first > 0,
         focus: null,
     });
+    // the film waits on its «ابدأ» screen: that press lets the browser play the music with it
+    const [started, setStarted] = useState(false);
+    useFilmMusic(started);
 
     const next = useCallback(() => {
         setScene((sc) => {
@@ -3170,21 +3174,21 @@ export default function MilestoneFilm({ startScene = 0 }: { startScene?: number 
             />
 
             <AnimatePresence mode="wait">
-                {scene === 0 && <SceneOpening key={`s0-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} />}
-                {scene === 1 && <ScenePeople key={`s1-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
-                {scene === 2 && <SceneRequest key={`s2-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
-                {scene === 3 && <SceneResearch key={`s3-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
-                {scene === 4 && <SceneZayed key={`s4-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
-                {scene === 5 && <SceneApproval key={`s5-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
-                {scene === 6 && <ScenePlot key={`s6-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
-                {scene === 7 && <SceneDeposit key={`s7-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
-                {scene === 8 && <SceneShare key={`s8-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
-                {scene === 9 && <SceneStageRight key={`s9-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
-                {scene === 10 && <SceneBuild key={`s10-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
-                {scene === 11 && <SceneSoFar key={`s11-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
-                {scene === 12 && <SceneCompare key={`s12-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
-                {scene === 13 && <SceneQuality key={`s13-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
-                {scene === 14 && <SceneFinale key={`s14-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onBackdrop={setBackdrop} onRestart={restart} />}
+                {started && scene === 0 && <SceneOpening key={`s0-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} />}
+                {started && scene === 1 && <ScenePeople key={`s1-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
+                {started && scene === 2 && <SceneRequest key={`s2-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
+                {started && scene === 3 && <SceneResearch key={`s3-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
+                {started && scene === 4 && <SceneZayed key={`s4-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
+                {started && scene === 5 && <SceneApproval key={`s5-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
+                {started && scene === 6 && <ScenePlot key={`s6-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
+                {started && scene === 7 && <SceneDeposit key={`s7-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
+                {started && scene === 8 && <SceneShare key={`s8-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
+                {started && scene === 9 && <SceneStageRight key={`s9-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
+                {started && scene === 10 && <SceneBuild key={`s10-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
+                {started && scene === 11 && <SceneSoFar key={`s11-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
+                {started && scene === 12 && <SceneCompare key={`s12-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
+                {started && scene === 13 && <SceneQuality key={`s13-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onDone={next} onBackdrop={setBackdrop} />}
+                {started && scene === 14 && <SceneFinale key={`s14-${run}-${sceneRun}`} run={run * 1000 + sceneRun} onBackdrop={setBackdrop} onRestart={restart} />}
             </AnimatePresence>
 
             <AnimatePresence>
@@ -3203,6 +3207,9 @@ export default function MilestoneFilm({ startScene = 0 }: { startScene?: number 
 
             <div className={s.letterTop} />
             <div className={s.letterBottom} />
+
+            <StartGate open={!started} title="حقّ المرحلة" subtitle="منهج سند في الشراكة العقارية" onStart={() => setStarted(true)} />
+            <SoundToggle />
         </div>
     );
 }

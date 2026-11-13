@@ -1,0 +1,162 @@
+/* ---------- «ابدأ»: the screen at the start of every film ---------- */
+.gate {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    background: radial-gradient(ellipse at 50% 45%, #13284a, #060c18 75%);
+    font-family: var(--font-tajawal), var(--font-cairo), sans-serif;
+    direction: rtl;
+    color: #fff;
+}
+.gateCenter {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    text-align: center;
+}
+.gateMark {
+    width: 40px;
+    height: 64px;
+    margin-bottom: 8px;
+    background: linear-gradient(160deg, #f6e7bb, #c29b40 70%);
+    -webkit-mask: url("/images/logo-mark.png") center / contain no-repeat;
+    mask: url("/images/logo-mark.png") center / contain no-repeat;
+    filter: drop-shadow(0 0 14px rgba(229, 199, 127, 0.25));
+}
+.gateTitle {
+    font-size: clamp(34px, 6vw, 60px);
+    font-weight: 800;
+    line-height: 1.2;
+    background: linear-gradient(180deg, #f6e7bb, #c29b40);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+.gateSub {
+    font-size: clamp(15px, 1.8vw, 18px);
+    color: rgba(255, 255, 255, 0.75);
+}
+.gatePlay {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    margin-top: clamp(22px, 5vh, 40px);
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+/* the dotted halo, turning slowly around the ring */
+.gateHalo {
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    width: 112px;
+    height: 112px;
+    margin-left: -56px;
+    border-radius: 50%;
+    border: 1px dashed rgba(229, 199, 127, 0.45);
+    animation: gateTurn 18s linear infinite;
+    pointer-events: none;
+}
+@keyframes gateTurn {
+    to {
+        transform: rotate(360deg);
+    }
+}
+.gateRing {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+    border: 1.5px solid #e5c77f;
+    background: radial-gradient(circle at 50% 40%, rgba(229, 199, 127, 0.16), rgba(10, 20, 36, 0.6) 70%);
+    box-shadow: 0 0 30px rgba(229, 199, 127, 0.18), inset 0 0 18px rgba(229, 199, 127, 0.12);
+    transition: transform 0.35s ease, background 0.35s ease, box-shadow 0.35s ease;
+}
+.gateRing svg {
+    width: 34px;
+    height: 34px;
+    fill: #f3e3b5;
+    transition: fill 0.35s ease;
+}
+.gatePlay:hover .gateRing,
+.gatePlay:focus-visible .gateRing {
+    transform: scale(1.06);
+    background: radial-gradient(circle at 50% 40%, #f3e3b5, #c29b40 75%);
+    box-shadow: 0 0 46px rgba(229, 199, 127, 0.45);
+}
+.gatePlay:hover .gateRing svg,
+.gatePlay:focus-visible .gateRing svg {
+    fill: #0a1424;
+}
+.gatePlay:focus-visible {
+    outline: none;
+}
+.gateWord {
+    margin-top: 6px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #e5c77f;
+}
+.gateNote {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.55);
+}
+.gateNote svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* ---------- mute / unmute ---------- */
+.toggle {
+    position: fixed;
+    /* above the films' own full-screen layers (the project entrance sits at 80), under the start screen */
+    z-index: 85;
+    /* bottom-left: the one corner every film leaves free (their own controls sit along the top) */
+    left: 16px;
+    bottom: 16px;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(229, 199, 127, 0.5);
+    background: rgba(10, 20, 36, 0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #e5c77f;
+    cursor: pointer;
+}
+.toggle svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.toggle:hover {
+    background: rgba(194, 155, 64, 0.2);
+}
