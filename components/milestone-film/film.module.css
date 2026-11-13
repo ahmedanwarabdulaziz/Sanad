@@ -176,9 +176,22 @@
 }
 .word,
 .goldGroup {
+    position: relative;
     display: inline-flex;
     column-gap: 0.28em;
     white-space: nowrap;
+}
+/* the pen stroke under a gold phrase: a little wider than the words, tucked just under them */
+.goldStroke {
+    position: absolute;
+    left: -0.12em;
+    right: -0.12em;
+    bottom: -0.08em;
+    width: calc(100% + 0.24em);
+    height: 0.3em;
+    overflow: visible;
+    pointer-events: none;
+    filter: drop-shadow(0 0 6px rgba(229, 199, 127, 0.35));
 }
 .goldWord {
     position: relative;
@@ -186,16 +199,6 @@
 }
 .goldWord {
     color: var(--gold-soft);
-}
-.underline {
-    position: absolute;
-    right: 0;
-    left: 0;
-    bottom: -0.04em;
-    height: 2px;
-    border-radius: 2px;
-    background: linear-gradient(270deg, var(--gold-soft), rgba(194, 155, 64, 0.2));
-    transform-origin: right;
 }
 
 /* ---------- scene 0: the title ---------- */
@@ -2349,4 +2352,40 @@
 }
 .endActions a {
     text-decoration: none;
+}
+
+/*
+ * Desktop: the pictures that phones anchor under the logo sit centred between the logo and the
+ * caption instead, and the caption settles higher (see Caption), so picture and words read as one.
+ */
+@media (min-width: 700px) {
+    /* centred inside the band between the logo and the settled caption; a tall block grows downwards ("safe") instead of into the logo */
+    .stageRight,
+    .compare {
+        top: calc(6svh + 112px);
+        bottom: calc(23svh + 30px);
+        translate: -50% 0;
+        justify-content: safe center;
+    }
+    .stageRight {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .compare {
+        align-items: safe center;
+    }
+    .mapBox {
+        top: 44%;
+        width: min(94vw, 640px);
+    }
+    .gantt {
+        gap: 5px;
+    }
+    .boq {
+        padding: 14px 20px 12px;
+    }
+    .legendSpot {
+        top: calc(77svh + clamp(28px, 4.5vw, 46px));
+    }
 }

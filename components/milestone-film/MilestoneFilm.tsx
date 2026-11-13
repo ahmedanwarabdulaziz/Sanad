@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { TILE_CREDIT, clamp01, createTileLayer, drawArea, easeInOut, fitCanvas, fitView, lerpView } from "@/components/masterplan/mapTiles";
 import { NEARBY_PLACES, NEIGHBORS, PROJECT_AREA, PROJECT_LOCATION, whatsappUrl } from "@/lib/sanad-zayed/masterplan/data";
 import s from "./film.module.css";
@@ -36,8 +36,36 @@ function usePhases<T extends string>(steps: [number, T][], run: number, active =
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
 /**
+ * The pen stroke under a gold phrase: one tapered, gently curved swash (thin at both ends, fuller in
+ * the middle), drawn right to left in the reading direction once the line has landed.
+ */
+function GoldStroke({ delay }: { delay: number }) {
+    const id = useId();
+    return (
+        <motion.svg
+            className={s.goldStroke}
+            viewBox="0 0 100 12"
+            preserveAspectRatio="none"
+            aria-hidden
+            initial={{ clipPath: "inset(0 0 0 100%)", opacity: 0 }}
+            animate={{ clipPath: "inset(0 0 0 0%)", opacity: 1, transition: { duration: 0.9, ease: EASE, delay } }}
+            exit={{ opacity: 0, transition: { duration: 0.3 } }}
+        >
+            <defs>
+                <linearGradient id={id} x1="0" x2="1" y1="0" y2="0">
+                    <stop offset="0" stopColor="#c29b40" stopOpacity="0.35" />
+                    <stop offset="0.45" stopColor="#f3e3b5" />
+                    <stop offset="1" stopColor="#c29b40" stopOpacity="0.9" />
+                </linearGradient>
+            </defs>
+            <path d="M0.5,8.2C24,3.6 62,2.4 99.5,5.4C66,5.9 27,7.3 0.5,8.2Z" fill={`url(#${id})`} />
+        </motion.svg>
+    );
+}
+
+/**
  * A line that rises word by word from behind an invisible edge, and leaves upward the same way.
- * Words marked with `*` are gold and get a hand-drawn underline once the line has landed.
+ * Words marked with `*` are gold; each gold phrase gets one pen stroke under it once the line has landed.
  */
 function RevealLine({ text, className, delay = 0, step = 0.11 }: { text: string; className?: string; delay?: number; step?: number }) {
     const words = text.split(" ");
@@ -53,18 +81,12 @@ function RevealLine({ text, className, delay = 0, step = 0.11 }: { text: string;
                     exit={{ y: "-115%", transition: { duration: 0.6, ease: [0.55, 0, 0.75, 0], delay: i * 0.05 } }}
                 >
                     {word}
-                    {gold && (
-                        <motion.i
-                            className={s.underline}
-                            initial={{ scaleX: 0 }}
-                            animate={{ scaleX: 1, transition: { duration: 0.7, ease: EASE, delay: delay + words.length * step + 0.5 } }}
-                        />
-                    )}
                 </motion.span>
             </span>
         );
     };
-    // consecutive gold words travel together: a wrapping line never splits a gold phrase across two lines
+    // consecutive gold words travel together: a wrapping line never splits a gold phrase across two lines,
+    // and the phrase shares a single stroke
     const groups: { gold: boolean; items: { w: string; i: number }[] }[] = [];
     words.forEach((w, i) => {
         const gold = w.startsWith("*");
@@ -72,12 +94,14 @@ function RevealLine({ text, className, delay = 0, step = 0.11 }: { text: string;
         if (gold && last?.gold) last.items.push({ w, i });
         else groups.push({ gold, items: [{ w, i }] });
     });
+    const strokeAt = delay + words.length * step + 0.45;
     return (
         <div className={className}>
             {groups.map((g) =>
-                g.gold && g.items.length > 1 ? (
+                g.gold ? (
                     <span key={g.items[0].i} className={s.goldGroup}>
                         {g.items.map(({ w, i }) => renderWord(w, i))}
+                        <GoldStroke delay={strokeAt} />
                     </span>
                 ) : (
                     renderWord(g.items[0].w, g.items[0].i)
@@ -206,6 +230,7 @@ function useCentreScale() {
  */
 function Caption({ id, text, centred, strong = false }: { id: string | null; text: string | null; centred: boolean; strong?: boolean }) {
     const big = useCentreScale();
+    const narrow = useNarrow();
     return (
         <div className={s.caption}>
             <AnimatePresence mode="wait">
@@ -216,7 +241,8 @@ function Caption({ id, text, centred, strong = false }: { id: string | null; tex
                         animate={{
                             scale: centred ? big : 1,
                             // a strong line is taller, so it settles a little higher to leave room for the buttons under it
-                            y: centred ? "0svh" : strong ? "25svh" : "31svh",
+                            // where it settles: lower on phones (tall screens), closer to the picture on desktop
+                            y: centred ? "0svh" : strong ? (narrow ? "25svh" : "22svh") : narrow ? "31svh" : "27svh",
                         }}
                         exit={{ opacity: 1 }}
                         transition={{ duration: 1.1, ease: EASE }}
