@@ -915,7 +915,7 @@ function MorePanel({ onClose }: { onClose: () => void }) {
                     ))}
                 </ol>
                 <button className={s.btn} onClick={onClose}>
-                    رجوع للفيلم
+                    رجوع للعرض
                 </button>
             </motion.div>
         </motion.div>
@@ -1233,7 +1233,7 @@ function AreaMore({ onClose }: { onClose: () => void }) {
                     </a>
                 </div>
                 <button className={s.btnText} onClick={onClose}>
-                    رجوع للفيلم
+                    رجوع للعرض
                 </button>
             </motion.div>
         </motion.div>
@@ -1894,9 +1894,9 @@ function ShareMore({ onClose }: { onClose: () => void }) {
                         </li>
                     ))}
                 </ol>
-                <p>المساحة اللي اتحسب عليها النصيب افتراضية لحد ما تطلع الرخصة وتتحدد مساحات الوحدات الفعلية. الأرقام في الفيلم رمزية للتوضيح بس.</p>
+                <p>المساحة اللي اتحسب عليها النصيب افتراضية لحد ما تطلع الرخصة وتتحدد مساحات الوحدات الفعلية. الأرقام في العرض رمزية للتوضيح بس.</p>
                 <button className={s.btn} onClick={onClose}>
-                    رجوع للفيلم
+                    رجوع للعرض
                 </button>
             </motion.div>
         </motion.div>
@@ -2120,9 +2120,9 @@ function StageMore({ onClose }: { onClose: () => void }) {
                         <span>أي شريك يقدر يبيع وحدته، بس النقل بيمر على سند عشان يبقى معروف المالك الجديد والتزاماته في المراحل الجاية.</span>
                     </li>
                 </ol>
-                <p>الأرقام في الفيلم رمزية للتوضيح بس.</p>
+                <p>الأرقام في العرض رمزية للتوضيح بس.</p>
                 <button className={s.btn} onClick={onClose}>
-                    رجوع للفيلم
+                    رجوع للعرض
                 </button>
             </motion.div>
         </motion.div>
@@ -2485,9 +2485,9 @@ function BuildMore({ onClose }: { onClose: () => void }) {
                         <span>اللي بيدخل متأخر بيدفع تكلفة اللي اتنفذ، زائد حق المرحلة لصاحب الوحدة اللي موّلها بدري.</span>
                     </li>
                 </ol>
-                <p>الأرقام والمدد في الفيلم رمزية للتوضيح بس.</p>
+                <p>الأرقام والمدد في العرض رمزية للتوضيح بس.</p>
                 <button className={s.btn} onClick={onClose}>
-                    رجوع للفيلم
+                    رجوع للعرض
                 </button>
             </motion.div>
         </motion.div>
@@ -2741,9 +2741,9 @@ function QualityMore({ onClose }: { onClose: () => void }) {
                         <span>سند بتبيع من وحداتها في نفس المشروع، فأي جودة أقل بتقلل قيمة وحداتها هي قبل وحداتك.</span>
                     </li>
                 </ol>
-                <p>الأرقام في الفيلم رمزية للتوضيح بس.</p>
+                <p>الأرقام في العرض رمزية للتوضيح بس.</p>
                 <button className={s.btn} onClick={onClose}>
-                    رجوع للفيلم
+                    رجوع للعرض
                 </button>
             </motion.div>
         </motion.div>
@@ -2881,7 +2881,7 @@ const LINES14: Record<string, string> = {
     l2: "*كلنا دفعنا نفس *التكلفة…",
     l3: "*والفرق *الوحيد… *وقت *الدخول.",
 };
-const CONTACT_TEXT = "مرحبًا، شُفت فيلم «حق المرحلة» وعايز أعرف أكتر عن الشراكة مع سند.";
+const CONTACT_TEXT = "مرحبًا، شُفت عرض «حق المرحلة» وعايز أعرف أكتر عن الشراكة مع سند.";
 
 function SceneFinale({ run, onBackdrop, onRestart }: { run: number; onBackdrop: (b: BackdropState) => void; onRestart: () => void }) {
     const phase = usePhases(S14, run);
@@ -2933,7 +2933,7 @@ function SceneFinale({ run, onBackdrop, onRestart }: { run: number; onBackdrop: 
                             </Link>
                         </motion.div>
                         <motion.button className={s.btnText} onClick={onRestart} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.4 }}>
-                            شوف الفيلم من الأول
+                            شوف العرض من الأول
                         </motion.button>
                     </motion.div>
                 )}

@@ -3,7 +3,7 @@ import MilestoneFilm, { DrawingGallery } from "@/components/milestone-film/Miles
 
 export const metadata: Metadata = {
     title: "حقّ المرحلة | سند",
-    description: "فيلم تفاعلي يشرح منهج سند «حقّ المرحلة»: إزاي بنختار مشاريعنا وشركاءنا، وإزاي بتتحسب كل مرحلة.",
+    description: "عرض تفاعلي يشرح منهج سند «حقّ المرحلة»: إزاي بنختار مشاريعنا وشركاءنا، وإزاي بتتحسب كل مرحلة.",
     // draft: keep it out of search results until the film is finished
     robots: { index: false, follow: false },
 };
